@@ -8,6 +8,8 @@
     "verify": "pnpm -r run verify",
     "format": "pnpm -r run format",
     "docgen": "pnpm -r run docgen",
+    "readme:reset": "tsx scripts/reset-readme.ts",
+    "readme:update": "tsx scripts/update-readme.ts",
     "prepare": "husky",
     "changeset": "changeset",
     "version": "changeset version",
@@ -36,6 +38,7 @@
     "@commitlint/cli": "^20.3.0",
     "@commitlint/config-conventional": "^20.3.0",
     "husky": "^9.1.7",
-    "lint-staged": "^16.2.7"
+    "lint-staged": "^16.2.7",
+    "tsx": "^4.21.0"
   }
 }

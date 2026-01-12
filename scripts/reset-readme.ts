@@ -1,4 +1,23 @@
-<div align="center">
+/**
+ * Reset the root README.md to a clean baseline state.
+ *
+ * This script overwrites README.md with a predefined template
+ * that already includes the plugins table markers.
+ * It is intended to be run from the `scripts` directory.
+ */
+
+import * as fs from "fs";
+import * as path from "path";
+
+// Resolve root README.md (scripts/ -> project root)
+const ROOT_README = path.resolve(__dirname, "../README.md");
+
+// Marker definitions (must match update-readme.ts)
+const START_MARKER = "<!-- PLUGINS_TABLE_START -->";
+const END_MARKER = "<!-- PLUGINS_TABLE_END -->";
+
+// Base README content (clean state)
+const content = `<div align="center">
   <img src="./assets/logo.png" alt="CapKit Logo" width="200" />
   <h1>CapKit Monorepo</h1>
 
@@ -25,13 +44,10 @@
 
 The **CapKit** suite ensures parity between iOS, Android, and Web, strictly following the Capacitor v8+ architecture.
 
-<!-- PLUGINS_TABLE_START -->
-
-| Package                                          | Version                                                                                                                                  | Downloads                                                                                                                                       | Description              |
-| :----------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------- |
-| [`@cap-kit/test-plugin`](./packages/test-plugin) | [![npm](https://img.shields.io/npm/v/@cap-kit/test-plugin?style=flat-square&label=)](https://www.npmjs.com/package/@cap-kit/test-plugin) | [![downloads](https://img.shields.io/npm/dm/@cap-kit/test-plugin?style=flat-square&label=)](https://www.npmjs.com/package/@cap-kit/test-plugin) | Test plugin for Cap-Kit. |
-
-<!-- PLUGINS_TABLE_END -->
+${START_MARKER}
+| Package | Version | Downloads | Description |
+| :--- | :--- | :--- | :--- |
+${END_MARKER}
 
 ## 🛠️ Architecture
 
@@ -39,7 +55,7 @@ This repository operates as a strict **pnpm monorepo**.
 
 - **Core:** Capacitor v8+
 - **Languages:** TypeScript, Swift, Kotlin
-- **Package Manager:** `pnpm`
+- **Package Manager:** \`pnpm\`
 - **CI/CD:** GitHub Actions (macOS-latest runners)
 
 ## 🚀 Getting Started
@@ -47,27 +63,35 @@ This repository operates as a strict **pnpm monorepo**.
 ### Prerequisites
 
 - Node.js 20+
-- pnpm 9+ (`npm install -g pnpm`)
+- pnpm 9+ (\`npm install -g pnpm\`)
 
 ### Installation
 
 To install a specific plugin into your Capacitor app:
 
-```bash
+\`\`\`bash
 pnpm add @cap-kit/test-plugin
 npx cap sync
-```
+\`\`\`
 
 ## 🤝 Contributing
 
 We welcome contributions! Please see our [CONTRIBUTING.md](./CONTRIBUTING.md) for details on how to set up the local environment and submit PRs.
 
 1. Fork the repo
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'feat(scope): Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
+2. Create your feature branch (\`git checkout -b feature/amazing-feature\`)
+3. Commit your changes (\`git commit -m 'feat(scope): Add some amazing feature'\`)
+4. Push to the branch (\`git push origin feature/amazing-feature\`)
 5. Open a Pull Request
 
 ## 📄 License
 
 CapKit is [MIT licensed](./LICENSE).
+`;
+
+function main(): void {
+  fs.writeFileSync(ROOT_README, content, { encoding: "utf-8" });
+  console.log("✅ README.md reset to baseline state.");
+}
+
+main();
