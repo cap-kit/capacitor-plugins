@@ -178,3 +178,7 @@ Result returned by the getPluginVersion method.
 ## Contributing
 
 Contributions are welcome! Please read the [contributing guide](CONTRIBUTING.md) before submitting a pull request.
+
+## Verified
+
+Automated CI/CD pipeline operational via macOS runners.
