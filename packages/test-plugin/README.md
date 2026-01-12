@@ -1,5 +1,9 @@
 <p align="center">
-  <img src="./logo.svg" alt="Capacitor Logo" width="128" height="128" />
+  <img
+    src="https://raw.githubusercontent.com/cap-kit/capacitor-plugins/main/assets/logo.png"
+    alt="CapKit Logo"
+    width="128"
+  />
 </p>
 
 <h3 align="center">Test</h3>
@@ -178,7 +182,3 @@ Result returned by the getPluginVersion method.
 ## Contributing
 
 Contributions are welcome! Please read the [contributing guide](CONTRIBUTING.md) before submitting a pull request.
-
-## Verified
-
-Automated CI/CD pipeline operational via macOS runners.
