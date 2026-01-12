@@ -7,7 +7,20 @@ const apps = fs.existsSync(path.resolve(__dirname, "apps"))
   ? fs.readdirSync(path.resolve(__dirname, "apps"))
   : [];
 
-const scopes = [...packages, ...apps, "root", "deps", "release", "ci"];
+// Expanded static scopes for better granularity
+const scopes = [
+  ...packages,
+  ...apps,
+  "root",
+  "deps",
+  "release",
+  "ci",
+  "gh-actions",
+  "docs",
+  "scripts",
+  "style",
+  "infra",
+];
 
 module.exports = {
   /*
