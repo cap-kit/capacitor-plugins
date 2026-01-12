@@ -4,25 +4,10 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - '**.md'
-      - 'assets/**'
-      - 'docs/**'
-      - 'LICENSE'
-      - '.gitignore'
-      - '.editorconfig'
-      - '.changeset/**'
+
   pull_request:
     branches:
       - main
-    paths-ignore:
-      - '**.md'
-      - 'assets/**'
-      - 'docs/**'
-      - 'LICENSE'
-      - '.gitignore'
-      - '.editorconfig'
-      - '.changeset/**'
 
 jobs:
   build-and-test:
@@ -40,7 +25,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v3
         with:
           version: latest
 
