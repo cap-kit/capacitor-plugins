@@ -8,7 +8,10 @@
     "verify": "pnpm -r run verify",
     "format": "pnpm -r run format",
     "docgen": "pnpm -r run docgen",
-    "prepare": "husky"
+    "prepare": "husky",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "pnpm build && changeset publish"
   },
   "author": "Fabio Martino",
   "lint-staged": {
