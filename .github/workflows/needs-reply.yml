@@ -1,0 +1,38 @@
+name: Needs reply
+
+on:
+  schedule:
+    # Every day at 02:00 UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  needs-reply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark issues and PRs that need a reply
+        uses: actions/stale@v9
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+          days-before-stale: 14
+          days-before-close: -1
+
+          stale-issue-label: needs-reply
+          stale-pr-label: needs-reply
+
+          stale-issue-message: >
+            This issue has been marked as **needs-reply**.
+            Please provide additional information or feedback to keep it open.
+
+          stale-pr-message: >
+            This pull request has been marked as **needs-reply**.
+            Please provide the requested updates.
+
+          exempt-issue-labels: |
+            bug
+            feature
+            discussion
+
+          exempt-pr-labels: |
+            work-in-progress
