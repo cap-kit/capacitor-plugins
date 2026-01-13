@@ -1,0 +1,44 @@
+name: ✨ Feature request
+description: Suggest an idea or enhancement
+title: "[Feature]: "
+labels: ["feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Feature requests are welcome.
+        Please be as specific as possible.
+
+  - type: input
+    id: package
+    attributes:
+      label: Target package
+      placeholder: "@cap-kit/geolocation"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What problem does this feature address?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: Describe the solution you'd like to see.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: breaking
+    attributes:
+      label: Is this a breaking change?
+      options:
+        - "No"
+        - "Yes"
+    validations:
+      required: true
