@@ -1,4 +1,4 @@
-package com.capkit.test
+package io.capkit.test
 
 import android.util.Log
 
