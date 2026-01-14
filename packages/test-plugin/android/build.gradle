@@ -46,7 +46,7 @@ def getPluginVersion() {
 def pluginVersion = getPluginVersion()
 
 android {
-    namespace = "com.capkit.test"
+    namespace = "io.capkit.test"
     compileSdk = project.hasProperty('compileSdkVersion') ? rootProject.ext.compileSdkVersion as Integer  : 36
 
     // AGP 8.0+ disables BuildConfig by default for libraries. 

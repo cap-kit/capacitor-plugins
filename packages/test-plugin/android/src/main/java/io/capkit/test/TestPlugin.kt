@@ -1,4 +1,4 @@
-package com.capkit.test
+package io.capkit.test
 
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
