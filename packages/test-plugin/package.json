@@ -1,6 +1,6 @@
 {
   "name": "@cap-kit/test-plugin",
-  "version": "0.1.2",
+  "version": "1.0.0",
   "description": "Test plugin for Cap-Kit.",
   "main": "dist/plugin.cjs.js",
   "module": "dist/esm/index.js",
