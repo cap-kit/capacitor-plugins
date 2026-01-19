@@ -1,5 +1,5 @@
 diff --git a/dist/output.js b/dist/output.js
-index 5f8cc8a222e58be00875ca0c8e6b3335c45ff87d..260a93d25a1971155000577e254f8624039dfa63 100644
+index 5f8cc8a222e58be00875ca0c8e6b3335c45ff87d..55fa48fa93d204dab9ff2e56cbf421ef825751c9 100644
 --- a/dist/output.js
 +++ b/dist/output.js
 @@ -4,15 +4,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
@@ -66,45 +66,72 @@ index 5f8cc8a222e58be00875ca0c8e6b3335c45ff87d..260a93d25a1971155000577e254f8624
      o.push(`--------------------`);
      o.push(``);
      o.push(``);
-@@ -190,36 +201,68 @@ function markdownConfig(data) {
+@@ -183,43 +194,108 @@ function markdownConfig(data) {
+     if (data.pluginConfigs) {
+         data.pluginConfigs.forEach((c) => {
+             o.push(configInterfaceTable(data, c));
+-            o.push(buildExamples(c));
++            o.push(buildExamples(c, data));
+         });
+     }
+     return o.join('\n');
  }
- function buildExamples(c) {
-     const o = [];
-+    // Build the configuration object for JSON
+-function buildExamples(c) {
++function buildConfigObject(configInterface, data, seen) {
 +    const configObj = {};
-+    c.properties.forEach((p) => {
-+        // 1. Find @example
++    if (seen.has(configInterface.name)) {
++        return configObj;
++    }
++    seen.add(configInterface.name);
++    configInterface.properties.forEach(p => {
 +        const exampleTag = p.tags.find((t) => t.name === 'example');
 +        let val = exampleTag === null || exampleTag === void 0 ? void 0 : exampleTag.text;
-+        // 2. If no @example, look for a default (often in code or @default tag)
 +        if (val === undefined) {
 +            const defaultTag = p.tags.find((t) => t.name === 'default');
 +            val = defaultTag === null || defaultTag === void 0 ? void 0 : defaultTag.text;
 +        }
-+        // 3. Parsing the value (raw handling for strings/numbers/booleans)
-+        if (val !== undefined) {
++        const type = formatting_1.formatType(data, p.type);
++        const relatedInterface = data.interfaces.find(i => i.name === type.type);
++        if (relatedInterface) {
++            configObj[p.name] = buildConfigObject(relatedInterface, data, seen);
++        }
++        else if (val !== undefined) {
 +            val = val.trim();
-+            // if it's 'true' or 'false', convert to boolean
-+            if (val === 'true')
++            if (val === 'true') {
 +                configObj[p.name] = true;
-+            else if (val === 'false')
++            }
++            else if (val === 'false') {
 +                configObj[p.name] = false;
-+            // If it's a number, convert to number
-+            else if (!isNaN(Number(val)))
++            }
++            else if (!isNaN(Number(val))) {
 +                configObj[p.name] = Number(val);
-+            // If it's a string with quotes, remove them to get it clean
-+            else if ((val.startsWith("'") && val.endsWith("'")) || (val.startsWith('"') && val.endsWith('"'))) {
++            }
++            else if ((val.startsWith("'") && val.endsWith("'")) ||
++                (val.startsWith('"') && val.endsWith('"'))) {
 +                configObj[p.name] = val.slice(1, -1);
 +            }
-+            // Otherwise leave as string
-+            else
-+                configObj[p.name] = val;
++            else if (val.startsWith('[') && val.endsWith(']')) {
++                try {
++                    // Replace single quotes with double quotes for valid JSON parsing
++                    const jsonVal = val.replace(/'/g, '"');
++                    configObj[p.name] = JSON.parse(jsonVal);
++                }
++                catch (e) {
++                    // Fallback to original string if parsing fails
++                    configObj[p.name] = val;
++                }
++            }
 +        }
 +    });
++    return configObj;
++}
++function buildExamples(c, data) {
+     const o = [];
++    const configObj = buildConfigObject(c, data, new Set());
 +    const jsonOutput = JSON.stringify({
 +        plugins: {
-+            [c.name]: configObj
-+        }
++            [c.name]: configObj,
++        },
 +    }, null, 2);
      o.push(`### Examples`);
      o.push(``);
@@ -142,14 +169,29 @@ index 5f8cc8a222e58be00875ca0c8e6b3335c45ff87d..260a93d25a1971155000577e254f8624
 -        var _a;
 -        o.push(`      ${p.name}: ${(_a = p.tags.find((t) => t.name === 'example')) === null || _a === void 0 ? void 0 : _a.text},`);
 +    // here we iterate to create the TS object (which accepts keys without quotes if valid)
++    const formatTsValue = (value, indent = 6) => {
++        if (Array.isArray(value)) {
++            // If it's an array, stringify it directly (e.g., ["a", "b"])
++            return JSON.stringify(value);
++        }
++        if (typeof value === 'string') {
++            return `'${value}'`;
++        }
++        if (typeof value === 'object' && value !== null) {
++            const indentStr = ' '.repeat(indent);
++            const props = Object.entries(value).map(([key, val]) => {
++                return `${indentStr}  ${key}: ${formatTsValue(val, indent + 2)}`;
++            });
++            return `{\n${props.join(',\n')}\n${indentStr}}`;
++        }
++        return value;
++    };
 +    Object.entries(configObj).forEach(([key, val]) => {
-+        // Format the value for TS (strings need quotes)
-+        const tsValue = typeof val === 'string' ? `'${val}'` : val;
-+        o.push(`      ${key}: ${tsValue},`);
++        o.push(`      ${key}: ${formatTsValue(val)},`);
      });
      o.push(`    },`);
      o.push(`  },`);
-@@ -363,7 +406,7 @@ async function outputJson(jsonFilePath, data) {
+@@ -363,7 +439,7 @@ async function outputJson(jsonFilePath, data) {
          throw new Error(`Missing data`);
      }
      const content = JSON.stringify(data, null, 2);
