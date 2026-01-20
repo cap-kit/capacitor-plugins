@@ -1,5 +1,11 @@
 # @cap-kit/test-plugin
 
+## 1.0.2
+
+### Patch Changes
+
+- b733b20: refactor: Rename native implementation classes to TestImpl and update Podspec to CapKitTest.
+
 ## 1.0.1
 
 ### Patch Changes
