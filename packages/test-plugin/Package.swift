@@ -2,12 +2,13 @@
 import PackageDescription
 
 let package = Package(
-    name: "TestPlugin",
+    name: "CapKitTest",
     platforms: [.iOS(.v15)],
     products: [
         .library(
-            name: "TestPlugin",
-            targets: ["TestPlugin"])
+            name: "CapKitTest",
+            targets: ["TestPlugin"]
+        )
     ],
     dependencies: [
         .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", from: "8.0.0")
@@ -17,8 +18,10 @@ let package = Package(
             name: "TestPlugin",
             dependencies: [
                 .product(name: "Capacitor", package: "capacitor-swift-pm"),
-                .product(name: "Cordova", package: "capacitor-swift-pm")            ],
-            path: "ios/Sources/TestPlugin"        ),
+                .product(name: "Cordova", package: "capacitor-swift-pm")
+            ],
+            path: "ios/Sources/TestPlugin"
+        ),
         .testTarget(
             name: "TestPluginTests",
             dependencies: ["TestPlugin"],

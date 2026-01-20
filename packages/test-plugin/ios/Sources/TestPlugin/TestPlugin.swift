@@ -17,7 +17,7 @@ public class TestPlugin: CAPPlugin, CAPBridgedPlugin {
     private var config: TestConfig?
 
     /// An instance of the implementation class that contains the plugin's core functionality.
-    private let implementation = Test()
+    private let implementation = TestImpl()
 
     /// The unique identifier for the plugin.
     public let identifier = "TestPlugin"

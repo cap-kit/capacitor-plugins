@@ -1,7 +1,7 @@
 package io.capkit.test
 
 import android.content.Context
-import io.capkit.test.utils.Logger
+import io.capkit.test.utils.TestLogger
 
 /**
  * Platform-specific native implementation for the Test plugin.
@@ -14,7 +14,7 @@ import io.capkit.test.utils.Logger
  * - handling PluginCall objects
  * - delegating logic to this implementation
  */
-class Test(
+class TestImpl(
   private val context: Context,
 ) {
   /**
@@ -32,8 +32,8 @@ class Test(
    */
   fun updateConfig(newConfig: TestConfig) {
     this.config = newConfig
-    Logger.verbose = this.config.verboseLogging
-    Logger.debug("Configuration updated. Verbose logging: ${this.config.verboseLogging}")
+    TestLogger.verbose = this.config.verboseLogging
+    TestLogger.debug("Configuration updated. Verbose logging: ${this.config.verboseLogging}")
   }
 
   /**
@@ -43,7 +43,7 @@ class Test(
    * and is intentionally side-effect free.
    */
   fun echo(value: String): String {
-    Logger.debug(value)
+    TestLogger.debug(value)
     return value
   }
 
