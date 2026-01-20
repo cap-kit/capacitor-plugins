@@ -11,7 +11,7 @@ import Capacitor
 
  The Capacitor plugin class is responsible for delegating work to this class.
  */
-@objc public class Test: NSObject {
+@objc public class TestImpl: NSObject {
 
     // Properties
     private var config: TestConfig?

@@ -11,7 +11,7 @@ import android.util.Log
  * The goal is to avoid scattering `if (verbose)` checks across
  * business logic and keep logging behavior consistent.
  */
-object Logger {
+object TestLogger {
   /**
    * Logcat tag used for all plugin logs.
    * Helps filtering logs during debugging.

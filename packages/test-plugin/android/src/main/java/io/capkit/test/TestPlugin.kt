@@ -10,7 +10,7 @@ import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.ActivityCallback
 import com.getcapacitor.annotation.CapacitorPlugin
-import io.capkit.test.utils.Logger
+import io.capkit.test.utils.TestLogger
 
 /**
  * Capacitor bridge for the Test plugin.
@@ -33,7 +33,7 @@ class TestPlugin : Plugin() {
   /**
    * Native implementation containing platform logic.
    */
-  private lateinit var implementation: Test
+  private lateinit var implementation: TestImpl
 
   /**
    * Called once when the plugin is loaded by the Capacitor bridge.
@@ -47,7 +47,7 @@ class TestPlugin : Plugin() {
     super.load()
 
     config = TestConfig(this)
-    implementation = Test(context)
+    implementation = TestImpl(context)
     implementation.updateConfig(config)
   }
 
@@ -61,7 +61,7 @@ class TestPlugin : Plugin() {
   @PluginMethod
   fun echo(call: PluginCall) {
     var value = call.getString("value") ?: ""
-    Logger.debug("Echoing value: $value")
+    TestLogger.debug("Echoing value: $value")
 
     // Append the custom message from the configuration
     value += config.customMessage

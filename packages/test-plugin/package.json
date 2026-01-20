@@ -13,7 +13,7 @@
     "ios/Sources",
     "ios/Tests",
     "Package.swift",
-    "TestPlugin.podspec",
+    "CapKitTest.podspec",
     "LICENSE"
   ],
   "author": "Fabio Martino",
@@ -35,7 +35,7 @@
   ],
   "scripts": {
     "verify": "pnpm run verify:ios && pnpm run verify:android && pnpm run verify:web",
-    "verify:ios": "xcodebuild -scheme TestPlugin -destination generic/platform=iOS",
+    "verify:ios": "xcodebuild -scheme CapKitTest -destination generic/platform=iOS",
     "verify:android": "cd android && ./gradlew clean build test && cd ..",
     "verify:web": "pnpm run build",
     "lint:android": "cd android && ./gradlew ktlintCheck",
