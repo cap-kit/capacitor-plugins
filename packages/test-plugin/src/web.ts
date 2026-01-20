@@ -1,19 +1,23 @@
-/**
- * @file web.ts
- * This file contains the web implementation of the TestPlugin.
- * It defines a class that extends the WebPlugin class and implements the
- * TestPlugin interface, providing the required functionality for web platforms.
- */
 import { WebPlugin } from '@capacitor/core';
 
 import type { TestPlugin } from './definitions';
 
 /**
- * Class representing the web implementation of the TestPlugin.
- * This class extends the WebPlugin class and implements the TestPlugin interface.
- * It provides a base implementation for web-based functionality of the plugin.
+ * Web implementation of the Test plugin.
+ *
+ * This implementation exists primarily to satisfy Capacitor's
+ * multi-platform contract and to allow usage in browser-based
+ * environments.
+ *
+ * Native-only features may be unavailable on Web.
  */
 export class TestWeb extends WebPlugin implements TestPlugin {
+  constructor() {
+    super();
+  }
+
+  // --- Echo Method ---
+
   /**
    * Echoes a value back for the web platform.
    * This method is a basic implementation example, primarily for testing
@@ -21,14 +25,6 @@ export class TestWeb extends WebPlugin implements TestPlugin {
    *
    * @param options - An object containing a `value` property to be echoed back.
    * @returns A promise resolving to an object containing the echoed `value`.
-   *
-   * @example
-   * ```typescript
-   * import { Test } from '@cap-kit/test-plugin';
-   *
-   * const result = await Test.echo({ value: 'Hello, World!' });
-   * console.log(result.value); // Output: 'Hello, World!'
-   * ```
    */
   async echo(options: { value: string }): Promise<{ value: string }> {
     console.log('ECHO', options);
@@ -38,21 +34,27 @@ export class TestWeb extends WebPlugin implements TestPlugin {
     return options;
   }
 
+  // --- App Settings ---
+
   /**
-   * Get the native Capacitor plugin version.
+   * Opens the app settings page.
+   * On Web, this is not applicable.
    *
-   * @returns Promise that resolves with the plugin version
-   * @throws Error if getting the version fails
+   * @returns A promise that resolves when the operation is complete.
+   */
+  async openAppSettings(): Promise<void> {
+    console.warn('Test: openAppSettings is not available on Web.');
+    return this.unimplemented('Not implemented on Web.') as never;
+  }
+
+  // --- Plugin Info ---
+
+  /**
+   * Returns the plugin version.
    *
-   * @example
-   * ```typescript
-   * import { Test } from '@cap-kit/test-plugin';
-   *
-   * const version = await Test.getPluginVersion();
-   * console.log(version.version); // Output: 'web'
-   * ```
+   * @returns The current plugin version.
    */
   async getPluginVersion(): Promise<{ version: string }> {
-    return { version: 'web' };
+    return { version: 'web-1.0.0' };
   }
 }
