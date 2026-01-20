@@ -1,5 +1,11 @@
 # @cap-kit/test-plugin
 
+## 1.0.1
+
+### Patch Changes
+
+- 6fb768a: Update internal dependencies and maintenance cleanup.
+
 ## 1.0.0
 
 ### Major Changes
