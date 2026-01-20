@@ -45,9 +45,10 @@ npx cap sync
 
 Configuration options for the Test plugin.
 
-| Prop                | Type                | Description                                                                                                                   | Default                       | Since |
-| ------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------- | ----- |
-| **`customMessage`** | <code>string</code> | A custom message to append to the echo response. This demonstrates how to pass data from `capacitor.config.ts` to the plugin. | <code>" (from config)"</code> | 0.0.1 |
+| Prop                 | Type                 | Description                                                                                                                                                                                                                              | Default                       | Since |
+| -------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- | ----- |
+| **`customMessage`**  | <code>string</code>  | Custom message appended to the echoed value. This option exists mainly as an example showing how to pass static configuration data from JavaScript to native platforms.                                                                  | <code>" (from config)"</code> | 0.0.1 |
+| **`verboseLogging`** | <code>boolean</code> | Enables verbose native logging. When enabled, additional debug information is printed to the native console (Logcat on Android, Xcode on iOS). This option affects native logging behavior only and has no impact on the JavaScript API. | <code>false</code>            | 1.0.0 |
 
 ### Examples
 
@@ -57,7 +58,8 @@ In `capacitor.config.json`:
 {
   "plugins": {
     "Test": {
-      "customMessage": " - Hello from Config!"
+      "customMessage": " - Hello from Config!",
+      "verboseLogging": true
     }
   }
 }
@@ -74,6 +76,7 @@ const config: CapacitorConfig = {
   plugins: {
     Test: {
       customMessage: ' - Hello from Config!',
+      verboseLogging: true,
     },
   },
 };
@@ -88,6 +91,7 @@ export default config;
 <docgen-index>
 
 - [`echo(...)`](#echo)
+- [`openAppSettings()`](#openappsettings)
 - [`getPluginVersion()`](#getpluginversion)
 - [Interfaces](#interfaces)
 
@@ -96,7 +100,10 @@ export default config;
 <docgen-api>
 <!--Update the source file JSDoc comments and rerun docgen to update the docs below-->
 
-Capacitor Test plugin interface.
+Public JavaScript API for the Test Capacitor plugin.
+
+This interface defines a stable, platform-agnostic API.
+All methods behave consistently across Android, iOS, and Web.
 
 ### echo(...)
 
@@ -106,12 +113,15 @@ echo(options: EchoOptions) => Promise<EchoResult>
 
 Echoes the provided value.
 
-If the plugin is configured with a `customMessage`, it will be appended
-to the response.
+If the plugin is configured with a `customMessage`, that value
+will be appended to the returned string.
 
-| Param         | Type                                                | Description                                 |
-| ------------- | --------------------------------------------------- | ------------------------------------------- |
-| **`options`** | <code><a href="#echooptions">EchoOptions</a></code> | - The options containing the value to echo. |
+This method is primarily intended as an example demonstrating
+native ↔ JavaScript communication.
+
+| Param         | Type                                                | Description                          |
+| ------------- | --------------------------------------------------- | ------------------------------------ |
+| **`options`** | <code><a href="#echooptions">EchoOptions</a></code> | Object containing the value to echo. |
 
 **Returns:** <code>Promise&lt;<a href="#echoresult">EchoResult</a>&gt;</code>
 
@@ -119,12 +129,27 @@ to the response.
 
 #### Example
 
-```typescript
-import { Test } from '@cap-kit/test-plugin';
-
-const result = await Test.echo({ value: 'Hello, World!' });
-console.log(result.value); // Output: 'Hello, World!'
+```ts
+const { value } = await Test.echo({ value: 'Hello' });
+console.log(value);
 ```
+
+---
+
+### openAppSettings()
+
+```typescript
+openAppSettings() => Promise<void>
+```
+
+Opens the operating system's application settings page.
+
+This is typically used when a permission has been permanently
+denied and the user must enable it manually.
+
+On Web, this method is not supported.
+
+**Since:** 1.0.0
 
 ---
 
@@ -134,7 +159,10 @@ console.log(result.value); // Output: 'Hello, World!'
 getPluginVersion() => Promise<PluginVersionResult>
 ```
 
-Get the native Capacitor plugin version.
+Returns the native plugin version.
+
+The returned version corresponds to the native implementation
+bundled with the application.
 
 **Returns:** <code>Promise&lt;<a href="#pluginversionresult">PluginVersionResult</a>&gt;</code>
 
@@ -142,11 +170,8 @@ Get the native Capacitor plugin version.
 
 #### Example
 
-```typescript
-import { Test } from '@cap-kit/test-plugin';
-
+```ts
 const { version } = await Test.getPluginVersion();
-console.log('Plugin version:', version); // Output: Plugin version: 0.0.1
 ```
 
 ---
@@ -155,27 +180,33 @@ console.log('Plugin version:', version); // Output: Plugin version: 0.0.1
 
 #### EchoResult
 
-Result returned by the echo method.
+Result object returned by the `echo` method.
 
-| Prop        | Type                | Description       |
-| ----------- | ------------------- | ----------------- |
-| **`value`** | <code>string</code> | The echoed value. |
+This object represents the resolved value of the echo operation
+after native processing has completed.
+
+| Prop        | Type                | Description                                                                                                   |
+| ----------- | ------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **`value`** | <code>string</code> | The echoed string value. If a `customMessage` is configured, it will be appended to the original input value. |
 
 #### EchoOptions
 
-Options for the echo method.
+Options object for the `echo` method.
 
-| Prop        | Type                | Description             |
-| ----------- | ------------------- | ----------------------- |
-| **`value`** | <code>string</code> | The value to be echoed. |
+This object defines the input payload sent from JavaScript
+to the native plugin implementation.
+
+| Prop        | Type                | Description                                                                                                                                                      |
+| ----------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`value`** | <code>string</code> | The string value to be echoed back by the plugin. This value is passed to the native layer and returned unchanged, optionally with a configuration-based suffix. |
 
 #### PluginVersionResult
 
-Result returned by the getPluginVersion method.
+Result object returned by the `getPluginVersion()` method.
 
-| Prop          | Type                | Description                              |
-| ------------- | ------------------- | ---------------------------------------- |
-| **`version`** | <code>string</code> | The native version string of the plugin. |
+| Prop          | Type                | Description                       |
+| ------------- | ------------------- | --------------------------------- |
+| **`version`** | <code>string</code> | The native plugin version string. |
 
 </docgen-api>
 

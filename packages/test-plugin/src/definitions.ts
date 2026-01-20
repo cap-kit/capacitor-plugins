@@ -1,76 +1,173 @@
 /// <reference types="@capacitor/cli" />
 
 /**
- * Extend the PluginsConfig interface to include configuration options for the Test plugin.
+ * Capacitor configuration extension for the Test plugin.
+ *
+ * Configuration values defined here can be provided under the `plugins.Test`
+ * key inside `capacitor.config.ts`.
+ *
+ * These values are:
+ * - read natively at build/runtime
+ * - NOT accessible from JavaScript at runtime
+ * - treated as read-only static configuration
  */
 declare module '@capacitor/cli' {
   export interface PluginsConfig {
     /**
      * Configuration options for the Test plugin.
      */
-    Test?: {
-      /**
-       * A custom message to append to the echo response.
-       * This demonstrates how to pass data from `capacitor.config.ts` to the plugin.
-       *
-       * @default " (from config)"
-       * @example " - Hello from Config!"
-       * @since 0.0.1
-       */
-      customMessage?: string;
-    };
+    Test?: TestConfig;
   }
 }
 
 /**
- * Options for the echo method.
+ * Static configuration options for the Test plugin.
+ *
+ * These values are defined in `capacitor.config.ts` and consumed
+ * exclusively by native code during plugin initialization.
+ *
+ * Configuration values:
+ * - do NOT change the JavaScript API shape
+ * - do NOT enable/disable methods
+ * - are applied once during plugin load
+ */
+export interface TestConfig {
+  /**
+   * Custom message appended to the echoed value.
+   *
+   * This option exists mainly as an example showing how to pass
+   * static configuration data from JavaScript to native platforms.
+   *
+   * @default " (from config)"
+   * @example " - Hello from Config!"
+   * @since 0.0.1
+   */
+  customMessage?: string;
+
+  /**
+   * Enables verbose native logging.
+   *
+   * When enabled, additional debug information is printed
+   * to the native console (Logcat on Android, Xcode on iOS).
+   *
+   * This option affects native logging behavior only and
+   * has no impact on the JavaScript API.
+   *
+   * @default false
+   * @example true
+   * @since 1.0.0
+   */
+  verboseLogging?: boolean;
+}
+
+/**
+ * Standardized error codes used by the Test plugin.
+ *
+ * These codes are returned as part of structured error objects
+ * and allow consumers to implement programmatic error handling.
+ *
+ * Note:
+ * On iOS (Swift Package Manager), errors are returned as data
+ * objects rather than rejected Promises.
+ *
+ * @since 1.0.0
+ */
+export enum TestErrorCode {
+  /** The device does not have the requested hardware. */
+  UNAVAILABLE = 'UNAVAILABLE',
+  /** The user denied the permission or the feature is disabled in settings. */
+  PERMISSION_DENIED = 'PERMISSION_DENIED',
+  /** The test plugin failed to initialize (e.g., runtime error or Looper failure). */
+  INIT_FAILED = 'INIT_FAILED',
+  /** The requested test plugin type is not valid or not supported by the plugin. */
+  UNKNOWN_TYPE = 'UNKNOWN_TYPE',
+}
+
+/**
+ * Options object for the `echo` method.
+ *
+ * This object defines the input payload sent from JavaScript
+ * to the native plugin implementation.
  */
 export interface EchoOptions {
   /**
-   * The value to be echoed.
+   * The string value to be echoed back by the plugin.
+   *
+   * This value is passed to the native layer and returned
+   * unchanged, optionally with a configuration-based suffix.
+   *
+   * @example "Hello, World!"
    */
   value: string;
 }
 
 /**
- * Result returned by the echo method.
+ * Result object returned by the `echo` method.
+ *
+ * This object represents the resolved value of the echo operation
+ * after native processing has completed.
  */
 export interface EchoResult {
   /**
-   * The echoed value.
+   * The echoed string value.
+   *
+   * If a `customMessage` is configured, it will be appended
+   * to the original input value.
    */
   value: string;
 }
 
 /**
- * Result returned by the getPluginVersion method.
+ * Result object returned by the `getPluginVersion()` method.
  */
 export interface PluginVersionResult {
   /**
-   * The native version string of the plugin.
+   * The native plugin version string.
    */
   version: string;
 }
 
 /**
- * Capacitor Test plugin interface.
+ * Structured error object returned by Test plugin operations.
+ *
+ * This object allows consumers to handle errors without relying
+ * on exception-based control flow.
+ */
+export interface TestError {
+  /**
+   * Human-readable error description.
+   */
+  message: string;
+
+  /**
+   * Machine-readable error code.
+   */
+  code: TestErrorCode;
+}
+
+/**
+ * Public JavaScript API for the Test Capacitor plugin.
+ *
+ * This interface defines a stable, platform-agnostic API.
+ * All methods behave consistently across Android, iOS, and Web.
  */
 export interface TestPlugin {
   /**
    * Echoes the provided value.
    *
-   * If the plugin is configured with a `customMessage`, it will be appended
-   * to the response.
+   * If the plugin is configured with a `customMessage`, that value
+   * will be appended to the returned string.
    *
-   * @param options - The options containing the value to echo.
-   * @returns A promise resolving to the echo result.
+   * This method is primarily intended as an example demonstrating
+   * native ↔ JavaScript communication.
+   *
+   * @param options Object containing the value to echo.
+   * @returns A promise resolving to the echoed value.
    *
    * @example
-   * ```typescript
-   * import { Test } from '@cap-kit/test-plugin';
-   *
-   * const result = await Test.echo({ value: 'Hello, World!' });
-   * console.log(result.value); // Output: 'Hello, World!'
+   * ```ts
+   * const { value } = await Test.echo({ value: 'Hello' });
+   * console.log(value);
    * ```
    *
    * @since 0.0.1
@@ -78,17 +175,28 @@ export interface TestPlugin {
   echo(options: EchoOptions): Promise<EchoResult>;
 
   /**
-   * Get the native Capacitor plugin version.
+   * Opens the operating system's application settings page.
    *
-   * @returns A promise resolving to an object containing the version string.
-   * @throws Error if getting the version fails.
+   * This is typically used when a permission has been permanently
+   * denied and the user must enable it manually.
+   *
+   * On Web, this method is not supported.
+   *
+   * @since 1.0.0
+   */
+  openAppSettings(): Promise<void>;
+
+  /**
+   * Returns the native plugin version.
+   *
+   * The returned version corresponds to the native implementation
+   * bundled with the application.
+   *
+   * @returns A promise resolving to the plugin version.
    *
    * @example
-   * ```typescript
-   * import { Test } from '@cap-kit/test-plugin';
-   *
+   * ```ts
    * const { version } = await Test.getPluginVersion();
-   * console.log('Plugin version:', version); // Output: Plugin version: 0.0.1
    * ```
    *
    * @since 0.0.1
