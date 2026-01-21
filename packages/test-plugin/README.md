@@ -13,21 +13,31 @@
   </strong>
 </p>
 
-<p align="center">Test plugin for Cap-Kit.</p>
+<p align="center">
+  The <strong>architectural reference implementation</strong> for the Cap-Kit ecosystem.<br>
+  This package serves as the definitive <strong>boilerplate and validation ground</strong> for creating new Capacitor plugins.<br>
+  It demonstrates the enforced monorepo structure, build configuration, and native bridges (Swift/Kotlin) required by our standards.<br>
+  <em>Note: This is an internal reference package, primarily used for CI verification and scaffolding.</em>
+</p>
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@cap-kit/test-plugin">
-    <img src="https://img.shields.io/npm/v/@cap-kit/test-plugin?style=flat-square" />
+    <img src="https://img.shields.io/npm/v/@cap-kit/test-plugin?color=blue&label=npm&logo=npm&style=flat-square" alt="npm version">
+  </a>
+  <a href="https://github.com/cap-kit/capacitor-plugins/actions">
+    <img src="https://img.shields.io/github/actions/workflow/status/cap-kit/capacitor-plugins/ci.yml?branch=main&label=CI&logo=github&style=flat-square" alt="CI Status" />
+  </a>
+  <a href="https://capacitorjs.com/">
+    <img src="https://img.shields.io/badge/Capacitor-Plugin-blue?logo=capacitor&style=flat-square" alt="Capacitor Plugin">
   </a>
   <a href="https://www.npmjs.com/package/@cap-kit/test-plugin">
-    <img src="https://img.shields.io/npm/dm/@cap-kit/test-plugin?style=flat-square" />
+    <img src="https://img.shields.io/npm/dm/@cap-kit/test-plugin?style=flat-square" alt="Downloads" />
   </a>
-  <a href="https://www.npmjs.com/package/@cap-kit/test-plugin">
-    <img src="https://img.shields.io/npm/l/@cap-kit/test-plugin?style=flat-square" />
+  <a href="./LICENSE">
+    <img src="https://img.shields.io/npm/l/@cap-kit/test-plugin?style=flat-square&logo=open-source-initiative&logoColor=white&color=green" alt="License" />
   </a>
-  <img src="https://img.shields.io/maintenance/yes/2026?style=flat-square" />
+  <img src="https://img.shields.io/maintenance/yes/2026?style=flat-square" alt="Maintained" />
 </p>
-
 <br>
 
 ## Install

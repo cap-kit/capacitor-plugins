@@ -27,13 +27,19 @@ const content = `<div align="center">
 
   <p>
     <a href="https://github.com/cap-kit/capacitor-plugins/actions">
-      <img src="https://img.shields.io/github/actions/workflow/status/cap-kit/capacitor-plugins/ci.yml?branch=main&style=flat-square" alt="CI Status" />
+      <img src="https://img.shields.io/github/actions/workflow/status/cap-kit/capacitor-plugins/ci.yml?branch=main&label=CI&logo=github&style=flat-square" alt="CI Status" />
     </a>
-    <a href="https://www.npmjs.com/search?q=%40cap-kit">
-      <img src="https://img.shields.io/npm/l/@cap-kit/test-plugin?style=flat-square" alt="License" />
+    <a href="https://pnpm.io/">
+      <img src="https://img.shields.io/badge/maintained%20with-pnpm-cc00ff.svg?style=flat-square&logo=pnpm&logoColor=white" alt="pnpm" />
+    </a>
+    <a href="https://github.com/changesets/changesets">
+      <img src="https://img.shields.io/badge/maintained%20with-changesets-176de3.svg?style=flat-square&logo=changeset&logoColor=white" alt="changesets" />
+    </a>
+    <a href="./LICENSE">
+      <img src="https://img.shields.io/github/license/cap-kit/capacitor-plugins?style=flat-square&logo=open-source-initiative&logoColor=white&color=green" alt="License" />
     </a>
     <a href="https://github.com/cap-kit/capacitor-plugins/stargazers">
-      <img src="https://img.shields.io/github/stars/cap-kit/capacitor-plugins?style=flat-square" alt="Stars" />
+      <img src="https://img.shields.io/github/stars/cap-kit/capacitor-plugins?style=flat-square&logo=github&logoColor=white" alt="Stars" />
     </a>
   </p>
 </div>
@@ -44,9 +50,17 @@ const content = `<div align="center">
 
 The **CapKit** suite ensures parity between iOS, Android, and Web, strictly following the Capacitor v8+ architecture.
 
+> **ℹ️ Note:** Individual plugins do not include standalone example apps.
+> A centralized **CapKit Playground App** is currently in development to demonstrate the entire suite (Coming Soon).
+
+Each package maintains its own documentation and setup guide.
+**Click on the plugin Name** in the table below to navigate to the specific installation instructions.
+
+Here is the current list of available plugins:
+
 ${START_MARKER}
-| Package | Version | Downloads | Description |
-| :--- | :--- | :--- | :--- |
+| Name | Package | Version | Downloads | Description |
+| :--- | :--- | :--- | :--- | :--- |
 ${END_MARKER}
 
 ## 🛠️ Architecture

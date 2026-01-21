@@ -26,14 +26,27 @@ const START_MARKER = "<!-- PLUGINS_TABLE_START -->";
 const END_MARKER = "<!-- PLUGINS_TABLE_END -->";
 
 // Markdown table header for the plugins list
-const TABLE_HEADER = `| Package | Version | Downloads | Description |
-| :--- | :--- | :--- | :--- |`;
+const TABLE_HEADER = `| Name | Package | Version | Downloads | Description |
+| :--- | :--- | :--- | :--- | :--- |`;
 
 /**
  * Escape a string so it can be safely used inside a RegExp constructor.
  */
 function escapeRegExp(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Converts a package name (e.g., "@cap-kit/test-plugin") into a readable title (e.g., "Test Plugin").
+ */
+function formatPluginName(packageName: string): string {
+  // Remove scope (@cap-kit/)
+  const cleanName = packageName.replace(/^@[\w-]+\//, "");
+  // Split by hyphen, capitalize first letter of each word, join with space
+  return cleanName
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 }
 
 async function main(): Promise<void> {
@@ -65,16 +78,20 @@ async function main(): Promise<void> {
     // Skip private packages
     if (pkgData.private) continue;
 
-    const name: string = pkgData.name;
+    const packageName: string = pkgData.name; // @cap-kit/test-plugin
+    const displayName = formatPluginName(packageName); // Test Plugin
     const description: string =
       pkgData.description || "No description provided.";
 
-    // npm version and download badges
-    const versionBadge = `[![npm](https://img.shields.io/npm/v/${name}?style=flat-square&label=)](https://www.npmjs.com/package/${name})`;
-    const downloadsBadge = `[![downloads](https://img.shields.io/npm/dm/${name}?style=flat-square&label=)](https://www.npmjs.com/package/${name})`;
+    // UPDATED: Badges with Icons (Flat Square)
+    // Version: Blue + npm logo
+    const versionBadge = `[![npm](https://img.shields.io/npm/v/${packageName}?style=flat-square&logo=npm&color=blue)](https://www.npmjs.com/package/${packageName})`;
+    // Downloads: Orange + npm logo (or generic download icon if preferred, keeping npm for consistency)
+    const downloadsBadge = `[![downloads](https://img.shields.io/npm/dm/${packageName}?style=flat-square&logo=npm&color=orange)](https://www.npmjs.com/package/${packageName})`;
 
+    // Row format: | Name (Link) | Package (`code`) | Version | Downloads | Description |
     tableRows.push(
-      `| [\`${name}\`](./packages/${pkgFolder}) | ${versionBadge} | ${downloadsBadge} | ${description} |`,
+      `| [**${displayName}**](./packages/${pkgFolder}) | \`${packageName}\` | ${versionBadge} | ${downloadsBadge} | ${description} |`,
     );
   }
 
