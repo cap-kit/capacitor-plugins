@@ -7,21 +7,11 @@
   </p>
 
   <p>
-    <a href="https://github.com/cap-kit/capacitor-plugins/actions">
-      <img src="https://img.shields.io/github/actions/workflow/status/cap-kit/capacitor-plugins/ci.yml?branch=main&label=CI&logo=github&style=flat-square" alt="CI Status" />
-    </a>
-    <a href="https://pnpm.io/">
-      <img src="https://img.shields.io/badge/maintained%20with-pnpm-cc00ff.svg?style=flat-square&logo=pnpm&logoColor=white" alt="pnpm" />
-    </a>
-    <a href="https://github.com/changesets/changesets">
-      <img src="https://img.shields.io/badge/maintained%20with-changesets-176de3.svg?style=flat-square&logo=changeset&logoColor=white" alt="changesets" />
-    </a>
-    <a href="./LICENSE">
-      <img src="https://img.shields.io/github/license/cap-kit/capacitor-plugins?style=flat-square&logo=open-source-initiative&logoColor=white&color=green" alt="License" />
-    </a>
-    <a href="https://github.com/cap-kit/capacitor-plugins/stargazers">
-      <img src="https://img.shields.io/github/stars/cap-kit/capacitor-plugins?style=flat-square&logo=github&logoColor=white" alt="Stars" />
-    </a>
+    <a href="https://github.com/cap-kit/capacitor-plugins/actions"><img src="https://img.shields.io/github/actions/workflow/status/cap-kit/capacitor-plugins/ci.yml?branch=main&label=CI&logo=github&style=flat-square" alt="CI Status" /></a>
+    <a href="https://pnpm.io/"><img src="https://img.shields.io/badge/maintained%20with-pnpm-cc00ff.svg?style=flat-square&logo=pnpm&logoColor=white" alt="pnpm" /></a>
+    <a href="https://github.com/changesets/changesets"><img src="https://img.shields.io/badge/maintained%20with-changesets-176de3.svg?style=flat-square&logo=git&logoColor=white" alt="changesets" /></a>
+    <a href="./LICENSE"><img src="https://img.shields.io/github/license/cap-kit/capacitor-plugins?style=flat-square&logo=open-source-initiative&logoColor=white&color=green" alt="License" /></a>
+    <a href="https://github.com/cap-kit/capacitor-plugins/commits/main"><img src="https://img.shields.io/github/last-commit/cap-kit/capacitor-plugins?style=flat-square&logo=git&logoColor=white&label=last%20commit&color=blue" alt="Last Commit" /></a>
   </p>
 </div>
 
@@ -34,17 +24,36 @@ The **CapKit** suite ensures parity between iOS, Android, and Web, strictly foll
 > **ℹ️ Note:** Individual plugins do not include standalone example apps.
 > A centralized **CapKit Playground App** is currently in development to demonstrate the entire suite (Coming Soon).
 
+<!-- PLUGINS_TABLE_START -->
+
 Each package maintains its own documentation and setup guide.
-**Click on the plugin Name** in the table below to navigate to the specific installation instructions.
+**Click on the plugin Name** below to navigate to the specific installation instructions.
 
 Here is the current list of available plugins:
 
-<!-- PLUGINS_TABLE_START -->
+<p>
+  <strong>Total Plugins:</strong> 1 | <strong>Weekly Downloads:</strong> <img src="https://img.shields.io/npm/dw/@cap-kit/test-plugin?style=flat-square&logo=npm&label=&color=orange" alt="Downloads" valign="middle" />
+</p>
+<br />
 
-| Name                                      | Package                | Version                                                                                                                                               | Downloads                                                                                                                                                      | Description                                                  |
-| :---------------------------------------- | :--------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------- |
-| [**Test Plugin**](./packages/test-plugin) | `@cap-kit/test-plugin` | [![npm](https://img.shields.io/npm/v/@cap-kit/test-plugin?style=flat-square&logo=npm&color=blue)](https://www.npmjs.com/package/@cap-kit/test-plugin) | [![downloads](https://img.shields.io/npm/dm/@cap-kit/test-plugin?style=flat-square&logo=npm&color=orange)](https://www.npmjs.com/package/@cap-kit/test-plugin) | Architectural reference and boilerplate for Cap-Kit plugins. |
+<table>
+<tr>
 
+<td align="center" width="33%">
+  <h3><a href="./packages/test-plugin">Test Plugin</a></h3>
+  <p><code>@cap-kit/test-plugin</code></p>
+  <p>
+    <a href="https://www.npmjs.com/package/@cap-kit/test-plugin"><img src="https://img.shields.io/npm/v/@cap-kit/test-plugin?style=flat-square&color=blue&label=npm&logo=npm" alt="npm version"></a>
+    <a href="https://www.npmjs.com/package/@cap-kit/test-plugin"><img src="https://img.shields.io/npm/dm/@cap-kit/test-plugin?style=flat-square&color=orange&label=downloads&logo=npm" alt="downloads"></a>
+  </p>
+  <p>Architectural reference and boilerplate for Cap-Kit plugins.</p>
+  <p>
+    <a href="./packages/test-plugin"><strong>Documentation</strong></a> | 
+    <a href="https://www.npmjs.com/package/@cap-kit/test-plugin"><strong>NPM</strong></a>
+  </p>
+</td>
+</tr>
+</table>
 <!-- PLUGINS_TABLE_END -->
 
 ## 🛠️ Architecture

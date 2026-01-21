@@ -1,5 +1,5 @@
 /**
- * Update the plugins table inside the root README.md.
+ * Update the plugins section in root README.md.
  *
  * This script scans the `packages/` directory, collects metadata from each
  * public package.json, and regenerates the plugins table between the
@@ -25,16 +25,9 @@ const ROOT_README = path.join(__dirname, "../README.md");
 const START_MARKER = "<!-- PLUGINS_TABLE_START -->";
 const END_MARKER = "<!-- PLUGINS_TABLE_END -->";
 
-// Markdown table header for the plugins list
-const TABLE_HEADER = `| Name | Package | Version | Downloads | Description |
-| :--- | :--- | :--- | :--- | :--- |`;
-
-/**
- * Escape a string so it can be safely used inside a RegExp constructor.
- */
-function escapeRegExp(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
+// GitHub repository details for contributors badge
+// const GITHUB_OWNER = "cap-kit";
+// const GITHUB_REPO = "capacitor-plugins";
 
 /**
  * Converts a package name (e.g., "@cap-kit/test-plugin") into a readable title (e.g., "Test Plugin").
@@ -49,6 +42,34 @@ function formatPluginName(packageName: string): string {
     .join(" ");
 }
 
+/**
+ * Generates the HTML for a single plugin cell (TD).
+ */
+function generatePluginCard(pkgData: any, folderName: string): string {
+  const name = pkgData.name;
+  const displayName = formatPluginName(name);
+  const description = pkgData.description || "No description provided.";
+
+  // Badges (Flat Square + NPM Logo)
+  const badgeVersion = `<a href="https://www.npmjs.com/package/${name}"><img src="https://img.shields.io/npm/v/${name}?style=flat-square&color=blue&label=npm&logo=npm" alt="npm version"></a>`;
+  const badgeDownloads = `<a href="https://www.npmjs.com/package/${name}"><img src="https://img.shields.io/npm/dm/${name}?style=flat-square&color=orange&label=downloads&logo=npm" alt="downloads"></a>`;
+
+  return `
+<td align="center" width="33%">
+  <h3><a href="./packages/${folderName}">${displayName}</a></h3>
+  <p><code>${name}</code></p>
+  <p>
+    ${badgeVersion}
+    ${badgeDownloads}
+  </p>
+  <p>${description}</p>
+  <p>
+    <a href="./packages/${folderName}"><strong>Documentation</strong></a> | 
+    <a href="https://www.npmjs.com/package/${name}"><strong>NPM</strong></a>
+  </p>
+</td>`;
+}
+
 async function main(): Promise<void> {
   console.log("⚙️  Updating root README.md...");
 
@@ -58,70 +79,93 @@ async function main(): Promise<void> {
     return;
   }
 
-  // Collect all first-level package directories and sort them alphabetically
-  const packages = fs
+  // 1. Get all public plugins
+  const plugins = fs
     .readdirSync(PACKAGES_DIR)
     .filter((dir) => fs.statSync(path.join(PACKAGES_DIR, dir)).isDirectory())
-    .sort();
+    .map((folder) => {
+      const pkgPath = path.join(PACKAGES_DIR, folder, "package.json");
+      if (!fs.existsSync(pkgPath)) return null;
+      const data = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+      return data.private ? null : { folder, data };
+    })
+    .filter((p): p is { folder: string; data: any } => p !== null)
+    .sort((a, b) => a.data.name.localeCompare(b.data.name));
 
-  const tableRows: string[] = [];
+  // 2. Stats Line (Total Plugins | Weekly Downloads | Contributors)
+  const totalPlugins = plugins.length;
 
-  // Iterate through each package folder and extract metadata
-  for (const pkgFolder of packages) {
-    const pkgJsonPath = path.join(PACKAGES_DIR, pkgFolder, "package.json");
+  // Downloads Badge (Orange)
+  const downloadsBadge = `<img src="https://img.shields.io/npm/dw/@cap-kit/test-plugin?style=flat-square&logo=npm&label=&color=orange" alt="Downloads" valign="middle" />`;
 
-    // Skip folders without a package.json
-    if (!fs.existsSync(pkgJsonPath)) continue;
+  // Contributors Badge (Green)
+  // const contributorsBadge = `<a href="https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/graphs/contributors"><img src="https://img.shields.io/github/contributors/${GITHUB_OWNER}/${GITHUB_REPO}?style=flat-square&logo=github&label=&color=green" alt="Contributors" valign="middle" /></a>`;
 
-    const pkgData = JSON.parse(fs.readFileSync(pkgJsonPath, "utf-8"));
+  // Capacitor Version Badge (Blue)
+  // const capVersionBadge = `<a href="https://capacitorjs.com"><img src="https://img.shields.io/badge/Capacitor-v8+-05f.svg?style=flat-square&logo=capacitor&logoColor=white" alt="Capacitor Compatibility" valign="middle" /></a>`;
 
-    // Skip private packages
-    if (pkgData.private) continue;
+  // Size/Performance Badge (Green)
+  // const sizeBadge = `<img src="https://img.shields.io/badge/Performance-Lightweight-00e676.svg?style=flat-square&logo=speedtest&logoColor=white" alt="Performance" valign="middle" />`;
 
-    const packageName: string = pkgData.name; // @cap-kit/test-plugin
-    const displayName = formatPluginName(packageName); // Test Plugin
-    const description: string =
-      pkgData.description || "No description provided.";
+  // --- STATS LINE CONSTRUCTION ---
 
-    // UPDATED: Badges with Icons (Flat Square)
-    // Version: Blue + npm logo
-    const versionBadge = `[![npm](https://img.shields.io/npm/v/${packageName}?style=flat-square&logo=npm&color=blue)](https://www.npmjs.com/package/${packageName})`;
-    // Downloads: Orange + npm logo (or generic download icon if preferred, keeping npm for consistency)
-    const downloadsBadge = `[![downloads](https://img.shields.io/npm/dm/${packageName}?style=flat-square&logo=npm&color=orange)](https://www.npmjs.com/package/${packageName})`;
+  // Add active elements to this array.
+  const activeStatsElements = [
+    `<strong>Total Plugins:</strong> ${totalPlugins}`,
+    `<strong>Weekly Downloads:</strong> ${downloadsBadge}`,
+    // `<strong>Contributors:</strong> ${contributorsBadge}`,
+    // `<strong>Core:</strong> ${capVersionBadge}`,
+    // `<strong>Quality:</strong> ${sizeBadge}`,
+  ];
 
-    // Row format: | Name (Link) | Package (`code`) | Version | Downloads | Description |
-    tableRows.push(
-      `| [**${displayName}**](./packages/${pkgFolder}) | \`${packageName}\` | ${versionBadge} | ${downloadsBadge} | ${description} |`,
-    );
-  }
+  // Join elements with a pipe separator. This avoids trailing pipes automatically.
+  const statsLine = `
+Each package maintains its own documentation and setup guide.
+**Click on the plugin Name** below to navigate to the specific installation instructions.
 
-  // Build the full table content to be injected between the markers
-  const newTableContent = [
-    START_MARKER,
-    TABLE_HEADER,
-    ...tableRows,
-    END_MARKER,
-  ].join("\n");
+Here is the current list of available plugins:
 
-  // Read the current README.md content
+<p>
+  ${activeStatsElements.join(" | ")}
+</p>
+<br />
+`;
+
+  // 3. Build Grid Rows (Chunks of 3)
+  const rows: string[] = [];
+  let currentRow: string[] = [];
+
+  plugins.forEach((plugin, index) => {
+    currentRow.push(generatePluginCard(plugin.data, plugin.folder));
+
+    // If row is full (3 items) or it's the last item
+    if (currentRow.length === 3 || index === plugins.length - 1) {
+      rows.push(`<tr>\n${currentRow.join("\n")}\n</tr>`);
+      currentRow = [];
+    }
+  });
+
+  const gridContent = `<table>\n${rows.join("\n")}\n</table>`;
+
+  // 4. Inject into README.md
   const readmeContent = fs.readFileSync(ROOT_README, "utf-8");
 
   // Create a RegExp that matches everything between the markers
   const regex = new RegExp(
-    `${escapeRegExp(START_MARKER)}[\\s\\S]*?${escapeRegExp(END_MARKER)}`,
+    `${START_MARKER.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[\\s\\S]*?${END_MARKER.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
   );
 
   // Fail explicitly if the markers are missing
   if (!regex.test(readmeContent)) {
-    console.error("❌ Plugins table markers not found in README.md.");
+    console.error("❌ Plugins markers not found.");
     process.exit(1);
   }
 
-  // Replace the existing plugins table with the newly generated one
-  const updatedReadme = readmeContent.replace(regex, newTableContent);
-  fs.writeFileSync(ROOT_README, updatedReadme);
+  // Inject Stats Line BEFORE the Grid
+  const newContent = `${START_MARKER}\n${statsLine}\n${gridContent}\n${END_MARKER}`;
+  fs.writeFileSync(ROOT_README, readmeContent.replace(regex, newContent));
 
-  console.log(`✅ README.md updated with ${tableRows.length} packages.`);
+  console.log(`✅ README.md updated with ${totalPlugins} plugins.`);
 }
 
 main().catch((err) => {
