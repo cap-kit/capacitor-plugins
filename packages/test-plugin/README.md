@@ -223,3 +223,21 @@ Result object returned by the `getPluginVersion()` method.
 ## Contributing
 
 Contributions are welcome! Please read the [contributing guide](CONTRIBUTING.md) before submitting a pull request.
+
+---
+
+## Credits
+
+This plugin is based on prior work from the Community and
+has been refactored and modernized for **Capacitor v8** and
+**Swift Package Manager** compatibility.
+
+Original inspiration:
+
+- [https://github.com/](https://github.com/)
+
+---
+
+## License
+
+MIT

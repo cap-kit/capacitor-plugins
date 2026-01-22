@@ -3,14 +3,11 @@ package io.capkit.test
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
-import androidx.activity.result.ActivityResult
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
-import com.getcapacitor.annotation.ActivityCallback
 import com.getcapacitor.annotation.CapacitorPlugin
-import io.capkit.test.utils.TestLogger
 
 /**
  * Capacitor bridge for the Test plugin.
@@ -51,7 +48,7 @@ class TestPlugin : Plugin() {
     implementation.updateConfig(config)
   }
 
-  // --- ---
+  // --- Echo ---
 
   /**
    * Echoes a string back to JavaScript.
@@ -61,7 +58,6 @@ class TestPlugin : Plugin() {
   @PluginMethod
   fun echo(call: PluginCall) {
     var value = call.getString("value") ?: ""
-    TestLogger.debug("Echoing value: $value")
 
     // Append the custom message from the configuration
     value += config.customMessage
@@ -71,10 +67,10 @@ class TestPlugin : Plugin() {
     call.resolve(ret)
   }
 
-  // ---  Version ---
+  // --- Version ---
 
   /**
-   * Returns the plugin version.
+   * Returns the native plugin version.
    */
   @PluginMethod
   fun getPluginVersion(call: PluginCall) {
@@ -95,22 +91,30 @@ class TestPlugin : Plugin() {
       val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
       val uri = Uri.fromParts("package", context.packageName, null)
       intent.data = uri
-      startActivityForResult(call, intent, "openSettingsResult")
+      context.startActivity(intent)
       call.resolve()
     } catch (e: Exception) {
+      // NOTE:
+      // On Android, PluginCall.reject(...) is fully supported and correctly used here.
+      // However, this plugin is designed with a cross-platform, state-based API mindset
+      // to remain compatible with iOS when using Swift Package Manager (SPM),
+      // where Promise rejection is not reliably available.
+      //
+      // For this reason:
+      // - JavaScript consumers SHOULD NOT rely on try/catch for this method
+      // - Errors should be handled by inspecting resolved result states instead
+      //
+      // This reject() call is intentionally kept on Android to:
+      // - preserve native correctness
+      // - document the platform capability
+      // - avoid hiding real failures during development
+      //
+      // When extending this plugin, consider mirroring error semantics across platforms
+      // to keep the public JS API predictable and consistent.
       call.reject(
         "Failed to open settings",
         "UNAVAILABLE",
       )
     }
-  }
-
-  @ActivityCallback
-  private fun openSettingsResult(
-    call: PluginCall,
-    result: ActivityResult,
-  ) {
-    // No-op, just to satisfy the callback requirement if needed
-    call.resolve()
   }
 }

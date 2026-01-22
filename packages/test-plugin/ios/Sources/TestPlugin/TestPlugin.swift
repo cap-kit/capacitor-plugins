@@ -4,14 +4,13 @@ import Capacitor
 /**
  Capacitor bridge for the Test plugin.
 
- This class represents the boundary between JavaScript and native iOS code.
- Responsibilities include:
- - reading plugin configuration
- - handling CAPPluginCall objects
- - delegating logic to the native implementation
+ This file MUST:
+ - read input from CAPPluginCall
+ - delegate logic to TestImpl
+ - resolve calls using state-based results
  */
 @objc(TestPlugin)
-public class TestPlugin: CAPPlugin, CAPBridgedPlugin {
+public final class TestPlugin: CAPPlugin, CAPBridgedPlugin {
 
     // Configuration instance
     private var config: TestConfig?
@@ -94,32 +93,21 @@ public class TestPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func openAppSettings(_ call: CAPPluginCall) {
         DispatchQueue.main.async(execute: DispatchWorkItem {
             guard let settingsUrl = URL(string: UIApplication.openSettingsURLString) else {
-                call.resolve([
-                    "success": false,
-                    "error": "Cannot open settings URL",
-                    "code": "UNAVAILABLE"
-                ])
+                TestLogger.error("Cannot create settings URL")
+                call.resolve()
                 return
             }
 
             if UIApplication.shared.canOpenURL(settingsUrl) {
                 UIApplication.shared.open(settingsUrl, options: [:]) { success in
-                    if success {
-                        call.resolve()
-                    } else {
-                        call.resolve([
-                            "success": false,
-                            "error": "Failed to open settings",
-                            "code": "UNAVAILABLE"
-                        ])
+                    if !success {
+                        TestLogger.error("Failed to open app settings")
                     }
+                    call.resolve()
                 }
             } else {
-                call.resolve([
-                    "success": false,
-                    "error": "Cannot open settings URL",
-                    "code": "UNAVAILABLE"
-                ])
+                TestLogger.error("Cannot open settings URL")
+                call.resolve()
             }
         })
     }

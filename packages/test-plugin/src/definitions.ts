@@ -75,11 +75,11 @@ export interface TestConfig {
 export enum TestErrorCode {
   /** The device does not have the requested hardware. */
   UNAVAILABLE = 'UNAVAILABLE',
-  /** The user denied the permission or the feature is disabled in settings. */
+  /** The user denied the permission or the feature is disabled. */
   PERMISSION_DENIED = 'PERMISSION_DENIED',
-  /** The test plugin failed to initialize (e.g., runtime error or Looper failure). */
+  /** The TestPlugin failed to initialize (e.g., runtime error or Looper failure). */
   INIT_FAILED = 'INIT_FAILED',
-  /** The requested test plugin type is not valid or not supported by the plugin. */
+  /** The requested TestPlugin type is not valid or not supported by the plugin. */
   UNKNOWN_TYPE = 'UNKNOWN_TYPE',
 }
 
