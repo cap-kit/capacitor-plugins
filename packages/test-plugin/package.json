@@ -16,7 +16,7 @@
     "CapKitTest.podspec",
     "LICENSE"
   ],
-  "author": "Fabio Martino",
+  "author": "CapKit Team",
   "license": "MIT",
   "repository": {
     "type": "git",
