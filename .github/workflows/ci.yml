@@ -28,7 +28,7 @@ on:
       - '.editorconfig'
 
 jobs:
-  build-and-test:
+  build-lint-test:
     name: Build, Lint, and Test
     runs-on: macos-latest
 
@@ -36,7 +36,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          # Fetch full history is required for pnpm filter to calculate diffs against main
+          # Full history required for pnpm filters to diff against main
           fetch-depth: 0
 
       - name: Setup Node.js
@@ -66,31 +66,83 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
+      # -------------------------
+      # Detect impacted packages
+      # -------------------------
+      - name: Detect Impacted Packages
+        id: affected
+        shell: bash
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "AFFECTED=ALL" >> $GITHUB_ENV
+            exit 0
+          fi
+
+          echo "📢 Detecting impacted packages (downstream)."
+          AFFECTED=$(pnpm --filter "[origin/main]..." ls --depth -1 || true)
+
+          if [[ -z "$AFFECTED" ]]; then
+            echo "🟡 No impacted packages detected."
+            echo "AFFECTED=NONE" >> $GITHUB_ENV
+          else
+            echo "📦 Impacted packages:"
+            echo "$AFFECTED"
+            echo "AFFECTED=YES" >> $GITHUB_ENV
+          fi
+
+      # -------------------------
+      # Lint
+      # -------------------------
       - name: Lint Code (Smart Filter)
         shell: bash
         run: |
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          if [[ "$AFFECTED" == "NONE" ]]; then
+            echo "🟡 Skipping lint (no impacted packages)."
+            exit 0
+          fi
+
+          if [[ "$AFFECTED" == "ALL" ]]; then
             echo "📢 On main branch: Linting ALL packages."
             pnpm lint
           else
-            echo "📢 On Pull Request: Linting IMPACTED packages only."
-            # Use the filter to run lint only on affected packages
-            pnpm --filter "...[origin/main]" lint
+            echo "📢 On Pull Request: Linting impacted packages."
+            pnpm --filter "[origin/main]..." lint
           fi
 
-      - name: Build Packages
-        run: pnpm build
+      # -------------------------
+      # Build (upstream only)
+      # -------------------------
+      - name: Build Packages (Smart Filter)
+        shell: bash
+        run: |
+          if [[ "$AFFECTED" == "NONE" ]]; then
+            echo "🟡 Skipping build (no impacted packages)."
+            exit 0
+          fi
 
+          if [[ "$AFFECTED" == "ALL" ]]; then
+            echo "📢 On main branch: Building ALL packages."
+            pnpm build
+          else
+            echo "📢 On Pull Request: Building changed packages and their dependencies."
+            pnpm --filter "...[origin/main]" build
+          fi
+
+      # -------------------------
+      # Test (downstream)
+      # -------------------------
       - name: Run Tests (Smart Filter)
         shell: bash
         run: |
-          # If we are on main, run everything for safety (final snapshot)
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "📢 On main branch: Running ALL tests."
+          if [[ "$AFFECTED" == "NONE" ]]; then
+            echo "🟡 Skipping tests (no impacted packages)."
+            exit 0
+          fi
+
+          if [[ "$AFFECTED" == "ALL" ]]; then
+            echo "📢 On main branch: Running ALL tests (serial)."
             pnpm -r --workspace-concurrency=1 test
           else
-            # On PRs, run tests only for impacted packages
-            echo "📢 On Pull Request: Running IMPACTED tests only."
-            # ...[origin/main] includes modified packages AND their dependents
-            pnpm --filter "...[origin/main]" --workspace-concurrency=1 test
+            echo "📢 On Pull Request: Running impacted tests only."
+            pnpm --filter "[origin/main]..." --workspace-concurrency=1 test
           fi
