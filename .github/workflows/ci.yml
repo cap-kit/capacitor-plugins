@@ -35,6 +35,9 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          # Fetch full history is required for pnpm filter to calculate diffs against main
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -69,6 +72,16 @@ jobs:
       - name: Build Packages
         run: pnpm build
 
-      - name: Run Tests
-        # Force concurrency to 1 to avoid xcodebuild race conditions on shared derived data
-        run: pnpm -r --workspace-concurrency=1 test
+      - name: Run Tests (Smart Filter)
+        shell: bash
+        run: |
+          # If we are on main, run everything for safety (final snapshot)
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "📢 On main branch: Running ALL tests."
+            pnpm -r --workspace-concurrency=1 test
+          else
+            # On PRs, run tests only for impacted packages
+            echo "📢 On Pull Request: Running IMPACTED tests only."
+            # ...[origin/main] includes modified packages AND their dependents
+            pnpm --filter "...[origin/main]" --workspace-concurrency=1 test
+          fi
