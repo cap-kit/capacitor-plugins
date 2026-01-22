@@ -1,0 +1,92 @@
+{
+  "name": "@cap-kit/settings",
+  "version": "0.0.1",
+  "description": "Capacitor plugin to open app and system settings on iOS and Android.",
+  "main": "dist/plugin.cjs.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/esm/index.d.ts",
+  "unpkg": "dist/plugin.js",
+  "files": [
+    "android/src/main/",
+    "android/build.gradle",
+    "dist/",
+    "ios/Sources",
+    "ios/Tests",
+    "Package.swift",
+    "CapKitSettings.podspec",
+    "LICENSE"
+  ],
+  "author": "CapKit Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cap-kit/capacitor-plugins.git",
+    "directory": "packages/settings"
+  },
+  "bugs": {
+    "url": "https://github.com/cap-kit/capacitor-plugins/issues"
+  },
+  "keywords": [
+    "capacitor",
+    "capacitor-plugin",
+    "plugin",
+    "native",
+    "settings",
+    "cap-kit"
+  ],
+  "scripts": {
+    "verify": "pnpm run verify:ios && pnpm run verify:android && pnpm run verify:web",
+    "verify:ios": "xcodebuild -scheme CapKitSettings -destination generic/platform=iOS",
+    "verify:android": "cd android && ./gradlew clean build test && cd ..",
+    "verify:web": "pnpm run build",
+    "lint:android": "cd android && ./gradlew ktlintCheck",
+    "fmt:android": "cd android && ./gradlew ktlintFormat",
+    "lint": "pnpm run eslint . && pnpm run swiftlint lint --strict || true && pnpm run lint:android || true",
+    "format:check": "prettier --check \"**/*.{css,html,ts,js,java}\" --plugin=prettier-plugin-java",
+    "format": "eslint --fix . && prettier --write \"**/*.{css,html,ts,js,java}\" --plugin=prettier-plugin-java && pnpm run swiftlint --fix --format && pnpm run fmt:android",
+    "eslint": "eslint",
+    "prettier": "prettier \"**/*.{css,html,ts,js,java}\" --plugin=prettier-plugin-java",
+    "swiftlint": "node-swiftlint lint ios/Sources",
+    "docgen": "docgen --api SettingsPlugin --output-readme README.md --output-json dist/docs.json",
+    "build": "pnpm run clean && pnpm run docgen && tsc && rollup -c rollup.config.mjs",
+    "clean": "rimraf ./dist",
+    "watch": "tsc --watch",
+    "test": "pnpm run verify",
+    "removePacked": "rimraf -g cap-kit-settings-*.tgz",
+    "publish:locally": "pnpm run removePacked && pnpm run build && pnpm pack",
+    "prepublishOnly": "pnpm run build"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.0.1",
+    "@capacitor/android": "^8.0.1",
+    "@capacitor/core": "^8.0.1",
+    "@capacitor/docgen": "^0.3.1",
+    "@capacitor/ios": "^8.0.1",
+    "@eslint/eslintrc": "^3.3.3",
+    "@eslint/js": "^9.39.2",
+    "eslint": "^9.39.2",
+    "eslint-plugin-import": "^2.32.0",
+    "globals": "^17.0.0",
+    "prettier": "^3.8.0",
+    "prettier-plugin-java": "^2.8.1",
+    "rimraf": "^6.1.2",
+    "rollup": "^4.55.2",
+    "swiftlint": "^2.0.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.53.1"
+  },
+  "peerDependencies": {
+    "@capacitor/core": ">=8.0.1"
+  },
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    },
+    "android": {
+      "src": "android"
+    }
+  }
+}
