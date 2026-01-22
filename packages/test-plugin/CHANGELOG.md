@@ -1,5 +1,11 @@
 # @cap-kit/test-plugin
 
+## 1.0.3
+
+### Patch Changes
+
+- ad5059e: Internal scaffolding updates
+
 ## 1.0.2
 
 ### Patch Changes
