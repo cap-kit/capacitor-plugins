@@ -70,4 +70,5 @@ jobs:
         run: pnpm build
 
       - name: Run Tests
-        run: pnpm test
+        # Force concurrency to 1 to avoid xcodebuild race conditions on shared derived data
+        run: pnpm -r --workspace-concurrency=1 test
