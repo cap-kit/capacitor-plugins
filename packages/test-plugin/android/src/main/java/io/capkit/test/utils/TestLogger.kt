@@ -5,7 +5,7 @@ import android.util.Log
 /**
  * Centralized logging utility for the Test plugin.
  *
- * This logger provides a single entry point for all native logs
+ * This logging provides a single entry point for all native logs
  * and supports runtime-controlled verbose logging.
  *
  * The goal is to avoid scattering `if (verbose)` checks across

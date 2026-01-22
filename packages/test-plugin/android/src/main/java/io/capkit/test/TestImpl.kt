@@ -32,8 +32,11 @@ class TestImpl(
    */
   fun updateConfig(newConfig: TestConfig) {
     this.config = newConfig
-    TestLogger.verbose = this.config.verboseLogging
-    TestLogger.debug("Configuration updated. Verbose logging: ${this.config.verboseLogging}")
+    TestLogger.verbose = newConfig.verboseLogging
+    TestLogger.debug(
+      "Configuration applied. Verbose logging:",
+      newConfig.verboseLogging.toString(),
+    )
   }
 
   /**

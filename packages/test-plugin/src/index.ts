@@ -1,6 +1,6 @@
 /**
  * @file index.ts
- * This file exports the TestPlugin and registers it with Capacitor.
+ * This file exports the Test and registers it with Capacitor.
  * It acts as the main entry point for accessing the plugin's functionality
  * across different platforms, including web.
  */

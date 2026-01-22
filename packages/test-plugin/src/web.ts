@@ -1,6 +1,6 @@
 import { WebPlugin } from '@capacitor/core';
 
-import type { TestPlugin } from './definitions';
+import type { TestPlugin, EchoOptions, EchoResult, PluginVersionResult } from './definitions';
 
 /**
  * Web implementation of the Test plugin.
@@ -26,7 +26,7 @@ export class TestWeb extends WebPlugin implements TestPlugin {
    * @param options - An object containing a `value` property to be echoed back.
    * @returns A promise resolving to an object containing the echoed `value`.
    */
-  async echo(options: { value: string }): Promise<{ value: string }> {
+  async echo(options: EchoOptions): Promise<EchoResult> {
     console.log('ECHO', options);
     // Note: On the web, reading 'capacitor.config.ts' requires specific build setups.
     // We pass the value through as-is for parity, or you can implement logic to read
@@ -44,6 +44,7 @@ export class TestWeb extends WebPlugin implements TestPlugin {
    */
   async openAppSettings(): Promise<void> {
     console.warn('Test: openAppSettings is not available on Web.');
+    // Rule: Unsupported methods MUST call this.unimplemented()
     return this.unimplemented('Not implemented on Web.') as never;
   }
 
@@ -52,9 +53,10 @@ export class TestWeb extends WebPlugin implements TestPlugin {
   /**
    * Returns the plugin version.
    *
-   * @returns The current plugin version.
+   * On the Web, this value represents the JavaScript package version
+   * rather than a native implementation.
    */
-  async getPluginVersion(): Promise<{ version: string }> {
-    return { version: 'web-1.0.0' };
+  async getPluginVersion(): Promise<PluginVersionResult> {
+    return { version: 'web' };
   }
 }

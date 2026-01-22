@@ -1,17 +1,14 @@
 import Foundation
-import Capacitor
 
 /**
- Native implementation for the Test Capacitor plugin.
+ Native iOS implementation for the Test plugin.
 
- This class contains platform-specific logic only and MUST NOT:
+ This class contains ONLY platform logic and must not:
  - access CAPPluginCall
- - interact directly with the Capacitor bridge
- - depend on JavaScript concepts
-
- The Capacitor plugin class is responsible for delegating work to this class.
+ - depend on Capacitor
+ - perform mapping logic
  */
-@objc public class TestImpl: NSObject {
+@objc public final class TestImpl: NSObject {
 
     // Properties
     private var config: TestConfig?
@@ -33,7 +30,7 @@ import Capacitor
     func applyConfig(_ config: TestConfig) {
         self.config = config
         TestLogger.verbose = config.verboseLogging
-        TestLogger.debug("Configuration applied. Verbose logging enabled.")
+        TestLogger.debug("Configuration applied. Verbose logging:", "\(config.verboseLogging)")
     }
 
     // MARK: - Echo Method
