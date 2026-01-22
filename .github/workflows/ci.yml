@@ -66,8 +66,17 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Lint Code
-        run: pnpm lint
+      - name: Lint Code (Smart Filter)
+        shell: bash
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "📢 On main branch: Linting ALL packages."
+            pnpm lint
+          else
+            echo "📢 On Pull Request: Linting IMPACTED packages only."
+            # Use the filter to run lint only on affected packages
+            pnpm --filter "...[origin/main]" lint
+          fi
 
       - name: Build Packages
         run: pnpm build
