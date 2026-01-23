@@ -1,5 +1,11 @@
 # @cap-kit/test-plugin
 
+## 2.0.0
+
+### Major Changes
+
+- 49faa9a: Internal CI verification update
+
 ## 1.0.3
 
 ### Patch Changes

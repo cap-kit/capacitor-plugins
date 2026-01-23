@@ -1,6 +1,6 @@
 {
   "name": "@cap-kit/test-plugin",
-  "version": "1.0.3",
+  "version": "2.0.0",
   "description": "Architectural reference and boilerplate for Cap-Kit plugins.",
   "main": "dist/plugin.cjs.js",
   "module": "dist/esm/index.js",
