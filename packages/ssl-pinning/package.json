@@ -3,6 +3,7 @@
   "version": "0.0.16",
   "description": "Capacitor plugin for runtime SSL certificate fingerprint pinning on iOS and Android",
   "type": "module",
+  "private": true,
   "engines": {
     "node": ">=22.0.0",
     "pnpm": ">=9.0.0"
@@ -92,11 +93,11 @@
     "eslint-plugin-import": "^2.32.0",
     "@types/node": "^24.10.4",
     "@types/yargs": "^17.0.35",
-    "globals": "^17.0.0",
+    "globals": "^17.1.0",
     "prettier": "^3.8.1",
     "prettier-plugin-java": "^2.8.1",
     "rimraf": "^6.1.2",
-    "rollup": "^4.55.2",
+    "rollup": "^4.56.0",
     "swiftlint": "^2.0.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.53.1"
