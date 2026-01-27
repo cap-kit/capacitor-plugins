@@ -1,5 +1,11 @@
 # @cap-kit/test-plugin
 
+## 5.0.0
+
+### Major Changes
+
+- 28ba943: refactor(test-plugin): architectural alignment with Capacitor v8 and v4.0.0 release
+
 ## 1.0.3
 
 ### Patch Changes
