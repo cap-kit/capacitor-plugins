@@ -7,7 +7,7 @@
 
 import { registerPlugin } from '@capacitor/core';
 
-import type { TestPlugin } from './definitions';
+import { TestPlugin } from './definitions';
 
 /**
  * Main entry point for the Test Capacitor plugin.

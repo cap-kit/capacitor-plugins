@@ -1,6 +1,6 @@
 {
   "name": "@cap-kit/test-plugin",
-  "version": "1.0.3",
+  "version": "4.0.1",
   "description": "Architectural reference and boilerplate for Cap-Kit plugins.",
   "main": "dist/plugin.cjs.js",
   "module": "dist/esm/index.js",
@@ -13,7 +13,7 @@
     "ios/Sources",
     "ios/Tests",
     "Package.swift",
-    "CapKitTest.podspec",
+    "CapKitTestPlugin.podspec",
     "LICENSE"
   ],
   "author": "CapKit Team",
@@ -35,7 +35,7 @@
   ],
   "scripts": {
     "verify": "pnpm run verify:ios && pnpm run verify:android && pnpm run verify:web",
-    "verify:ios": "xcodebuild -scheme CapKitTest -destination generic/platform=iOS",
+    "verify:ios": "xcodebuild -scheme CapKitTestPlugin -destination generic/platform=iOS",
     "verify:android": "cd android && ./gradlew clean build test && cd ..",
     "verify:web": "pnpm run build",
     "lint:android": "cd android && ./gradlew ktlintCheck",

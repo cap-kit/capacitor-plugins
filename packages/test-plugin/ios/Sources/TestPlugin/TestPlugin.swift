@@ -64,18 +64,20 @@ public final class TestPlugin: CAPPlugin, CAPBridgedPlugin {
      and delegates the core logic to the native implementation.
      */
     @objc func echo(_ call: CAPPluginCall) {
-        var value = call.getString("value", "")
+        let jsValue = call.getString("value", "")
 
-        // Log input only if verbose logging is enabled
-        TestLogger.debug("Echoing value:", value)
-
-        // Append the custom message from the configuration
-        if let configMessage = config?.customMessage {
-            value += configMessage
+        let valueToEcho: String
+        if !jsValue.isEmpty {
+            valueToEcho = jsValue
+        } else {
+            valueToEcho = config?.customMessage ?? ""
         }
 
+        // Log input only if verbose logging is enabled
+        TestLogger.debug("Echoing value:", valueToEcho)
+
         call.resolve([
-            "value": implementation.echo(value)
+            "value": implementation.echo(valueToEcho)
         ])
     }
 

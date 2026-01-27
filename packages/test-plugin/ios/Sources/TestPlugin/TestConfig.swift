@@ -59,14 +59,12 @@ public struct TestConfig {
      - Parameter plugin: The CAPPlugin instance used to access typed configuration.
      */
     init(plugin: CAPPlugin) {
-        let config = plugin.getConfig()
+        let pluginId = plugin.pluginId
 
         // Bool
-        verboseLogging =
-            (config.value(forKey: Keys.verboseLogging) as? Bool) ?? defaultVerboseLogging
+        verboseLogging = plugin.getConfigValue(Keys.verboseLogging) as? Bool ?? defaultVerboseLogging
 
         // String
-        customMessage =
-            (config.value(forKey: Keys.customMessage) as? String) ?? defaultCustomMessage
+        customMessage = plugin.getConfigValue(Keys.customMessage) as? String ?? defaultCustomMessage
     }
 }
