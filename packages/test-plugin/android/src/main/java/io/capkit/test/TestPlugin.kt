@@ -57,13 +57,17 @@ class TestPlugin : Plugin() {
    */
   @PluginMethod
   fun echo(call: PluginCall) {
-    var value = call.getString("value") ?: ""
+    val jsValue = call.getString("value") ?: ""
 
-    // Append the custom message from the configuration
-    value += config.customMessage
+    val valueToEcho =
+      if (jsValue.isNotEmpty()) {
+        jsValue
+      } else {
+        config.customMessage ?: ""
+      }
 
     val ret = JSObject()
-    ret.put("value", implementation.echo(value))
+    ret.put("value", implementation.echo(valueToEcho))
     call.resolve(ret)
   }
 

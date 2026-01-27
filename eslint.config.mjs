@@ -56,7 +56,9 @@ export default [
     rules: {
       '@typescript-eslint/array-type': 'error',
       '@typescript-eslint/consistent-type-assertions': 'error',
-      '@typescript-eslint/consistent-type-imports': 'error',
+      '@typescript-eslint/consistent-type-imports': ['error', {
+        prefer: 'no-type-imports'
+      }],
       '@typescript-eslint/prefer-for-of': 'error',
 
       'import/first': 'error',

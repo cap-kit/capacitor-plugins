@@ -1,6 +1,6 @@
 import { WebPlugin } from '@capacitor/core';
 
-import type { TestPlugin, EchoOptions, EchoResult, PluginVersionResult } from './definitions';
+import { TestPlugin, EchoOptions, EchoResult, PluginVersionResult } from './definitions';
 
 /**
  * Web implementation of the Test plugin.
