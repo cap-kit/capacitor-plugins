@@ -13,12 +13,12 @@
   },
   "packageRules": [
     {
-      "description": "Disabilita aggiornamenti per i nostri pacchetti interni",
+      "description": "Disable updates for our internal packages",
       "matchPackageNames": ["@cap-kit/*"],
       "enabled": false
     },
     {
-      "description": "Protezione peerDependencies per Capacitor v8+",
+      "description": "Peer dependency protection for Capacitor v8+",
       "matchDepTypes": ["peerDependencies"],
       "matchPackageNames": [
         "@capacitor/core",
@@ -28,14 +28,14 @@
       "rangeStrategy": "widen"
     },
     {
-      "description": "Automerge sicuro per devDependencies non-major",
+      "description": "Safe automerge for non-major devDependencies",
       "matchUpdateTypes": ["patch", "minor"],
       "matchDepTypes": ["devDependencies"],
       "automerge": true,
       "labels": ["dependencies", "automerge"]
     },
     {
-      "description": "Richiede changeset per dipendenze di produzione",
+      "description": "Require changeset for production dependencies",
       "matchDepTypes": ["dependencies"],
       "labels": ["dependencies", "requires-changeset"]
     }
