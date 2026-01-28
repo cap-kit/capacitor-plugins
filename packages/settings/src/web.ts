@@ -1,7 +1,6 @@
 import { WebPlugin } from '@capacitor/core';
 
-import { SettingsErrorCode } from './definitions';
-import type { SettingsPlugin, SettingsResult, PluginVersionResult } from './definitions';
+import { SettingsErrorCode, SettingsPlugin, SettingsResult, PluginVersionResult } from './definitions';
 
 /**
  * Web implementation of the Settings plugin.

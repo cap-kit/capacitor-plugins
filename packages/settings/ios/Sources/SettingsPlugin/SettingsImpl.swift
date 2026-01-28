@@ -48,15 +48,15 @@ import UIKit
     // MARK: - Settings
 
     /**
-    Opens the requested iOS settings page.
+     Opens the requested iOS settings page.
 
-    - Parameter option: The settings option to open.
+     - Parameter option: The settings option to open.
 
-    - Returns:
-    - success: Indicates whether the URL was valid and dispatched.
-    - error: Optional human-readable error.
-    - code: Optional machine-readable error code.
-    */
+     - Returns:
+     - success: Indicates whether the URL was valid and dispatched.
+     - error: Optional human-readable error.
+     - code: Optional machine-readable error code.
+     */
     func open(option: String?) -> Result {
         guard let url = SettingsUtils.resolveSettingsURL(for: option) else {
             return Result(

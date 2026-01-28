@@ -67,5 +67,8 @@ captures
 
 .externalNativeBuild
 
+# Auto generated version
+ios/Sources/SettingsPlugin/Version.swift
+
 # Locally published versions
 cap-kit-settings-*.tgz

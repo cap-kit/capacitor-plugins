@@ -5,12 +5,12 @@ import Capacitor
  Helper struct to manage the SSLPinning plugin configuration.
 
  This struct reads static configuration values from `capacitor.config.ts`
- using Capacitor's `PluginConfig` API.
+ using the Capacitor plugin instance's built-in config access.
 
  IMPORTANT:
- - These values are READ-ONLY at runtime
- - JavaScript MUST NOT access them directly
- - Actual behavior is implemented in native code only
+ - These values are READ-ONLY at runtime.
+ - JavaScript MUST NOT access them directly.
+ - Actual behavior is implemented in native code only.
  */
 public struct SSLPinningConfig {
 
@@ -25,7 +25,10 @@ public struct SSLPinningConfig {
     // MARK: - Public Config Values
 
     /**
-     Enables verbose native logging (Xcode / Logcat).
+     Enables verbose native logging.
+
+     When enabled, additional debug information is printed
+     to the Xcode console via the plugin logger.
 
      Default: false
      */
@@ -43,29 +46,34 @@ public struct SSLPinningConfig {
      */
     public let fingerprints: [String]
 
+    // MARK: - Private Defaults
+
+    private let defaultVerboseLogging = false
+    private let defaultFingerprint: String? = nil
+    private let defaultFingerprints: [String] = []
+
     // MARK: - Init
 
     /**
-     Initializes the configuration by reading values from
-     `capacitor.config.ts` via Capacitor's PluginConfig system.
+     Initializes the configuration by reading values from the Capacitor bridge.
+
+     - Parameter plugin: The CAPPlugin instance used to access typed configuration.
      */
     init(plugin: CAPPlugin) {
-        let config = plugin.getConfig()
+        // Use getConfigValue(key) to bypass SPM visibility issues and ensure stability.
 
-        // Bool
-        verboseLogging =
-            (config.value(forKey: Keys.verboseLogging) as? Bool) ?? false
+        // Bool - Verbose Logging
+        verboseLogging = plugin.getConfigValue(Keys.verboseLogging) as? Bool ?? defaultVerboseLogging
 
-        // Optional string
-        if let fprt = config.value(forKey: Keys.fingerprint) as? String,
-           !fprt.isEmpty {
+        // Optional String - Single Fingerprint
+        // We validate that it is not empty after casting to avoid using empty strings as valid fingerprints.
+        if let fprt = plugin.getConfigValue(Keys.fingerprint) as? String, !fprt.isEmpty {
             fingerprint = fprt
         } else {
-            fingerprint = nil
+            fingerprint = defaultFingerprint
         }
 
-        // Arrays (default empty)
-        fingerprints =
-            config.value(forKey: Keys.fingerprints) as? [String] ?? []
+        // Array of Strings - Multiple Fingerprints
+        fingerprints = plugin.getConfigValue(Keys.fingerprints) as? [String] ?? defaultFingerprints
     }
 }

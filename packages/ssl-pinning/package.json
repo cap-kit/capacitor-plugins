@@ -6,7 +6,7 @@
   "private": true,
   "engines": {
     "node": ">=22.0.0",
-    "pnpm": ">=9.0.0"
+    "pnpm": ">=10.0.0"
   },
   "main": "dist/plugin.cjs.js",
   "module": "dist/esm/index.js",
@@ -34,6 +34,7 @@
   "bugs": {
     "url": "https://github.com/cap-kit/capacitor-plugins/issues"
   },
+  "homepage": "https://github.com/cap-kit/capacitor-plugins/tree/main/packages/ssl-pinning#readme",
   "keywords": [
     "capacitor",
     "capacitor-plugin",
@@ -52,7 +53,7 @@
   ],
   "scripts": {
     "verify": "pnpm run verify:ios && pnpm run verify:android && pnpm run verify:web",
-    "verify:ios": "xcodebuild -scheme CapKitSSLPinning -destination generic/platform=iOS",
+    "verify:ios": "node ./scripts/sync-version.js && xcodebuild -scheme CapKitSSLPinning -destination generic/platform=iOS",
     "verify:android": "cd android && ./gradlew clean build test && cd ..",
     "verify:web": "pnpm run build",
     "lint:android": "cd android && ./gradlew ktlintCheck",
@@ -64,7 +65,7 @@
     "prettier": "prettier \"**/*.{css,html,ts,js,java}\" --plugin=prettier-plugin-java",
     "swiftlint": "node-swiftlint lint ios/Sources",
     "docgen": "docgen --api SSLPinningPlugin --output-readme README.md --output-json dist/docs.json",
-    "build": "pnpm run clean && pnpm run docgen && tsc && rollup -c rollup.config.mjs && node scripts/chmod.js",
+    "build": "node ./scripts/sync-version.js && pnpm run clean && pnpm run docgen && tsc && rollup -c rollup.config.mjs && node scripts/chmod.js",
     "clean": "rimraf ./dist",
     "watch": "tsc --watch",
     "test": "pnpm run verify",
@@ -79,31 +80,31 @@
     "access": "public"
   },
   "dependencies": {
-    "yargs": "^17.7.2"
+    "yargs": "^18.0.0"
   },
   "devDependencies": {
-    "@capacitor/android": "^8.0.1",
-    "@capacitor/cli": "^8.0.1",
-    "@capacitor/core": "^8.0.1",
+    "@capacitor/android": "^8.0.2",
+    "@capacitor/cli": "^8.0.2",
+    "@capacitor/core": "^8.0.2",
     "@capacitor/docgen": "^0.3.1",
-    "@capacitor/ios": "^8.0.1",
+    "@capacitor/ios": "^8.0.2",
     "@eslint/eslintrc": "^3.3.3",
     "@eslint/js": "^9.39.2",
     "eslint": "^9.39.2",
     "eslint-plugin-import": "^2.32.0",
-    "@types/node": "^24.10.4",
+    "@types/node": "^25.0.10",
     "@types/yargs": "^17.0.35",
-    "globals": "^17.1.0",
+    "globals": "^17.2.0",
     "prettier": "^3.8.1",
     "prettier-plugin-java": "^2.8.1",
     "rimraf": "^6.1.2",
-    "rollup": "^4.56.0",
+    "rollup": "^4.57.0",
     "swiftlint": "^2.0.0",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.53.1"
+    "typescript-eslint": "^8.54.0"
   },
   "peerDependencies": {
-    "@capacitor/core": "^8.0.1"
+    "@capacitor/core": "^8.0.2"
   },
   "capacitor": {
     "ios": {
