@@ -4,7 +4,7 @@
   "description": "Architectural reference and boilerplate for Cap-Kit plugins.",
   "type": "module",
   "engines": {
-    "node": ">=22.0.0",
+    "node": ">=24.0.0",
     "pnpm": ">=10.0.0"
   },
   "main": "dist/plugin.cjs.js",

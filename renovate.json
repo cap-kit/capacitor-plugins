@@ -1,0 +1,50 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "schedule:earlyMondays",
+    ":preserveSemverRanges",
+    "group:allNonMajor"
+  ],
+  "dependencyDashboard": true,
+  "lockFileMaintenance": {
+    "enabled": true,
+    "automerge": true
+  },
+  "packageRules": [
+    {
+      "description": "Disabilita aggiornamenti per i nostri pacchetti interni",
+      "matchPackageNames": ["@cap-kit/*"],
+      "enabled": false
+    },
+    {
+      "description": "Protezione peerDependencies per Capacitor v8+",
+      "matchDepTypes": ["peerDependencies"],
+      "matchPackageNames": [
+        "@capacitor/core",
+        "@capacitor/android",
+        "@capacitor/ios"
+      ],
+      "rangeStrategy": "widen"
+    },
+    {
+      "description": "Automerge sicuro per devDependencies non-major",
+      "matchUpdateTypes": ["patch", "minor"],
+      "matchDepTypes": ["devDependencies"],
+      "automerge": true,
+      "labels": ["dependencies", "automerge"]
+    },
+    {
+      "description": "Richiede changeset per dipendenze di produzione",
+      "matchDepTypes": ["dependencies"],
+      "labels": ["dependencies", "requires-changeset"]
+    }
+  ],
+  "constraints": {
+    "node": ">=24.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "pnpm": {
+    "enabled": true
+  }
+}

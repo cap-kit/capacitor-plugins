@@ -2,148 +2,86 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
+    branches: [main, 'renovate/**']
     paths-ignore:
       - '**/*.md'
       - 'docs/**'
       - 'assets/**'
-      - '.vscode/**'
-      - '.idea/**'
       - 'LICENSE'
       - '.gitignore'
       - '.editorconfig'
-
   pull_request:
-    branches:
-      - main
+    branches: [main]
     paths-ignore:
       - '**/*.md'
       - 'docs/**'
       - 'assets/**'
-      - '.vscode/**'
-      - '.idea/**'
       - 'LICENSE'
       - '.gitignore'
       - '.editorconfig'
 
 jobs:
-  build-lint-test:
-    name: Build, Lint, and Test
-    runs-on: macos-latest
-
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          # Full history required for pnpm filters to diff against main
-          fetch-depth: 0
+          fetch-depth: 0 # Required for diffing against origin/main
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v4
         with:
           version: 10
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org' # CapKit registry protocol
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile # Prevents lockfile drift in CI
+
+      - name: Lint (main)
+        if: github.ref == 'refs/heads/main'
+        run: pnpm lint
+
+      - name: Lint (impacted)
+        if: github.ref != 'refs/heads/main'
+        run: pnpm --filter "[origin/main]..." lint
+
+  build-test:
+    name: Build and Test
+    runs-on: macos-latest # Required for xcodebuild and iOS tooling
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
           registry-url: 'https://registry.npmjs.org'
-          cache: 'pnpm'
+          cache: pnpm
 
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+      - run: pnpm install --frozen-lockfile
 
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-
+      - name: Build (main)
+        if: github.ref == 'refs/heads/main'
+        run: pnpm build
 
-      - name: Install Dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Build (impacted upstream)
+        if: github.ref != 'refs/heads/main'
+        run: pnpm --filter "...[origin/main]" build
 
-      # -------------------------
-      # Detect impacted packages
-      # -------------------------
-      - name: Detect Impacted Packages
-        id: affected
-        shell: bash
-        run: |
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "AFFECTED=ALL" >> $GITHUB_ENV
-            exit 0
-          fi
+      - name: Test (main)
+        if: github.ref == 'refs/heads/main'
+        run: pnpm -r --workspace-concurrency=1 test # Serial execution to avoid iOS simulator conflicts
 
-          echo "📢 Detecting impacted packages (downstream)."
-          AFFECTED=$(pnpm --filter "[origin/main]..." ls --depth -1 || true)
-
-          if [[ -z "$AFFECTED" ]]; then
-            echo "🟡 No impacted packages detected."
-            echo "AFFECTED=NONE" >> $GITHUB_ENV
-          else
-            echo "📦 Impacted packages:"
-            echo "$AFFECTED"
-            echo "AFFECTED=YES" >> $GITHUB_ENV
-          fi
-
-      # -------------------------
-      # Lint
-      # -------------------------
-      - name: Lint Code (Smart Filter)
-        shell: bash
-        run: |
-          if [[ "$AFFECTED" == "NONE" ]]; then
-            echo "🟡 Skipping lint (no impacted packages)."
-            exit 0
-          fi
-
-          if [[ "$AFFECTED" == "ALL" ]]; then
-            echo "📢 On main branch: Linting ALL packages."
-            pnpm lint
-          else
-            echo "📢 On Pull Request: Linting impacted packages."
-            pnpm --filter "[origin/main]..." lint
-          fi
-
-      # -------------------------
-      # Build (upstream only)
-      # -------------------------
-      - name: Build Packages (Smart Filter)
-        shell: bash
-        run: |
-          if [[ "$AFFECTED" == "NONE" ]]; then
-            echo "🟡 Skipping build (no impacted packages)."
-            exit 0
-          fi
-
-          if [[ "$AFFECTED" == "ALL" ]]; then
-            echo "📢 On main branch: Building ALL packages."
-            pnpm build
-          else
-            echo "📢 On Pull Request: Building changed packages and their dependencies."
-            pnpm --filter "...[origin/main]" build
-          fi
-
-      # -------------------------
-      # Test (downstream)
-      # -------------------------
-      - name: Run Tests (Smart Filter)
-        shell: bash
-        run: |
-          if [[ "$AFFECTED" == "NONE" ]]; then
-            echo "🟡 Skipping tests (no impacted packages)."
-            exit 0
-          fi
-
-          if [[ "$AFFECTED" == "ALL" ]]; then
-            echo "📢 On main branch: Running ALL tests (serial)."
-            pnpm -r --workspace-concurrency=1 test
-          else
-            echo "📢 On Pull Request: Running impacted tests only."
-            pnpm --filter "[origin/main]..." --workspace-concurrency=1 test
-          fi
+      - name: Test (impacted downstream)
+        if: github.ref != 'refs/heads/main'
+        run: pnpm --filter "[origin/main]..." --workspace-concurrency=1 test
