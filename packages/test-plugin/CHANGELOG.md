@@ -1,5 +1,11 @@
 # @cap-kit/test-plugin
 
+## 6.0.0
+
+### Major Changes
+
+- 9003cac: Refactor iOS version retrieval logic and update core dependencies to latest Capacitor v8 standards
+
 ## 5.0.0
 
 ### Major Changes
