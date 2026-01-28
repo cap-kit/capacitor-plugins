@@ -31,11 +31,12 @@
     "capacitor",
     "capacitor-plugin",
     "ionic",
-    "native"
+    "native",
+    "cap-kit"
   ],
   "scripts": {
     "verify": "pnpm run verify:ios && pnpm run verify:android && pnpm run verify:web",
-    "verify:ios": "xcodebuild -scheme CapKitTestPlugin -destination generic/platform=iOS",
+    "verify:ios": "node ./scripts/sync-version.js && xcodebuild -scheme CapKitTestPlugin -destination generic/platform=iOS",
     "verify:android": "cd android && ./gradlew clean build test && cd ..",
     "verify:web": "pnpm run build",
     "lint:android": "cd android && ./gradlew ktlintCheck",
@@ -47,7 +48,7 @@
     "prettier": "prettier \"**/*.{css,html,ts,js,java}\" --plugin=prettier-plugin-java",
     "swiftlint": "node-swiftlint lint ios/Sources",
     "docgen": "docgen --api TestPlugin --output-readme README.md --output-json dist/docs.json",
-    "build": "pnpm run clean && pnpm run docgen && tsc && rollup -c rollup.config.mjs",
+    "build": "node ./scripts/sync-version.js && pnpm run clean && pnpm run docgen && tsc && rollup -c rollup.config.mjs",
     "clean": "rimraf ./dist",
     "watch": "tsc --watch",
     "test": "pnpm run verify",
@@ -59,26 +60,26 @@
     "access": "public"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.0.1",
-    "@capacitor/android": "^8.0.1",
-    "@capacitor/core": "^8.0.1",
+    "@capacitor/cli": "^8.0.2",
+    "@capacitor/android": "^8.0.2",
+    "@capacitor/core": "^8.0.2",
     "@capacitor/docgen": "^0.3.1",
-    "@capacitor/ios": "^8.0.1",
+    "@capacitor/ios": "^8.0.2",
     "@eslint/eslintrc": "^3.3.3",
     "@eslint/js": "^9.39.2",
     "eslint": "^9.39.2",
     "eslint-plugin-import": "^2.32.0",
-    "globals": "^17.1.0",
+    "globals": "^17.2.0",
     "prettier": "^3.8.1",
     "prettier-plugin-java": "^2.8.1",
     "rimraf": "^6.1.2",
-    "rollup": "^4.56.0",
+    "rollup": "^4.57.0",
     "swiftlint": "^2.0.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.53.1"
+    "typescript-eslint": "^8.54.0"
   },
   "peerDependencies": {
-    "@capacitor/core": ">=8.0.1"
+    "@capacitor/core": ">=8.0.2"
   },
   "capacitor": {
     "ios": {
