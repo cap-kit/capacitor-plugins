@@ -1,0 +1,61 @@
+name: Renovate Changeset Helper
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  generate-changeset:
+    runs-on: ubuntu-latest
+    # Runs only if the actor is Renovate and the PR has the 'requires-changeset' label
+    if: github.actor == 'renovate[bot]' && contains(github.event.pull_request.labels.*.name, 'requires-changeset')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Detect Changed Packages and Create Changeset
+        shell: bash
+        run: |
+          # 1. Find all modified package.json files (excluding the root one)
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD | grep "package.json" | grep "packages/" || true)
+          
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No package-level changes detected. Checking root dependencies..."
+            # If the change is only in the root, choose a default package (e.g. core)
+            # or apply different logic. Here we assume core as a fallback.
+            PACKAGES=("@cap-kit/core")
+          else
+            PACKAGES=()
+            for FILE in $CHANGED_FILES; do
+              # Extracts the "name" field from package.json using jq
+              PKG_NAME=$(jq -r '.name' $FILE)
+              PACKAGES+=("$PKG_NAME")
+            done
+          fi
+
+          # 2. Create the changeset file
+          DESC="${{ github.event.pull_request.title }}"
+          FILENAME=".changeset/renovate-$(date +%s).md"
+          
+          echo "---" > $FILENAME
+          for PKG in "${PACKAGES[@]}"; do
+            echo "'$PKG': patch" >> $FILENAME
+          done
+          echo "---" >> $FILENAME
+          echo "" >> $FILENAME
+          echo "$DESC" >> $FILENAME
+          
+          echo "✅ Created changeset for: ${PACKAGES[*]}"
+
+      - name: Commit Changeset
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .changeset/*.md
+          # [skip ci] prevents infinite CI pipeline loops
+          git commit -m "chore(release): Add dynamic changeset for renovate update [skip ci]"
+          git push
