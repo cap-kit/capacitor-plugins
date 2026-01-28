@@ -39,16 +39,17 @@ jobs:
           # Full history required for pnpm filters to diff against main
           fetch-depth: 0
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           registry-url: 'https://registry.npmjs.org'
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 10
+          cache: 'pnpm'
 
       - name: Get pnpm store directory
         shell: bash
