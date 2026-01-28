@@ -69,5 +69,8 @@ captures
 # External native build folder generated in Android Studio 2.2 and later
 .externalNativeBuild
 
+# Auto generated version
+ios/Sources/SSLPinningPlugin/Version.swift
+
 # Locally published versions
 cap-kit-ssl-pinning-*.tgz

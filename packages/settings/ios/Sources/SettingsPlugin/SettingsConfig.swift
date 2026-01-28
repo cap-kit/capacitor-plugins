@@ -10,7 +10,7 @@ import Capacitor
  Configuration is:
  - read once during plugin initialization
  - treated as immutable runtime input
- - consumed only by native code (never by JavaScript)
+ - consumed only by native code
  */
 public struct SettingsConfig {
 
@@ -46,10 +46,9 @@ public struct SettingsConfig {
      - Parameter plugin: The CAPPlugin instance used to access typed configuration.
      */
     init(plugin: CAPPlugin) {
-        let config = plugin.getConfig()
+        // Use getConfigValue(key) to ensure compatibility across all v8 environments
 
-        // Bool
-        verboseLogging =
-            (config.value(forKey: Keys.verboseLogging) as? Bool) ?? defaultVerboseLogging
+        // Bool - Verbose Logging
+        verboseLogging = plugin.getConfigValue(Keys.verboseLogging) as? Bool ?? defaultVerboseLogging
     }
 }

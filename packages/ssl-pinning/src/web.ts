@@ -8,7 +8,7 @@
 
 import { CapacitorException, ExceptionCode, WebPlugin } from '@capacitor/core';
 
-import type {
+import {
   PluginVersionResult,
   SSLPinningMultiOptions,
   SSLPinningOptions,

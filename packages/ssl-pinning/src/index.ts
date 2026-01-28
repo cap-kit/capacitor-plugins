@@ -11,7 +11,7 @@ import { registerPlugin } from '@capacitor/core';
  * and exports all necessary types for consumers.
  */
 
-import type { SSLPinningPlugin } from './definitions';
+import { SSLPinningPlugin } from './definitions';
 
 /**
  * The SSLPinning plugin instance.

@@ -7,7 +7,7 @@
 
 import { registerPlugin } from '@capacitor/core';
 
-import type { SettingsPlugin } from './definitions';
+import { SettingsPlugin } from './definitions';
 
 /**
  * Main entry point for the Settings Capacitor plugin.

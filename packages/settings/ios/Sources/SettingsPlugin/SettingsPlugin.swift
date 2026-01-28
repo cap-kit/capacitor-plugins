@@ -69,10 +69,12 @@ public final class SettingsPlugin: CAPPlugin, CAPBridgedPlugin {
 
     // MARK: - Version
 
-    /// Retrieves the plugin version from the bundle.
+    /// Retrieves the plugin version synchronized from package.json.
     @objc func getPluginVersion(_ call: CAPPluginCall) {
-        let version = Bundle(for: type(of: self)).infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.1"
-        call.resolve(["version": version])
+        // Standardized enum name across all CapKit plugins
+        call.resolve([
+            "version": PluginVersion.number
+        ])
     }
 
     // MARK: - Helpers

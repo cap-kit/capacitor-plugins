@@ -1,8 +1,13 @@
 {
   "name": "capacitor-plugins",
   "private": true,
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  },
   "scripts": {
     "build": "pnpm -r build",
+    "clean": "pnpm -r run clean",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
     "verify": "pnpm -r run verify",
@@ -13,7 +18,7 @@
     "prepare": "husky",
     "changeset": "changeset",
     "version": "changeset version",
-    "release": "pnpm build && changeset publish"
+    "release": "pnpm build && pnpm changeset publish"
   },
   "author": "Fabio Martino",
   "lint-staged": {
@@ -27,6 +32,7 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
+      "esbuild",
       "swiftlint"
     ],
     "patchedDependencies": {
