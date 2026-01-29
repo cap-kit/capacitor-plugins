@@ -116,8 +116,8 @@ This repository operates as a strict **pnpm monorepo**.
 
 ### Prerequisites
 
-- Node.js 20+
-- pnpm 9+ (\`npm install -g pnpm\`)
+- Node.js 24+
+- pnpm 10+ (\`npm install -g pnpm\`)
 
 ### Installation
 

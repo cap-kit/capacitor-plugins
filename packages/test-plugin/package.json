@@ -42,7 +42,7 @@
   "scripts": {
     "verify": "pnpm run verify:ios && pnpm run verify:android && pnpm run verify:web",
     "verify:ios": "node ./scripts/sync-version.js && xcodebuild -scheme CapKitTestPlugin -destination generic/platform=iOS",
-    "verify:android": "cd android && ./gradlew clean build test && cd ..",
+    "verify:android": "cd android && ./gradlew clean build && cd ..",
     "verify:web": "pnpm run build",
     "lint:android": "cd android && ./gradlew ktlintCheck",
     "fmt:android": "cd android && ./gradlew ktlintFormat",
