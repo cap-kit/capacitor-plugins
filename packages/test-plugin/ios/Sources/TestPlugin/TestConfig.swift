@@ -54,6 +54,11 @@ public struct TestConfig {
     // MARK: - Init
 
     /**
+     NOTE:
+     We intentionally use `getConfigValue(_:)` instead of `getConfig()`
+     due to Swift Package Manager toolchain limitations observed in
+     Capacitor v8 (PluginConfig not reliably accessible in some setups).
+
      Initializes the configuration by reading values from the Capacitor bridge.
 
      - Parameter plugin: The CAPPlugin instance used to access typed configuration.

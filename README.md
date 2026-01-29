@@ -32,12 +32,26 @@ Each package maintains its own documentation and setup guide.
 Here is the current list of available plugins:
 
 <p>
-  <strong>Total Plugins:</strong> 1 | <strong>Weekly Downloads:</strong> <img src="https://img.shields.io/npm/dw/@cap-kit/test-plugin?style=flat-square&logo=npm&label=&color=orange" alt="Downloads" valign="middle" />
+  <strong>Total Plugins:</strong> 2 | <strong>Weekly Downloads:</strong> <img src="https://img.shields.io/npm/dw/@cap-kit/test-plugin?style=flat-square&logo=npm&label=&color=orange" alt="Downloads" valign="middle" />
 </p>
 <br />
 
 <table>
 <tr>
+
+<td align="center" width="33%">
+  <h3><a href="./packages/settings">Settings</a></h3>
+  <p><code>@cap-kit/settings</code></p>
+  <p>
+    <a href="https://www.npmjs.com/package/@cap-kit/settings"><img src="https://img.shields.io/npm/v/@cap-kit/settings?style=flat-square&color=blue&label=npm&logo=npm" alt="npm version"></a>
+    <a href="https://www.npmjs.com/package/@cap-kit/settings"><img src="https://img.shields.io/npm/dm/@cap-kit/settings?style=flat-square&color=orange&label=downloads&logo=npm" alt="downloads"></a>
+  </p>
+  <p>Capacitor plugin to open app and system settings on iOS and Android.</p>
+  <p>
+    <a href="./packages/settings"><strong>Documentation</strong></a> | 
+    <a href="https://www.npmjs.com/package/@cap-kit/settings"><strong>NPM</strong></a>
+  </p>
+</td>
 
 <td align="center" width="33%">
   <h3><a href="./packages/test-plugin">Test Plugin</a></h3>
@@ -69,8 +83,8 @@ This repository operates as a strict **pnpm monorepo**.
 
 ### Prerequisites
 
-- Node.js 20+
-- pnpm 9+ (`npm install -g pnpm`)
+- Node.js 24+
+- pnpm 10+ (`npm install -g pnpm`)
 
 ### Installation
 
