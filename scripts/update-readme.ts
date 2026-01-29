@@ -87,7 +87,10 @@ async function main(): Promise<void> {
       const pkgPath = path.join(PACKAGES_DIR, folder, "package.json");
       if (!fs.existsSync(pkgPath)) return null;
       const data = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
-      return data.private ? null : { folder, data };
+
+      if (data.private !== false) return null;
+
+      return { folder, data };
     })
     .filter((p): p is { folder: string; data: any } => p !== null)
     .sort((a, b) => a.data.name.localeCompare(b.data.name));
