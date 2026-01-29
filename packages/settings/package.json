@@ -1,9 +1,9 @@
 {
   "name": "@cap-kit/settings",
-  "version": "0.0.1",
+  "version": "8.0.0-next.0",
   "description": "Capacitor plugin to open app and system settings on iOS and Android.",
   "type": "module",
-  "private": true,
+  "private": false,
   "engines": {
     "node": ">=24.0.0",
     "pnpm": ">=10.0.0"
