@@ -1,5 +1,5 @@
 ---
-"@cap-kit/ssl-pinning": patch
+"@cap-kit/settings": patch
 ---
 
 Initial release for Capacitor v8 alignment.
