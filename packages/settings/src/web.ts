@@ -30,7 +30,7 @@ export class SettingsWeb extends WebPlugin implements SettingsPlugin {
   async open(): Promise<SettingsResult> {
     return {
       success: false,
-      error: 'Opening system settings, is not supported on the Web.',
+      error: 'Opening system settings is not supported on the Web.',
       code: SettingsErrorCode.UNAVAILABLE,
     };
   }
