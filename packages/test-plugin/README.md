@@ -154,11 +154,6 @@ openAppSettings() => Promise<void>
 
 Opens the operating system's application settings page.
 
-This is typically used when a permission has been permanently
-denied and the user must enable it manually.
-
-On Web, this method is not supported.
-
 **Since:** 1.0.0
 
 ---

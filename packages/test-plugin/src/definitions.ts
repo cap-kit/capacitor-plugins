@@ -177,10 +177,7 @@ export interface TestPlugin {
   /**
    * Opens the operating system's application settings page.
    *
-   * This is typically used when a permission has been permanently
-   * denied and the user must enable it manually.
-   *
-   * On Web, this method is not supported.
+   * @throws {TestError} Rejects if the settings page cannot be opened.
    *
    * @since 1.0.0
    */

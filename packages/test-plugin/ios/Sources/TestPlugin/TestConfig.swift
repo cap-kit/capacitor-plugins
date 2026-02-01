@@ -48,28 +48,25 @@ public struct TestConfig {
     // MARK: - Private Defaults
 
     // Default values
-    private let defaultVerboseLogging = false
-    private let defaultCustomMessage = " (from config)"
+    private static let defaultVerboseLogging = false
+    private static let defaultCustomMessage = " (from config)"
 
     // MARK: - Init
 
     /**
-     NOTE:
-     We intentionally use `getConfigValue(_:)` instead of `getConfig()`
-     due to Swift Package Manager toolchain limitations observed in
-     Capacitor v8 (PluginConfig not reliably accessible in some setups).
-
      Initializes the configuration by reading values from the Capacitor bridge.
 
      - Parameter plugin: The CAPPlugin instance used to access typed configuration.
      */
     init(plugin: CAPPlugin) {
-        let pluginId = plugin.pluginId
+        let config = plugin.getConfig()
 
         // Bool
-        verboseLogging = plugin.getConfigValue(Keys.verboseLogging) as? Bool ?? defaultVerboseLogging
+        verboseLogging =
+            config.getBoolean(Keys.verboseLogging, Self.defaultVerboseLogging)
 
         // String
-        customMessage = plugin.getConfigValue(Keys.customMessage) as? String ?? defaultCustomMessage
+        customMessage =
+            config.getString(Keys.customMessage) ?? Self.defaultCustomMessage
     }
 }

@@ -1,5 +1,6 @@
 import Foundation
 import Capacitor
+import UIKit
 
 /**
  Capacitor bridge for the Test plugin.
@@ -7,10 +8,13 @@ import Capacitor
  This file MUST:
  - read input from CAPPluginCall
  - delegate logic to TestImpl
- - resolve calls using state-based results
+ - mapping native errors to JS error codes
+ - resolving or rejecting calls exactly once
  */
 @objc(TestPlugin)
 public final class TestPlugin: CAPPlugin, CAPBridgedPlugin {
+
+    // MARK: - Properties
 
     // Configuration instance
     private var config: TestConfig?
@@ -36,14 +40,15 @@ public final class TestPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "openAppSettings", returnType: CAPPluginReturnPromise)
     ]
 
-    /**
-     Plugin lifecycle entry point.
+    // MARK: - Lifecycle
 
+    /**
      Called once when the plugin is loaded by the Capacitor bridge.
-     This is the correct place to:
-     - read configuration values
-     - initialize native resources
-     - configure the implementation instance
+
+     Responsibilities:
+     - read static configuration
+     - initialize native implementation
+     - apply configuration-derived behavior
      */
     override public func load() {
         // Initialize TestConfig with the correct type
@@ -55,35 +60,65 @@ public final class TestPlugin: CAPPlugin, CAPBridgedPlugin {
         TestLogger.debug("Test plugin loaded with config:", cfg)
     }
 
+    // MARK: - Error Mapping
+
+    /**
+     Maps native TestError instances to JS-facing TestErrorCode values.
+
+     IMPORTANT:
+     - This is the ONLY place where native errors are translated
+     - TestImpl must NEVER reference JS or Capacitor
+     */
+    private func reject(_ call: CAPPluginCall, error: TestError) {
+        let code: String
+
+        switch error {
+        case .unavailable:
+            code = "UNAVAILABLE"
+        case .permissionDenied:
+            code = "PERMISSION_DENIED"
+        case .initFailed:
+            code = "INIT_FAILED"
+        case .unknownType:
+            code = "UNKNOWN_TYPE"
+        }
+
+        call.reject(error.message, code)
+    }
+
     // MARK: - Echo
 
     /**
      Echoes a string back to JavaScript.
 
-     This method validates input, applies configuration-derived behavior,
-     and delegates the core logic to the native implementation.
+     - Validates input
+     - Applies configuration-derived behavior
+     - Delegates logic to the native implementation
      */
     @objc func echo(_ call: CAPPluginCall) {
-        let jsValue = call.getString("value", "")
-
-        let valueToEcho: String
-        if !jsValue.isEmpty {
-            valueToEcho = jsValue
-        } else {
-            valueToEcho = config?.customMessage ?? ""
-        }
+        var value = call.getString("value") ?? ""
 
         // Log input only if verbose logging is enabled
-        TestLogger.debug("Echoing value:", valueToEcho)
+        TestLogger.debug("Echoing value:", value)
+
+        // Append the custom message from the configuration
+        if let configMessage = config?.customMessage {
+            value += configMessage
+        }
 
         call.resolve([
-            "value": implementation.echo(valueToEcho)
+            "value": implementation.echo(value)
         ])
     }
 
     // MARK: - Version
 
-    /// Retrieves the plugin version synchronized from package.json.
+    /**
+     Returns the native plugin version.
+
+     The version is synchronized from package.json
+     and shared across JS, Android, and iOS.
+     */
     @objc func getPluginVersion(_ call: CAPPluginCall) {
         // Standardized enum name across all CapKit plugins
         call.resolve([
@@ -93,26 +128,19 @@ public final class TestPlugin: CAPPlugin, CAPBridgedPlugin {
 
     // MARK: - Settings
 
-    /// Opens the iOS Settings app specifically for this application.
+    /**
+     Opens the iOS Settings page for the current application.
+     */
     @objc func openAppSettings(_ call: CAPPluginCall) {
-        DispatchQueue.main.async(execute: DispatchWorkItem {
-            guard let settingsUrl = URL(string: UIApplication.openSettingsURLString) else {
-                TestLogger.error("Cannot create settings URL")
+        DispatchQueue.main.async {
+            do {
+                try self.implementation.openAppSettings()
                 call.resolve()
-                return
+            } catch let error as TestError {
+                self.reject(call, error: error)
+            } catch {
+                call.reject("Unknown error", "UNAVAILABLE")
             }
-
-            if UIApplication.shared.canOpenURL(settingsUrl) {
-                UIApplication.shared.open(settingsUrl, options: [:]) { success in
-                    if !success {
-                        TestLogger.error("Failed to open app settings")
-                    }
-                    call.resolve()
-                }
-            } else {
-                TestLogger.error("Cannot open settings URL")
-                call.resolve()
-            }
-        })
+        }
     }
 }

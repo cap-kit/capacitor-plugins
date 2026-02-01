@@ -38,14 +38,12 @@ export class TestWeb extends WebPlugin implements TestPlugin {
 
   /**
    * Opens the app settings page.
-   * On Web, this is not applicable.
-   *
-   * @returns A promise that resolves when the operation is complete.
+   * On Web, this is not applicable and will reject the Promise.
    */
   async openAppSettings(): Promise<void> {
     console.warn('Test: openAppSettings is not available on Web.');
     // Rule: Unsupported methods MUST call this.unimplemented()
-    return this.unimplemented('Not implemented on Web.') as never;
+    throw this.unimplemented('Not implemented on Web.');
   }
 
   // --- Plugin Info ---
