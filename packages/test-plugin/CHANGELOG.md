@@ -1,5 +1,11 @@
 # @cap-kit/test-plugin
 
+## 6.0.1
+
+### Patch Changes
+
+- fa8a831: Refactor error handling by introducing a dedicated TestError class, improve configuration parsing logic, and perform general code comment cleanup.
+
 ## 6.0.0
 
 ### Major Changes
