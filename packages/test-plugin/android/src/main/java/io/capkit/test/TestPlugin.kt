@@ -1,8 +1,8 @@
 package io.capkit.test
 
 import android.content.Intent
-import android.net.Uri
 import android.provider.Settings
+import androidx.core.net.toUri
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
@@ -10,35 +10,50 @@ import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 
 /**
- * Capacitor bridge for the Test plugin.
+ * Capacitor bridge for the Test plugin (Android).
  *
- * This class acts as the boundary between JavaScript and native Android code.
- * It is responsible for:
- * - reading configuration
- * - validating PluginCall input
- * - mapping JS calls to native logic
+ * This class represents the boundary between JavaScript and native Android code.
+ *
+ * Responsibilities:
+ * - read plugin configuration
+ * - validate PluginCall input
+ * - delegate logic to TestImpl
+ * - map native errors to JS-facing error codes
+ * - resolve or reject calls exactly once
  */
 @CapacitorPlugin(
   name = "Test",
 )
 class TestPlugin : Plugin() {
+  // ---------------------------------------------------------------------------
+  // Properties
+  // ---------------------------------------------------------------------------
+
   /**
-   * Plugin configuration parsed from capacitor.config.ts.
+   * Immutable plugin configuration parsed from capacitor.config.ts.
    */
   private lateinit var config: TestConfig
 
   /**
-   * Native implementation containing platform logic.
+   * Native implementation containing platform-specific logic only.
+   *
+   * IMPORTANT:
+   * - Must NOT access PluginCall
+   * - Must NOT reference Capacitor APIs
    */
   private lateinit var implementation: TestImpl
+
+  // ---------------------------------------------------------------------------
+  // Lifecycle
+  // ---------------------------------------------------------------------------
 
   /**
    * Called once when the plugin is loaded by the Capacitor bridge.
    *
    * This is the correct place to:
-   * - read configuration
+   * - read static configuration
    * - initialize native resources
-   * - inject dependencies into the implementation
+   * - inject configuration into the implementation
    */
   override fun load() {
     super.load()
@@ -48,22 +63,50 @@ class TestPlugin : Plugin() {
     implementation.updateConfig(config)
   }
 
-  // --- Echo ---
+  // ---------------------------------------------------------------------------
+  // Error Mapping
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Maps native TestError instances to JS-facing TestErrorCode values.
+   *
+   * IMPORTANT:
+   * - This is the ONLY place where native errors are translated
+   * - TestImpl must NEVER know about JS or Capacitor error codes
+   */
+  private fun reject(
+    call: PluginCall,
+    error: TestError,
+  ) {
+    val code =
+      when (error) {
+        is TestError.Unavailable -> "UNAVAILABLE"
+        is TestError.PermissionDenied -> "PERMISSION_DENIED"
+        is TestError.InitFailed -> "INIT_FAILED"
+        is TestError.UnknownType -> "UNKNOWN_TYPE"
+      }
+
+    call.reject(error.message, code)
+  }
+
+  // ---------------------------------------------------------------------------
+  // Echo
+  // ---------------------------------------------------------------------------
 
   /**
    * Echoes a string back to JavaScript.
    *
-   * @param call Capacitor plugin call containing the `value` parameter.
+   * - Reads input from PluginCall
+   * - Applies configuration-derived behavior
+   * - Delegates logic to TestImpl
    */
   @PluginMethod
   fun echo(call: PluginCall) {
     val jsValue = call.getString("value") ?: ""
 
     val valueToEcho =
-      if (jsValue.isNotEmpty()) {
-        jsValue
-      } else {
-        config.customMessage ?: ""
+      jsValue.ifEmpty {
+        config.customMessage
       }
 
     val ret = JSObject()
@@ -71,10 +114,17 @@ class TestPlugin : Plugin() {
     call.resolve(ret)
   }
 
-  // --- Version ---
+  // ---------------------------------------------------------------------------
+  // Version
+  // ---------------------------------------------------------------------------
 
   /**
    * Returns the native plugin version.
+   *
+   * NOTE:
+   * - This method is guaranteed not to fail
+   * - Therefore it does NOT use TestError
+   * - Version is injected at build time from package.json
    */
   @PluginMethod
   fun getPluginVersion(call: PluginCall) {
@@ -83,42 +133,43 @@ class TestPlugin : Plugin() {
     call.resolve(ret)
   }
 
-  // --- Settings ---
+  // ---------------------------------------------------------------------------
+  // Settings
+  // ---------------------------------------------------------------------------
 
   /**
    * Opens the application details settings page.
-   * Allowing the user to manually enable permissions.
+   *
+   * This allows the user to manually manage permissions.
    */
   @PluginMethod
   fun openAppSettings(call: PluginCall) {
-    try {
-      val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-      val uri = Uri.fromParts("package", context.packageName, null)
-      intent.data = uri
-      context.startActivity(intent)
-      call.resolve()
-    } catch (e: Exception) {
-      // NOTE:
-      // On Android, PluginCall.reject(...) is fully supported and correctly used here.
-      // However, this plugin is designed with a cross-platform, state-based API mindset
-      // to remain compatible with iOS when using Swift Package Manager (SPM),
-      // where Promise rejection is not reliably available.
-      //
-      // For this reason:
-      // - JavaScript consumers SHOULD NOT rely on try/catch for this method
-      // - Errors should be handled by inspecting resolved result states instead
-      //
-      // This reject() call is intentionally kept on Android to:
-      // - preserve native correctness
-      // - document the platform capability
-      // - avoid hiding real failures during development
-      //
-      // When extending this plugin, consider mirroring error semantics across platforms
-      // to keep the public JS API predictable and consistent.
-      call.reject(
-        "Failed to open settings",
-        "UNAVAILABLE",
-      )
-    }
+    val result = implementation.openAppSettings()
+
+    result.fold(
+      onSuccess = {
+        try {
+          val intent =
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+              data = "package:${context.packageName}".toUri()
+            }
+
+          val activity = activity
+          if (activity != null) {
+            activity.startActivity(intent)
+          } else {
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+          }
+
+          call.resolve()
+        } catch (e: Exception) {
+          reject(call, TestError.Unavailable("Failed to open app settings"))
+        }
+      },
+      onFailure = {
+        reject(call, it as TestError)
+      },
+    )
   }
 }

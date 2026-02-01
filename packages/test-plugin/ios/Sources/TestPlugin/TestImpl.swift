@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 /**
  Native iOS implementation for the Test plugin.
@@ -30,7 +31,7 @@ import Foundation
     func applyConfig(_ config: TestConfig) {
         self.config = config
         TestLogger.verbose = config.verboseLogging
-        TestLogger.debug("Configuration applied. Verbose logging:", "\(config.verboseLogging)")
+        TestLogger.debug("Configuration applied:", config.verboseLogging)
     }
 
     // MARK: - Echo Method
@@ -44,5 +45,20 @@ import Foundation
     @objc public func echo(_ value: String) -> String {
         TestLogger.debug("Echoing value:", value)
         return value
+    }
+
+    // MARK: - openAppSettings
+
+    /// Opens the system app settings screen.
+    func openAppSettings() throws {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else {
+            throw TestError.unavailable("Settings URL not available")
+        }
+
+        guard UIApplication.shared.canOpenURL(url) else {
+            throw TestError.unavailable("Cannot open settings")
+        }
+
+        UIApplication.shared.open(url)
     }
 }

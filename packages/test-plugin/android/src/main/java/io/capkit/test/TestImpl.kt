@@ -46,8 +46,24 @@ class TestImpl(
    * and is intentionally side-effect free.
    */
   fun echo(value: String): String {
-    TestLogger.debug(value)
+    TestLogger.debug("Echoing value:", value)
     return value
+  }
+
+  /**
+   * Opens the system app settings screen.
+   *
+   * Returns a Result<Unit> to explicitly model success or failure.
+   */
+  fun openAppSettings(): Result<Unit> {
+    return try {
+      // Actual intent execution is delegated to the Plugin layer
+      Result.success(Unit)
+    } catch (e: SecurityException) {
+      Result.failure(TestError.PermissionDenied("Permission denied"))
+    } catch (e: Exception) {
+      Result.failure(TestError.Unavailable("Settings not available"))
+    }
   }
 
   companion object {
