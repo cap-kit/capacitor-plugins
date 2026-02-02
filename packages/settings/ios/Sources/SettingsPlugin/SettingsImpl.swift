@@ -4,13 +4,14 @@ import UIKit
 /**
  Native iOS implementation for the Settings plugin.
 
- This class contains ONLY platform logic and must not:
- - access CAPPluginCall
- - depend on Capacitor
- - contain JavaScript or bridge-related logic
+ Responsibilities:
+ - Perform platform-specific operations
+ - Throw typed SettingsError values on failure
 
- Mapping from JavaScript-facing options to platform-specific
- settings URLs is delegated to SettingsUtils.
+ Forbidden:
+ - Accessing CAPPluginCall
+ - Referencing Capacitor APIs
+ - Constructing JS payloads
  */
 @objc public final class SettingsImpl: NSObject {
 
@@ -22,22 +23,13 @@ import UIKit
         super.init()
     }
 
-    // MARK: - Result
-
-    struct Result {
-        let success: Bool
-        let error: String?
-        let code: String?
-    }
-
     // MARK: - Configuration
 
     /**
-     Applies the plugin configuration.
+     Applies static plugin configuration.
 
-     This method should be called exactly once during plugin initialization.
-     Its responsibility is to translate configuration values into runtime
-     behavior (e.g. enabling verbose logging).
+     This method must be called exactly once
+     during plugin initialization.
      */
     func applyConfig(_ config: SettingsConfig) {
         self.config = config
@@ -50,35 +42,24 @@ import UIKit
     /**
      Opens the requested iOS settings page.
 
-     - Parameter option: The settings option to open.
-
-     - Returns:
-     - success: Indicates whether the URL was valid and dispatched.
-     - error: Optional human-readable error.
-     - code: Optional machine-readable error code.
+     - Parameter option: JS-facing settings key
+     - Throws: SettingsError if the operation cannot be completed
      */
-    func open(option: String?) -> Result {
+    func open(option: String?) throws {
         guard let url = SettingsUtils.resolveSettingsURL(for: option) else {
-            return Result(
-                success: false,
-                error: "Requested setting is not available on iOS",
-                code: "UNAVAILABLE"
+            throw SettingsError.unavailable(
+                "Requested setting is not available on iOS"
             )
         }
 
         guard UIApplication.shared.canOpenURL(url) else {
-            SettingsLogger.debug("Cannot open URL:", url.absoluteString)
-            return Result(
-                success: false,
-                error: "Cannot open settings URL",
-                code: "UNAVAILABLE"
+            throw SettingsError.unavailable(
+                "Cannot open settings URL"
             )
         }
 
-        DispatchQueue.main.async(execute: DispatchWorkItem {
+        DispatchQueue.main.async {
             UIApplication.shared.open(url, options: [:])
-        })
-
-        return Result(success: true, error: nil, code: nil)
+        }
     }
 }

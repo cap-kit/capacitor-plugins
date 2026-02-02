@@ -36,7 +36,7 @@ public struct SettingsConfig {
     // MARK: - Private Defaults
 
     // Default values
-    private let defaultVerboseLogging = false
+    private static let defaultVerboseLogging = false
 
     // MARK: - Init
 
@@ -46,9 +46,10 @@ public struct SettingsConfig {
      - Parameter plugin: The CAPPlugin instance used to access typed configuration.
      */
     init(plugin: CAPPlugin) {
-        // Use getConfigValue(key) to ensure compatibility across all v8 environments
+        let config = plugin.getConfig()
 
-        // Bool - Verbose Logging
-        verboseLogging = plugin.getConfigValue(Keys.verboseLogging) as? Bool ?? defaultVerboseLogging
+        // Bool
+        verboseLogging =
+            config.getBoolean(Keys.verboseLogging, Self.defaultVerboseLogging)
     }
 }

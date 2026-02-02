@@ -123,7 +123,7 @@ This design ensures consistent behavior across Android, iOS, and Web.
 ### open(...)
 
 ```typescript
-open(options: PlatformOptions) => Promise<SettingsResult>
+open(options: PlatformOptions) => Promise<void>
 ```
 
 Opens the specified settings option on the current platform.
@@ -133,8 +133,6 @@ On Web, this method is not supported.
 | ------------- | ----------------------------------------------------------- | ----------------------------------- |
 | **`options`** | <code><a href="#platformoptions">PlatformOptions</a></code> | Platform-specific settings options. |
 
-**Returns:** <code>Promise&lt;<a href="#settingsresult">SettingsResult</a>&gt;</code>
-
 **Since:** 1.0.0
 
 ---
@@ -142,7 +140,7 @@ On Web, this method is not supported.
 ### openIOS(...)
 
 ```typescript
-openIOS(options: IOSOptions) => Promise<SettingsResult>
+openIOS(options: IOSOptions) => Promise<void>
 ```
 
 Opens a specific system settings section. (iOS Only)
@@ -151,8 +149,6 @@ Opens a specific system settings section. (iOS Only)
 | ------------- | ------------------------------------------------- | --------------------- |
 | **`options`** | <code><a href="#iosoptions">IOSOptions</a></code> | iOS settings options. |
 
-**Returns:** <code>Promise&lt;<a href="#settingsresult">SettingsResult</a>&gt;</code>
-
 **Since:** 1.0.0
 
 ---
@@ -160,7 +156,7 @@ Opens a specific system settings section. (iOS Only)
 ### openAndroid(...)
 
 ```typescript
-openAndroid(options: AndroidOptions) => Promise<SettingsResult>
+openAndroid(options: AndroidOptions) => Promise<void>
 ```
 
 Opens a specific Android Intent. (Android Only)
@@ -169,8 +165,6 @@ On Web, this method is not supported.
 | Param         | Type                                                      | Description               |
 | ------------- | --------------------------------------------------------- | ------------------------- |
 | **`options`** | <code><a href="#androidoptions">AndroidOptions</a></code> | Android settings options. |
-
-**Returns:** <code>Promise&lt;<a href="#settingsresult">SettingsResult</a>&gt;</code>
 
 **Since:** 1.0.0
 
@@ -200,19 +194,6 @@ const { version } = await Settings.getPluginVersion();
 ---
 
 ### Interfaces
-
-#### SettingsResult
-
-Response object for settings open operations.
-
-All platforms return a state-based result object.
-Promise rejection is NOT used.
-
-| Prop          | Type                                                            | Description                                                                                                                                      |
-| ------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **`success`** | <code>boolean</code>                                            | Indicates if the operation was successful.                                                                                                       |
-| **`error`**   | <code>string</code>                                             | Human-readable error message, if the operation failed.                                                                                           |
-| **`code`**    | <code><a href="#settingserrorcode">SettingsErrorCode</a></code> | Machine-readable error code. This field is present when `success` is false and allows programmatic handling of platform limitations or failures. |
 
 #### PlatformOptions
 
@@ -251,15 +232,6 @@ Result object returned by the `getPluginVersion()` method.
 | **`version`** | <code>string</code> | The native plugin version string. |
 
 ### Enums
-
-#### SettingsErrorCode
-
-| Members                 | Value                            | Description                                                                       |
-| ----------------------- | -------------------------------- | --------------------------------------------------------------------------------- |
-| **`UNAVAILABLE`**       | <code>'UNAVAILABLE'</code>       | The device does not have the requested hardware.                                  |
-| **`PERMISSION_DENIED`** | <code>'PERMISSION_DENIED'</code> | The user denied the permission or the feature is disabled in settings.            |
-| **`INIT_FAILED`**       | <code>'INIT_FAILED'</code>       | The Settings plugin failed to initialize (e.g., runtime error or Looper failure). |
-| **`UNKNOWN_TYPE`**      | <code>'UNKNOWN_TYPE'</code>      | The requested Settings plugin type is not valid or not supported by the plugin.   |
 
 #### AndroidSettings
 

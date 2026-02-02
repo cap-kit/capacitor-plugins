@@ -6,17 +6,15 @@ import io.capkit.settings.utils.SettingsLogger
 import io.capkit.settings.utils.SettingsUtils
 
 /**
- * Platform-specific native implementation for the Settings plugin (Android).
- *
- * This class contains ONLY Android platform logic and MUST NOT:
- * - depend on Capacitor APIs
- * - reference PluginCall
- * - perform JS-related validation
- *
- * The Capacitor plugin (SettingsPlugin) is responsible for:
- * - reading configuration
- * - extracting call parameters
- * - resolving results to JavaScript
+ Native Android implementation for the Settings plugin.
+
+ Responsibilities:
+ - Perform platform logic
+ - Throw typed SettingsError values on failure
+
+ Forbidden:
+ - Accessing PluginCall
+ - Referencing Capacitor APIs
  */
 class SettingsImpl(
   private val context: Context,
@@ -46,50 +44,23 @@ class SettingsImpl(
   /**
    * Opens an Android system settings screen.
    *
-   * The operation is considered successful if:
-   * - the option maps to a valid Intent
-   * - an Activity exists to handle the Intent
-   *
-   * No Activity result is awaited, by design.
-   *
-   * @param option JavaScript-facing settings key
-   * @return standardized Result object (state-based)
+   * @throws SettingsError if the operation fails
    */
-  fun open(option: String): Result {
-    SettingsLogger.debug("Requested Android settings option:", option)
-
+  fun open(option: String) {
     val intent =
       SettingsUtils.resolveIntent(option, context.packageName)
-        ?: return Result(
-          success = false,
-          error = "Requested setting is not available on Android",
-          code = "UNAVAILABLE",
+        ?: throw SettingsError.Unavailable(
+          "Requested setting is not available on Android",
         )
 
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
-    return if (intent.resolveActivity(context.packageManager) != null) {
-      context.startActivity(intent)
-      SettingsLogger.debug("Android settings activity started:", intent.action ?: "unknown")
-      Result(success = true)
-    } else {
-      SettingsLogger.error("No activity found to handle intent for option: $option")
-      Result(
-        success = false,
-        error = "Cannot open settings URL",
-        code = "UNAVAILABLE",
+    if (intent.resolveActivity(context.packageManager) == null) {
+      throw SettingsError.Unavailable(
+        "No activity found to handle settings intent",
       )
     }
-  }
 
-  /**
-   * Standardized result returned by Settings operations.
-   *
-   * This mirrors the iOS result model and the public TypeScript API.
-   */
-  data class Result(
-    val success: Boolean,
-    val error: String? = null,
-    val code: String? = null,
-  )
+    context.startActivity(intent)
+  }
 }
