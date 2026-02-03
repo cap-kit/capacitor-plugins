@@ -1,6 +1,6 @@
 import { WebPlugin } from '@capacitor/core';
 
-import { SettingsErrorCode, SettingsPlugin, SettingsResult, PluginVersionResult } from './definitions';
+import { SettingsPlugin, PluginVersionResult } from './definitions';
 
 /**
  * Web implementation of the Settings plugin.
@@ -27,12 +27,8 @@ export class SettingsWeb extends WebPlugin implements SettingsPlugin {
    * This operation is not supported on the Web, as browsers do not
    * provide APIs to open operating system settings.
    */
-  async open(): Promise<SettingsResult> {
-    return {
-      success: false,
-      error: 'Opening system settings is not supported on the Web.',
-      code: SettingsErrorCode.UNAVAILABLE,
-    };
+  async open(): Promise<void> {
+    this.unavailable('Opening system settings is not supported on the Web.');
   }
 
   /**
@@ -40,12 +36,8 @@ export class SettingsWeb extends WebPlugin implements SettingsPlugin {
    *
    * This operation is not supported on the Web.
    */
-  async openIOS(): Promise<SettingsResult> {
-    return {
-      success: false,
-      error: 'iOS settings are not available in web environments.',
-      code: SettingsErrorCode.UNAVAILABLE,
-    };
+  async openIOS(): Promise<void> {
+    this.unavailable('iOS settings are not available in web environments.');
   }
 
   /**
@@ -53,12 +45,8 @@ export class SettingsWeb extends WebPlugin implements SettingsPlugin {
    *
    * This operation is not supported on the Web.
    */
-  async openAndroid(): Promise<SettingsResult> {
-    return {
-      success: false,
-      error: 'Android settings are not available in web environments.',
-      code: SettingsErrorCode.UNAVAILABLE,
-    };
+  async openAndroid(): Promise<void> {
+    this.unavailable('Android settings are not available in web environments.');
   }
 
   // --- Plugin Info ---

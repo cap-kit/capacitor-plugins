@@ -100,34 +100,6 @@ export interface SettingsError {
 }
 
 /**
- * Response object for settings open operations.
- *
- * All platforms return a state-based result object.
- * Promise rejection is NOT used.
- */
-export interface SettingsResult {
-  /**
-   * Indicates if the operation was successful.
-   */
-  success: boolean;
-
-  /**
-   * Human-readable error message, if the operation failed.
-   */
-  error?: string;
-
-  /**
-   * Machine-readable error code.
-   *
-   * This field is present when `success` is false and allows
-   * programmatic handling of platform limitations or failures.
-   *
-   * @example SettingsErrorCode.UNAVAILABLE
-   */
-  code?: SettingsErrorCode;
-}
-
-/**
  * Platform-specific options for opening system settings.
  *
  * This interface allows specifying settings options for both
@@ -730,7 +702,7 @@ export interface SettingsPlugin {
    *
    * @since 1.0.0
    */
-  open(options: PlatformOptions): Promise<SettingsResult>;
+  open(options: PlatformOptions): Promise<void>;
 
   /**
    * Opens a specific system settings section. (iOS Only)
@@ -752,7 +724,7 @@ export interface SettingsPlugin {
    *
    * @since 1.0.0
    */
-  openIOS(options: IOSOptions): Promise<SettingsResult>;
+  openIOS(options: IOSOptions): Promise<void>;
 
   /**
    * Opens a specific Android Intent. (Android Only)
@@ -765,7 +737,7 @@ export interface SettingsPlugin {
    *
    * @since 1.0.0
    */
-  openAndroid(options: AndroidOptions): Promise<SettingsResult>;
+  openAndroid(options: AndroidOptions): Promise<void>;
 
   /**
    * Returns the native plugin version.

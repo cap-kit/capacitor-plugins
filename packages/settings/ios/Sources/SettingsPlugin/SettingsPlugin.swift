@@ -4,19 +4,21 @@ import Capacitor
 /**
  Capacitor bridge for the Settings plugin.
 
- This file MUST:
- - read input from CAPPluginCall
- - delegate logic to SettingsImpl
- - resolve calls using state-based results
+ Responsibilities:
+ - Parse JS input
+ - Delegate to SettingsImpl
+ - Resolve or reject CAPPluginCall
  */
 @objc(SettingsPlugin)
 public final class SettingsPlugin: CAPPlugin, CAPBridgedPlugin {
 
-    // Configuration instance
-    private var config: SettingsConfig?
+    // MARK: - Properties
 
     /// An instance of the implementation class that contains the plugin's core functionality.
     private let implementation = SettingsImpl()
+
+    // Configuration instance
+    private var config: SettingsConfig?
 
     /// The unique identifier for the plugin.
     public let identifier = "SettingsPlugin"
@@ -36,6 +38,8 @@ public final class SettingsPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "getPluginVersion", returnType: CAPPluginReturnPromise)
     ]
 
+    // MARK: - Lifecycle
+
     /**
      Plugin lifecycle entry point.
 
@@ -52,19 +56,55 @@ public final class SettingsPlugin: CAPPlugin, CAPBridgedPlugin {
         implementation.applyConfig(cfg)
 
         // Log if verbose logging is enabled
-        SettingsLogger.debug("Settings plugin loaded with config:", cfg)
+        SettingsLogger.debug("Settings plugin loaded")
+    }
+
+    // MARK: - Error Mapping
+
+    /**
+     Maps native SettingsError values to JS-facing error codes.
+     */
+    private func reject(_ call: CAPPluginCall, error: SettingsError) {
+        let code: String
+
+        switch error {
+        case .unavailable:
+            code = "UNAVAILABLE"
+        case .permissionDenied:
+            code = "PERMISSION_DENIED"
+        case .initFailed:
+            code = "INIT_FAILED"
+        case .unknownType:
+            code = "UNKNOWN_TYPE"
+        }
+
+        call.reject(error.message, code)
     }
 
     // MARK: - Settings
 
     /// Opens the requested iOS settings page.
     @objc func open(_ call: CAPPluginCall) {
-        resolveOpenResult(call, option: call.getString("optionIOS", ""))
+        let option = call.getString("optionIOS", "")
+        handleOpen(call, option: option)
     }
 
     /// Opens the requested iOS settings page.
     @objc func openIOS(_ call: CAPPluginCall) {
-        resolveOpenResult(call, option: call.getString("option", ""))
+        let option = call.getString("option", "")
+        handleOpen(call, option: option)
+    }
+
+    ///
+    private func handleOpen(_ call: CAPPluginCall, option: String) {
+        do {
+            try implementation.open(option: option)
+            call.resolve()
+        } catch let error as SettingsError {
+            reject(call, error: error)
+        } catch {
+            call.reject("Unknown error", "UNKNOWN")
+        }
     }
 
     // MARK: - Version
@@ -75,29 +115,5 @@ public final class SettingsPlugin: CAPPlugin, CAPBridgedPlugin {
         call.resolve([
             "version": PluginVersion.number
         ])
-    }
-
-    // MARK: - Helpers
-
-    /// Resolves the result of an open settings call.
-    private func resolveOpenResult(
-        _ call: CAPPluginCall,
-        option: String
-    ) {
-        let result = implementation.open(option: option)
-
-        var payload: [String: Any] = [
-            "success": result.success
-        ]
-
-        if let error = result.error {
-            payload["error"] = error
-        }
-
-        if let code = result.code {
-            payload["code"] = code
-        }
-
-        call.resolve(payload)
     }
 }
