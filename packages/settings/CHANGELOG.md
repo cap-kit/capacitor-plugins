@@ -1,5 +1,11 @@
 # @cap-kit/settings
 
+## 8.0.2
+
+### Patch Changes
+
+- ed8d37e: Update README documentation and bump internal dependencies for improved stability.
+
 ## 8.0.1
 
 ### Patch Changes
