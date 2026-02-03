@@ -3,83 +3,75 @@ package io.capkit.sslpinning.utils
 import android.util.Log
 
 /**
- * Centralized logging utility for the SSLPinning plugin.
+ * Centralized native logger for the SSLPinning plugin (Android).
  *
- * This logging provides a single entry point for all native logs
- * and supports runtime-controlled verbose logging.
+ * Responsibilities:
+ * - Provide a single logging entry point
+ * - Support runtime-controlled verbose logging
+ * - Keep logging behavior consistent across files
  *
- * The goal is to avoid scattering `if (verbose)` checks across
- * business logic and keep logging behavior consistent.
+ * Forbidden:
+ * - Controlling application logic
+ * - Being queried for flow decisions
  */
 object SSLPinningLogger {
   /**
    * Logcat tag used for all plugin logs.
-   * Helps filtering logs during debugging.
    */
   private const val TAG = "⚡️ SSLPinning"
 
   /**
    * Controls whether debug logs are printed.
    *
-   * This flag should be set once during plugin initialization
-   * based on configuration values.
+   * This flag MUST be set once during plugin initialization
+   * based on static configuration.
    */
   var verbose: Boolean = false
 
   /**
    * Prints a debug / verbose log message.
    *
-   * This method should be used for development-time diagnostics
-   * and is automatically silenced when [verbose] is false.
-   *
-   * @param messages One or more message fragments to be concatenated.
+   * Debug logs are automatically silenced
+   * when `verbose` is false.
    */
   fun debug(vararg messages: String) {
-    if (verbose) {
-      log(TAG, Log.DEBUG, *messages)
-    }
+    if (!verbose) return
+    log(Log.DEBUG, *messages)
   }
 
   /**
    * Prints an error log message.
    *
-   * Error logs are always printed regardless of [verbose] state.
-   *
-   * @param message Human-readable error description.
-   * @param e Optional exception for stack trace logging.
+   * Error logs are always printed regardless
+   * of the verbose flag.
    */
   fun error(
     message: String,
-    e: Throwable? = null,
+    throwable: Throwable? = null,
   ) {
-    val sb = StringBuilder(message)
-    if (e != null) {
-      sb.append(" | Error: ").append(e.message)
+    if (throwable != null) {
+      Log.e(TAG, message, throwable)
+    } else {
+      Log.e(TAG, message)
     }
-    Log.e(TAG, sb.toString(), e)
   }
 
   /**
    * Internal low-level log dispatcher.
-   *
-   * Joins message fragments and forwards them to Android's Log API
-   * using the specified priority.
    */
-  fun log(
-    tag: String,
+  private fun log(
     level: Int,
     vararg messages: String,
   ) {
-    val sb = StringBuilder()
-    for (msg in messages) {
-      sb.append(msg).append(" ")
-    }
+    val text =
+      messages.joinToString(separator = " ")
+
     when (level) {
-      Log.DEBUG -> Log.d(tag, sb.toString())
-      Log.INFO -> Log.i(tag, sb.toString())
-      Log.WARN -> Log.w(tag, sb.toString())
-      Log.ERROR -> Log.e(tag, sb.toString())
-      else -> Log.v(tag, sb.toString())
+      Log.DEBUG -> Log.d(TAG, text)
+      Log.INFO -> Log.i(TAG, text)
+      Log.WARN -> Log.w(TAG, text)
+      Log.ERROR -> Log.e(TAG, text)
+      else -> Log.v(TAG, text)
     }
   }
 }

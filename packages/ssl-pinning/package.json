@@ -3,7 +3,7 @@
   "version": "8.0.0-next.0",
   "description": "Capacitor plugin for runtime SSL certificate fingerprint pinning on iOS and Android",
   "type": "module",
-  "private": true,
+  "private": false,
   "engines": {
     "node": ">=24.0.0",
     "pnpm": ">=10.0.0"
@@ -73,8 +73,7 @@
     "publish:locally": "pnpm run removePacked && pnpm run build && pnpm pack"
   },
   "bin": {
-    "ssl-fingerprint": "./dist/cli/fingerprint.js",
-    "capacitor-ssl-fingerprint": "./dist/cli/fingerprint.js"
+    "cap-kit-ssl-pinning": "./dist/cli/fingerprint.js"
   },
   "publishConfig": {
     "access": "public"

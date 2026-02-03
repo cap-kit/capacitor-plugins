@@ -4,11 +4,20 @@ import java.net.URL
 import java.security.MessageDigest
 import java.security.cert.Certificate
 
+/**
+ * Utility helpers for SSL pinning logic (Android).
+ *
+ * Pure utilities:
+ * - No Capacitor dependency
+ * - No side effects
+ * - Fully testable
+ */
 object SSLPinningUtils {
   /**
-   * Validates that the provided string is a valid HTTPS URL.
+   * Validates and returns a HTTPS URL.
    *
-   * Non-HTTPS URLs are explicitly rejected to prevent insecure usage.
+   * Non-HTTPS URLs are explicitly rejected
+   * to prevent insecure usage.
    */
   fun httpsUrl(value: String): URL? {
     return try {
@@ -24,21 +33,28 @@ object SSLPinningUtils {
    * - Removing colon separators
    * - Converting to lowercase
    *
-   * This allows consistent comparison across platforms.
+   * Example:
+   * "AA:BB:CC" → "aabbcc"
    */
   fun normalizeFingerprint(value: String): String {
-    return value.replace(":", "").lowercase()
+    return value
+      .replace(":", "")
+      .lowercase()
   }
 
   /**
    * Computes the SHA-256 fingerprint of an X.509 certificate.
    *
-   * The returned format uses colon-separated hexadecimal pairs,
-   * matching common OpenSSL representations.
+   * Output format:
+   * "aa:bb:cc:dd:..."
    */
   fun sha256Fingerprint(cert: Certificate): String {
-    val md = MessageDigest.getInstance("SHA-256")
-    val digest = md.digest(cert.encoded)
-    return digest.joinToString(":") { "%02x".format(it) }
+    val digest =
+      MessageDigest.getInstance("SHA-256")
+        .digest(cert.encoded)
+
+    return digest.joinToString(separator = ":") {
+      "%02x".format(it)
+    }
   }
 }
