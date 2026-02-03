@@ -32,7 +32,7 @@ Each package maintains its own documentation and setup guide.
 Here is the current list of available plugins:
 
 <p>
-  <strong>Total Plugins:</strong> 2 | <strong>Weekly Downloads:</strong> <img src="https://img.shields.io/npm/dw/@cap-kit/test-plugin?style=flat-square&logo=npm&label=&color=orange" alt="Downloads" valign="middle" />
+  <strong>Total Plugins:</strong> 3 | <strong>Weekly Downloads:</strong> <img src="https://img.shields.io/npm/dw/@cap-kit/test-plugin?style=flat-square&logo=npm&label=&color=orange" alt="Downloads" valign="middle" />
 </p>
 <br />
 
@@ -50,6 +50,20 @@ Here is the current list of available plugins:
   <p>
     <a href="./packages/settings"><strong>Documentation</strong></a> | 
     <a href="https://www.npmjs.com/package/@cap-kit/settings"><strong>NPM</strong></a>
+  </p>
+</td>
+
+<td align="center" width="33%">
+  <h3><a href="./packages/ssl-pinning">Ssl Pinning</a></h3>
+  <p><code>@cap-kit/ssl-pinning</code></p>
+  <p>
+    <a href="https://www.npmjs.com/package/@cap-kit/ssl-pinning"><img src="https://img.shields.io/npm/v/@cap-kit/ssl-pinning?style=flat-square&color=blue&label=npm&logo=npm" alt="npm version"></a>
+    <a href="https://www.npmjs.com/package/@cap-kit/ssl-pinning"><img src="https://img.shields.io/npm/dm/@cap-kit/ssl-pinning?style=flat-square&color=orange&label=downloads&logo=npm" alt="downloads"></a>
+  </p>
+  <p>Capacitor plugin for runtime SSL certificate fingerprint pinning on iOS and Android</p>
+  <p>
+    <a href="./packages/ssl-pinning"><strong>Documentation</strong></a> | 
+    <a href="https://www.npmjs.com/package/@cap-kit/ssl-pinning"><strong>NPM</strong></a>
   </p>
 </td>
 
