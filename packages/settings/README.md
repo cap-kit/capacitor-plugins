@@ -15,7 +15,7 @@
 
 <p align="center">
   A <strong>Capacitor plugin</strong> for opening system and application settings on <strong>iOS and Android</strong>.<br>
-  Provides a unified, state-based API to navigate users to relevant settings screens,
+  Provides a unified Promise-based API to navigate users to relevant settings screens,
   including app settings, notifications, connectivity, and other system sections.<br>
   Built following the <strong>Cap-Kit architectural standards</strong> with strict separation
   between JavaScript, bridge, and native implementations (Swift / Kotlin).
@@ -112,11 +112,14 @@ export default config;
 
 Public JavaScript API for the Settings Capacitor plugin.
 
-This plugin uses a state-based result model:
+This plugin uses standard Promise semantics:
 
-- operations never throw
-- Promise rejection is not used
-- failures are reported via `{ success, error?, code? }`
+- operations resolve with no value on success
+- failures reject the Promise with an error code
+- consumers are expected to handle errors using `try / catch`
+
+This design aligns with Capacitor v8 error handling conventions
+and ensures consistent behavior across Android, iOS, and Web.
 
 This design ensures consistent behavior across Android, iOS, and Web.
 
@@ -349,19 +352,19 @@ device-specific or undocumented system intents. Availability may vary depending 
 - system configuration or user restrictions
 
 When a requested settings screen is not supported on the current device,
-the plugin will return a structured result with:
+the plugin rejects the Promise with the error code:
 
-```ts
-{
-  success: false,
-  code: 'UNAVAILABLE'
-}
-```
+- `UNAVAILABLE`
+
+Consumers are expected to handle this case using standard `try / catch`
+error handling.
 
 This behavior is intentional and aligns with real-world Android platform constraints.
 
-For additional context, see the discussion in the original implementation:
+For historical context on Android intent limitations, see the discussion in the
+original implementation:
 [https://github.com/RaphaelWoude/capacitor-native-settings/pull/63](https://github.com/RaphaelWoude/capacitor-native-settings/pull/63)
+Note that this plugin does not use the state-based result model found in that implementation.
 
 ---
 
