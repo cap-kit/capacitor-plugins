@@ -10,6 +10,7 @@ on:
       - 'LICENSE'
       - '.gitignore'
       - '.editorconfig'
+
   pull_request:
     branches: [main]
     paths-ignore:
@@ -24,6 +25,7 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -44,7 +46,11 @@ jobs:
       - name: Verify Root README sync
         run: |
           pnpm run readme:update
-          git diff --exit-code README.md || (echo "❌ Root README.md is out of sync with public packages. Run 'pnpm run readme:update' and commit the changes." && exit 1)
+          git diff --exit-code README.md || (
+            echo "❌ Root README.md is out of sync with public packages." &&
+            echo "Run 'pnpm run readme:update' and commit the changes." &&
+            exit 1
+          )
 
       - name: Lint (main)
         if: github.ref == 'refs/heads/main'
@@ -58,6 +64,7 @@ jobs:
     name: Build and Test
     runs-on: macos-latest # Required for xcodebuild and iOS tooling
     needs: lint
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -75,18 +82,33 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Detect impacted packages (early exit optimization)
+      - name: Detect impacted packages
+        id: affected
+        run: |
+          echo "Checking for impacted packages..."
+          pnpm --filter "[origin/main]..." list --depth -1 > affected.txt
+          if [ ! -s affected.txt ]; then
+            echo "No impacted packages detected."
+            echo "none=true" >> $GITHUB_OUTPUT
+          else
+            echo "Impacted packages:"
+            cat affected.txt
+            echo "none=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build (main)
         if: github.ref == 'refs/heads/main'
         run: pnpm build
 
-      - name: Build (impacted upstream)
-        if: github.ref != 'refs/heads/main'
+      - name: Build (impacted)
+        if: github.ref != 'refs/heads/main' && steps.affected.outputs.none != 'true'
         run: pnpm --filter "...[origin/main]" build
 
       - name: Test (main)
         if: github.ref == 'refs/heads/main'
-        run: pnpm -r --workspace-concurrency=1 test # Serial execution to avoid iOS simulator conflicts
+        run: pnpm test --workspace-concurrency=1
 
-      - name: Test (impacted downstream)
-        if: github.ref != 'refs/heads/main'
-        run: pnpm --filter "[origin/main]..." --workspace-concurrency=1 test
+      - name: Test (impacted)
+        if: github.ref != 'refs/heads/main' && steps.affected.outputs.none != 'true'
+        run: pnpm --filter "[origin/main]..." test --workspace-concurrency=1
