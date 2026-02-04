@@ -53,22 +53,11 @@ jobs:
 
       - name: Lint (main)
         if: github.ref == 'refs/heads/main'
-        run: pnpm lint:all
-
-      # Detect impacted packages
-      - name: Detect impacted packages
-        id: affected
-        run: |
-          pnpm --filter "[origin/main]..." list --depth -1 > affected.txt
-          if [ ! -s affected.txt ]; then
-            echo "none=true" >> $GITHUB_OUTPUT
-          else
-            echo "none=false" >> $GITHUB_OUTPUT
-          fi
+        run: pnpm -r lint
 
       - name: Lint (impacted)
-        if: github.ref != 'refs/heads/main' && steps.affected.outputs.none != 'true'
-        run: pnpm --filter "[origin/main]..." run lint
+        if: github.ref != 'refs/heads/main'
+        run: pnpm -r --filter "[origin/main]..." lint --if-present
 
   build-test:
     name: Build and Test
@@ -92,26 +81,15 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # Detect impacted packages
-      - name: Detect impacted packages with lint
+      - name: Detect impacted packages
         id: affected
         run: |
-          set -e
-          HAS_LINT=false
-
-          for pkg in $(pnpm --filter "[origin/main]..." list --depth -1 --json | jq -r '.[].path'); do
-            if jq -e '.scripts.lint' "$pkg/package.json" > /dev/null; then
-              HAS_LINT=true
-              break
-            fi
-          done
-
-          if [ "$HAS_LINT" = "true" ]; then
-            echo "none=false" >> $GITHUB_OUTPUT
-          else
+          pnpm --filter "[origin/main]..." list --depth -1 > affected.txt
+          if [ ! -s affected.txt ]; then
             echo "none=true" >> $GITHUB_OUTPUT
+          else
+            echo "none=false" >> $GITHUB_OUTPUT
           fi
-
 
       - name: Build (main)
         if: github.ref == 'refs/heads/main'
