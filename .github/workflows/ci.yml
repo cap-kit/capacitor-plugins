@@ -47,15 +47,15 @@ jobs:
         run: |
           pnpm run readme:update
           git diff --exit-code README.md || (
-            echo "❌ Root README.md is out of sync with public packages." &&
-            echo "Run 'pnpm run readme:update' and commit the changes." &&
+            echo "❌ Root README.md is out of sync." &&
             exit 1
           )
 
       - name: Lint (main)
         if: github.ref == 'refs/heads/main'
-        run: pnpm lint
+        run: pnpm lint:all
 
+      # Detect impacted packages
       - name: Detect impacted packages
         id: affected
         run: |
