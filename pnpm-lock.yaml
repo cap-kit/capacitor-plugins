@@ -32,6 +32,60 @@ importers:
         specifier: ^4.21.0
         version: 4.21.0
 
+  packages/integrity:
+    devDependencies:
+      '@capacitor/android':
+        specifier: ^8.0.2
+        version: 8.0.2(@capacitor/core@8.0.2)
+      '@capacitor/cli':
+        specifier: ^8.0.2
+        version: 8.0.2
+      '@capacitor/core':
+        specifier: ^8.0.2
+        version: 8.0.2
+      '@capacitor/docgen':
+        specifier: ^0.3.1
+        version: 0.3.1(patch_hash=c6b48fe4092e47ae4d84b802d6d1404500f33eace93b0fee32763cdd2e8822fd)
+      '@capacitor/ios':
+        specifier: ^8.0.2
+        version: 8.0.2(@capacitor/core@8.0.2)
+      '@eslint/eslintrc':
+        specifier: ^3.3.3
+        version: 3.3.3
+      '@eslint/js':
+        specifier: ^9.39.2
+        version: 9.39.2
+      eslint:
+        specifier: ^9.39.2
+        version: 9.39.2(jiti@2.6.1)
+      eslint-plugin-import:
+        specifier: ^2.32.0
+        version: 2.32.0(@typescript-eslint/parser@8.54.0(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.2(jiti@2.6.1))
+      globals:
+        specifier: ^17.3.0
+        version: 17.3.0
+      prettier:
+        specifier: ^3.8.1
+        version: 3.8.1
+      prettier-plugin-java:
+        specifier: ^2.8.1
+        version: 2.8.1(prettier@3.8.1)
+      rimraf:
+        specifier: ^6.1.2
+        version: 6.1.2
+      rollup:
+        specifier: ^4.57.1
+        version: 4.57.1
+      swiftlint:
+        specifier: ^2.0.0
+        version: 2.0.0(typescript@5.9.3)
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.54.0
+        version: 8.54.0(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3)
+
   packages/settings:
     devDependencies:
       '@capacitor/android':
