@@ -56,9 +56,19 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: pnpm lint
 
+      - name: Detect impacted packages
+        id: affected
+        run: |
+          pnpm --filter "[origin/main]..." list --depth -1 > affected.txt
+          if [ ! -s affected.txt ]; then
+            echo "none=true" >> $GITHUB_OUTPUT
+          else
+            echo "none=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Lint (impacted)
-        if: github.ref != 'refs/heads/main'
-        run: pnpm --filter "[origin/main]..." run lint --if-present
+        if: github.ref != 'refs/heads/main' && steps.affected.outputs.none != 'true'
+        run: pnpm --filter "[origin/main]..." run lint
 
   build-test:
     name: Build and Test
