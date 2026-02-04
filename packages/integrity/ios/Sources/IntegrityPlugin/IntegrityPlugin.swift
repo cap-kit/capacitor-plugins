@@ -101,65 +101,21 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
      */
     @objc func check(_ call: CAPPluginCall) {
         do {
-            var signals = try implementation.checkJailbreakSignals()
+            let options =
+                try call.decode(IntegrityCheckOptions.self)
 
-            let isSimulator = implementation.isSimulator()
-            if isSimulator {
-                signals.append([
-                    "id": "ios_simulator",
-                    "category": "emulator",
-                    "confidence": "high"
-                ])
-            }
+            let normalizedOptions = IntegrityCheckOptions(
+                level: options.level ?? "basic",
+                includeDebugInfo: options.includeDebugInfo ?? false
+            )
 
-            if try implementation.checkFridaLibraries() {
-                signals.append([
-                    "id": "ios_frida_library",
-                    "category": "hook",
-                    "confidence": "high"
-                ])
-            }
+            let result =
+                try implementation.performCheck(
+                    options: normalizedOptions
+                )
 
-            if try implementation.checkFridaThreads() {
-                signals.append([
-                    "id": "ios_frida_thread",
-                    "category": "hook",
-                    "confidence": "medium"
-                ])
-            }
+            call.resolve(result)
 
-            if try !implementation.checkBundleIntegrity() {
-                signals.append([
-                    "id": "ios_bundle_integrity",
-                    "category": "tamper",
-                    "confidence": "high"
-                ])
-            }
-
-            let confidenceWeights: [String: Int] = [
-                "high": 30,
-                "medium": 15,
-                "low": 5
-            ]
-
-            let score = signals.reduce(0) { acc, signal in
-                guard let confidence = signal["confidence"] as? String else {
-                    return acc
-                }
-                return acc + (confidenceWeights[confidence] ?? 0)
-            }
-
-            call.resolve([
-                "signals": signals,
-                "score": score,
-                "compromised": score >= 30,
-                "environment": [
-                    "platform": "ios",
-                    "isEmulator": isSimulator,
-                    "isDebugBuild": false
-                ],
-                "timestamp": Int(Date().timeIntervalSince1970 * 1000)
-            ])
         } catch let error as IntegrityError {
             reject(call, error: error)
         } catch {

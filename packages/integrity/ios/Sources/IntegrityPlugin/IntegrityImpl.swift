@@ -44,6 +44,83 @@ public final class IntegrityImpl: NSObject {
         )
     }
 
+    // MARK: - Options orchestrator
+
+    func performCheck(
+        options: IntegrityCheckOptions
+    ) throws -> [String: Any] {
+
+        var signals = try checkJailbreakSignals()
+
+        let isSimulator = isSimulator()
+        if isSimulator {
+            signals.append([
+                "id": "ios_simulator",
+                "category": "emulator",
+                "confidence": "high"
+            ])
+        }
+
+        // --- STANDARD ------------------------------------------------------------
+        if options.level != "basic" {
+
+            if checkDebug() {
+                var signal: [String: Any] = [
+                    "id": "ios_debug_detected",
+                    "category": "debug",
+                    "confidence": "medium"
+                ]
+
+                if options.includeDebugInfo == true {
+                    signal["description"] = "Debugger attached to the process"
+                }
+
+                signals.append(signal)
+            }
+
+            if try checkFridaLibraries() {
+                signals.append([
+                    "id": "ios_frida_library",
+                    "category": "hook",
+                    "confidence": "high"
+                ])
+            }
+
+            if try checkFridaThreads() {
+                signals.append([
+                    "id": "ios_frida_thread",
+                    "category": "hook",
+                    "confidence": "medium"
+                ])
+            }
+        }
+
+        // --- STRICT --------------------------------------------------------------
+        if options.level == "strict" {
+            if try !checkBundleIntegrity() {
+                signals.append([
+                    "id": "ios_bundle_integrity",
+                    "category": "tamper",
+                    "confidence": "high"
+                ])
+            }
+        }
+
+        let score = computeScore(signals)
+
+        return [
+            "signals": signals,
+            "score": score,
+            "compromised": score >= 30,
+            "environment": [
+                "platform": "ios",
+                "isEmulator": isSimulator,
+                "isDebugBuild": false
+            ],
+            "timestamp": Int(Date().timeIntervalSince1970 * 1000)
+        ]
+    }
+
     // MARK: - Internal cache
 
     /**
@@ -110,6 +187,40 @@ public final class IntegrityImpl: NSObject {
         #endif
     }
 
+    // MARK: - Debug detection
+
+    /**
+     Detects whether the process is being debugged.
+
+     Uses sysctl-based detection.
+     */
+    func checkDebug() -> Bool {
+        var info = kinfo_proc()
+        var size = MemoryLayout<kinfo_proc>.stride
+
+        var mib: [Int32] = [
+            CTL_KERN,
+            KERN_PROC,
+            KERN_PROC_PID,
+            getpid()
+        ]
+
+        let sysctlResult = sysctl(
+            &mib,
+            UInt32(mib.count),
+            &info,
+            &size,
+            nil,
+            0
+        )
+
+        if sysctlResult != 0 {
+            return false
+        }
+
+        return (info.kp_proc.p_flag & P_TRACED) != 0
+    }
+
     // MARK: - Frida detection — loaded libraries
 
     /**
@@ -168,5 +279,24 @@ public final class IntegrityImpl: NSObject {
         }
 
         return FileManager.default.fileExists(atPath: executablePath)
+    }
+
+    // MARK: - Scoring
+
+    private func computeScore(
+        _ signals: [[String: Any]]
+    ) -> Int {
+        return signals.reduce(0) { acc, signal in
+            guard let confidence = signal["confidence"] as? String else {
+                return acc
+            }
+
+            switch confidence {
+            case "high": return acc + 30
+            case "medium": return acc + 15
+            case "low": return acc + 5
+            default: return acc
+            }
+        }
     }
 }
