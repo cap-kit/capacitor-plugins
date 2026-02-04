@@ -1,61 +1,111 @@
 import Foundation
 import Security
 
+/**
+ URLSession delegate responsible for performing
+ SSL pinning based on certificate fingerprint comparison.
+
+ Responsibilities:
+ - Intercept TLS authentication challenges
+ - Extract the server leaf certificate
+ - Compute its SHA-256 fingerprint
+ - Compare it against the expected fingerprints
+
+ Forbidden:
+ - Referencing Capacitor APIs
+ - Throwing JavaScript-facing errors
+ - Performing configuration lookups
+ */
 final class SSLPinningDelegate: NSObject, URLSessionDelegate {
 
-    /// Initializes the delegate with optional pinned certificates.
+    // MARK: - Properties
+
+    /**
+     Normalized expected fingerprints.
+     Normalization is performed once to ensure
+     consistent comparison.
+     */
     private let expectedFingerprints: [String]
 
-    /// Completion handler to return the result.
+    /**
+     Completion handler returning the raw result
+     of the SSL pinning operation.
+     */
     private let completion: ([String: Any]) -> Void
 
-    /// Verbose logging flag.
+    /**
+     Controls verbose native logging.
+     */
     private let verboseLogging: Bool
 
-    /// Initializes the SSLPinningDelegate.
+    // MARK: - Initialization
+
+    /**
+     Initializes the SSLPinningDelegate.
+
+     - Parameters:
+     - expectedFingerprints: Allowed SHA-256 fingerprints
+     - verboseLogging: Enables verbose native logging
+     - completion: Completion handler returning the result
+     */
     init(
         expectedFingerprints: [String],
-        completion: @escaping ([String: Any]) -> Void,
-        verboseLogging: Bool
+        verboseLogging: Bool,
+        completion: @escaping ([String: Any]) -> Void
     ) {
         self.expectedFingerprints =
             expectedFingerprints.map {
                 SSLPinningUtils.normalizeFingerprint($0)
             }
-        self.completion = completion
         self.verboseLogging = verboseLogging
+        self.completion = completion
     }
 
     // MARK: - URLSessionDelegate
 
-    /// Intercepts the TLS authentication challenge to perform
-    /// manual SSL pinning based on certificate fingerprint.
-    ///
-    /// The connection is accepted or rejected solely based on
-    /// fingerprint comparison, not on system trust evaluation.
+    /**
+     Intercepts the TLS authentication challenge
+     to perform manual SSL pinning.
+
+     The connection is accepted or rejected solely
+     based on fingerprint comparison.
+
+     IMPORTANT:
+     - The system trust chain is NOT evaluated
+     - Only the leaf certificate fingerprint is checked
+     */
     func urlSession(
         _ session: URLSession,
         didReceive challenge: URLAuthenticationChallenge,
-        completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
+        completionHandler: @escaping (
+            URLSession.AuthChallengeDisposition,
+            URLCredential?
+        ) -> Void
     ) {
-        // =========================================================
-        // FINGERPRINT MODE (unchanged behavior)
-        // =========================================================
-        guard let trust = challenge.protectionSpace.serverTrust,
-              let cert = SSLPinningUtils.leafCertificate(from: trust) else {
 
-            completionHandler(.cancelAuthenticationChallenge, nil)
+        guard
+            let trust = challenge.protectionSpace.serverTrust,
+            let certificate =
+                SSLPinningUtils.leafCertificate(from: trust)
+        else {
+            SSLPinningLogger.error(
+                "Failed to extract server certificate"
+            )
+
             completion([
-                "fingerprintMatched": false,
-                "error": "Unable to extract certificate",
-                "errorCode": "INIT_FAILED"
+                "fingerprintMatched": false
             ])
+
+            completionHandler(
+                .cancelAuthenticationChallenge,
+                nil
+            )
             return
         }
 
         let actualFingerprint =
             SSLPinningUtils.normalizeFingerprint(
-                SSLPinningUtils.sha256Fingerprint(from: cert)
+                SSLPinningUtils.sha256Fingerprint(from: certificate)
             )
 
         let matchedFingerprint =
@@ -65,7 +115,10 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate {
 
         let matched = matchedFingerprint != nil
 
-        SSLPinningLogger.debug("SSLPinning matched:", "\(matched)")
+        SSLPinningLogger.debug(
+            "SSLPinning matched:",
+            "\(matched)"
+        )
 
         completion([
             "actualFingerprint": actualFingerprint,
@@ -74,8 +127,12 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate {
         ])
 
         completionHandler(
-            matched ? .useCredential : .cancelAuthenticationChallenge,
-            matched ? URLCredential(trust: trust) : nil
+            matched
+                ? .useCredential
+                : .cancelAuthenticationChallenge,
+            matched
+                ? URLCredential(trust: trust)
+                : nil
         )
     }
 }

@@ -2,33 +2,38 @@ import Foundation
 import Capacitor
 
 /**
- Helper struct to manage the SSLPinning plugin configuration.
+ Plugin configuration container.
 
- This struct reads static configuration values from `capacitor.config.ts`
- using the Capacitor plugin instance's built-in config access.
+ This struct is responsible for reading and exposing
+ static configuration values defined under the
+ `SSLPinning` key in capacitor.config.ts.
 
- IMPORTANT:
- - These values are READ-ONLY at runtime.
- - JavaScript MUST NOT access them directly.
- - Actual behavior is implemented in native code only.
+ Configuration rules:
+ - Read once during plugin initialization
+ - Treated as immutable runtime input
+ - Accessible only from native code
  */
 public struct SSLPinningConfig {
 
     // MARK: - Configuration Keys
 
-    private struct Keys {
+    /**
+     Centralized definition of configuration keys.
+     Avoids string duplication and typos.
+     */
+    private enum Keys {
         static let verboseLogging = "verboseLogging"
         static let fingerprint = "fingerprint"
         static let fingerprints = "fingerprints"
     }
 
-    // MARK: - Public Config Values
+    // MARK: - Public Configuration Values
 
     /**
      Enables verbose native logging.
 
-     When enabled, additional debug information is printed
-     to the Xcode console via the plugin logger.
+     When enabled, the plugin prints additional
+     debug information to the Xcode console.
 
      Default: false
      */
@@ -46,34 +51,44 @@ public struct SSLPinningConfig {
      */
     public let fingerprints: [String]
 
-    // MARK: - Private Defaults
+    // MARK: - Defaults
 
-    private let defaultVerboseLogging = false
-    private let defaultFingerprint: String? = nil
-    private let defaultFingerprints: [String] = []
+    private static let defaultVerboseLogging: Bool = false
+    private static let defaultFingerprint: String? = nil
+    private static let defaultFingerprints: [String] = []
 
-    // MARK: - Init
+    // MARK: - Initialization
 
     /**
-     Initializes the configuration by reading values from the Capacitor bridge.
+     Initializes the configuration by reading values
+     from the Capacitor PluginConfig.
 
-     - Parameter plugin: The CAPPlugin instance used to access typed configuration.
+     - Parameter plugin: The CAPPlugin instance used
+     to access typed configuration values.
      */
     init(plugin: CAPPlugin) {
-        // Use getConfigValue(key) to bypass SPM visibility issues and ensure stability.
+        let config = plugin.getConfig()
 
-        // Bool - Verbose Logging
-        verboseLogging = plugin.getConfigValue(Keys.verboseLogging) as? Bool ?? defaultVerboseLogging
+        // Verbose logging flag
+        self.verboseLogging =
+            config.getBoolean(
+                Keys.verboseLogging,
+                Self.defaultVerboseLogging
+            )
 
-        // Optional String - Single Fingerprint
-        // We validate that it is not empty after casting to avoid using empty strings as valid fingerprints.
-        if let fprt = plugin.getConfigValue(Keys.fingerprint) as? String, !fprt.isEmpty {
-            fingerprint = fprt
+        // Single fingerprint (optional)
+        if let value = config.getString(Keys.fingerprint),
+           !value.isEmpty {
+            self.fingerprint = value
         } else {
-            fingerprint = defaultFingerprint
+            self.fingerprint = Self.defaultFingerprint
         }
 
-        // Array of Strings - Multiple Fingerprints
-        fingerprints = plugin.getConfigValue(Keys.fingerprints) as? [String] ?? defaultFingerprints
+        // Multiple fingerprints (optional)
+        self.fingerprints =
+            config.getArray(Keys.fingerprints)?
+            .compactMap { $0 as? String }
+            .filter { !$0.isEmpty }
+            ?? Self.defaultFingerprints
     }
 }

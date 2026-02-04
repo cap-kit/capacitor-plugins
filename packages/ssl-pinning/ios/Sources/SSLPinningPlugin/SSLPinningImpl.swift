@@ -1,111 +1,141 @@
 import Foundation
 import Security
 
-final class SSLPinningImpl {
+/**
+ Native iOS implementation for the SSLPinning plugin.
 
-    /// Cached configuration.
+ Responsibilities:
+ - Perform platform-specific SSL pinning logic
+ - Interact with system networking APIs
+ - Throw typed SSLPinningError values on failure
+
+ Forbidden:
+ - Accessing CAPPluginCall
+ - Referencing Capacitor APIs
+ - Constructing JavaScript payloads
+ */
+@objc
+public final class SSLPinningImpl: NSObject {
+
+    // MARK: - Properties
+
+    /**
+     Immutable plugin configuration.
+     Injected once during plugin initialization.
+     */
     private var config: SSLPinningConfig?
 
-    /// Applies the given configuration.
+    // MARK: - Configuration
+
+    /**
+     Applies static plugin configuration.
+
+     This method MUST be called exactly once
+     from the Plugin layer during `load()`.
+     */
     func applyConfig(_ config: SSLPinningConfig) {
         self.config = config
+        SSLPinningLogger.verbose = config.verboseLogging
+        SSLPinningLogger.debug("Configuration applied. Verbose logging:", config.verboseLogging)
     }
 
     // MARK: - Single fingerprint
 
-    /// Validates multiple SSL certificates for a given URL.
+    /**
+     Validates the SSL certificate of a HTTPS endpoint
+     using a single SHA-256 fingerprint.
+     */
     func checkCertificate(
         urlString: String,
-        fingerprintFromArgs: String?,
-        completion: @escaping ([String: Any]) -> Void
-    ) {
+        fingerprintFromArgs: String?
+    ) async throws -> [String: Any] {
+
         let fingerprint =
             fingerprintFromArgs ??
             config?.fingerprint
 
         guard let expectedFingerprint = fingerprint else {
-            completion([
-                "fingerprintMatched": false,
-                "error": "No fingerprint provided (args or config)",
-                "errorCode": "UNAVAILABLE"
-            ])
-            return
+            throw SSLPinningError.unavailable(
+                "No fingerprint provided (args or config)"
+            )
         }
 
-        performCheck(
+        return try await performCheck(
             urlString: urlString,
-            fingerprints: [expectedFingerprint],
-            completion: completion
+            fingerprints: [expectedFingerprint]
         )
     }
 
     // MARK: - Multiple fingerprints
 
-    /// Validates multiple SSL certificates for a given URL.
+    /**
+     Validates the SSL certificate of a HTTPS endpoint
+     using multiple allowed SHA-256 fingerprints.
+     */
     func checkCertificates(
         urlString: String,
-        fingerprintsFromArgs: [String]?,
-        completion: @escaping ([String: Any]) -> Void
-    ) {
+        fingerprintsFromArgs: [String]?
+    ) async throws -> [String: Any] {
+
         let fingerprints =
             fingerprintsFromArgs ??
             config?.fingerprints
 
-        guard let fingerprints, !fingerprints.isEmpty else {
-            completion([
-                "fingerprintMatched": false,
-                "error": "No fingerprints provided (args or config)",
-                "errorCode": "UNAVAILABLE"
-            ])
-            return
+        guard let fingerprints,
+              !fingerprints.isEmpty else {
+            throw SSLPinningError.unavailable(
+                "No fingerprints provided (args or config)"
+            )
         }
 
-        performCheck(
+        return try await performCheck(
             urlString: urlString,
-            fingerprints: fingerprints,
-            completion: completion
+            fingerprints: fingerprints
         )
     }
 
     // MARK: - Shared implementation
 
-    /// Performs the actual SSL pinning validation.
-    ///
-    /// This method:
-    /// - Creates an ephemeral URLSession
-    /// - Intercepts the TLS handshake via URLSessionDelegate
-    /// - Extracts the server leaf certificate
-    /// - Compares its SHA-256 fingerprint against the expected ones
-    ///
-    /// IMPORTANT:
-    /// - The system trust chain is NOT evaluated
-    /// - Only fingerprint matching determines acceptance
+    /**
+     Performs the actual SSL pinning validation.
+
+     This method:
+     - Validates the HTTPS URL
+     - Creates an ephemeral URLSession
+     - Intercepts the TLS handshake via URLSessionDelegate
+     - Compares the server leaf certificate fingerprint
+     against the expected ones
+
+     IMPORTANT:
+     - The system trust chain is NOT evaluated
+     - Only fingerprint matching determines acceptance
+     */
     private func performCheck(
         urlString: String,
-        fingerprints: [String],
-        completion: @escaping ([String: Any]) -> Void
-    ) {
+        fingerprints: [String]
+    ) async throws -> [String: Any] {
+
         guard let url = SSLPinningUtils.httpsURL(from: urlString) else {
-            completion([
-                "fingerprintMatched": false,
-                "error": "Invalid HTTPS URL",
-                "errorCode": "UNKNOWN_TYPE"
-            ])
-            return
+            throw SSLPinningError.unknownType(
+                "Invalid HTTPS URL"
+            )
         }
 
-        let delegate = SSLPinningDelegate(
-            expectedFingerprints: fingerprints,
-            completion: completion,
-            verboseLogging: config?.verboseLogging ?? false
-        )
+        return try await withCheckedThrowingContinuation { continuation in
+            let delegate = SSLPinningDelegate(
+                expectedFingerprints: fingerprints,
+                verboseLogging: config?.verboseLogging ?? false
+            ) { result in
+                continuation.resume(returning: result)
+            }
 
-        let session = URLSession(
-            configuration: .ephemeral,
-            delegate: delegate,
-            delegateQueue: nil
-        )
+            let session = URLSession(
+                configuration: .ephemeral,
+                delegate: delegate,
+                delegateQueue: nil
+            )
 
-        session.dataTask(with: url).resume()
+            session.dataTask(with: url).resume()
+        }
     }
 }

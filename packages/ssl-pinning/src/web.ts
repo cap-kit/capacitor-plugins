@@ -8,36 +8,15 @@
 
 import { CapacitorException, ExceptionCode, WebPlugin } from '@capacitor/core';
 
-import {
-  PluginVersionResult,
-  SSLPinningMultiOptions,
-  SSLPinningOptions,
-  SSLPinningPlugin,
-  SSLPinningResult,
-} from './definitions';
+import { PluginVersionResult, SSLPinningPlugin, SSLPinningResult } from './definitions';
 
 /**
- * Web implementation of the SSLPinningPlugin interface.
+ * Web implementation of the SSLPinning plugin.
  *
- * This class is intended to be used in a browser environment and handles scenarios where SSL certificate
- * checking is unsupported. It implements the methods defined by the SSLPinningPlugin
- * interface but returns standardized error responses to indicate the lack of functionality in web contexts.
+ * SSL certificate inspection is not supported in browsers,
+ * therefore all SSL pinning methods are unimplemented.
  */
 export class SSLPinningWeb extends WebPlugin implements SSLPinningPlugin {
-  /**
-   * Checks a single SSL certificate against the expected fingerprint.
-   * @param options - The options for checking the certificate.
-   * @returns A promise that resolves to the result of the certificate check.
-   */
-  async checkCertificate(): Promise<SSLPinningResult>;
-
-  /**
-   * Checks a single SSL certificate against the expected fingerprint.
-   * @param options - The options for checking the certificate.
-   * @returns A promise that resolves to the result of the certificate check.
-   */
-  async checkCertificate(_: SSLPinningOptions): Promise<SSLPinningResult>;
-
   /**
    * Checks a single SSL certificate against the expected fingerprint.
    * @return A promise that resolves to the result of the certificate check.
@@ -52,22 +31,7 @@ export class SSLPinningWeb extends WebPlugin implements SSLPinningPlugin {
    * @return A promise that resolves to an array of results for each certificate check.
    * @throws CapacitorException indicating unimplemented functionality.
    */
-  async checkCertificates(): Promise<SSLPinningResult[]>;
-
-  /**
-   * Checks multiple SSL certificates against their expected fingerprints.
-   * @param options - The options for checking multiple certificates.
-   * @return A promise that resolves to an array of results for each certificate check.
-   * @throws CapacitorException indicating unimplemented functionality.
-   */
-  async checkCertificates(_: SSLPinningMultiOptions[]): Promise<SSLPinningResult[]>;
-
-  /**
-   * Checks multiple SSL certificates against their expected fingerprints.
-   * @return A promise that resolves to an array of results for each certificate check.
-   * @throws CapacitorException indicating unimplemented functionality.
-   */
-  async checkCertificates(): Promise<SSLPinningResult[]> {
+  async checkCertificates(): Promise<SSLPinningResult> {
     throw this.createUnimplementedError();
   }
 
@@ -76,7 +40,8 @@ export class SSLPinningWeb extends WebPlugin implements SSLPinningPlugin {
   /**
    * Returns the plugin version.
    *
-   * @returns The current plugin version.
+   * On the Web, this value represents the JavaScript package version
+   * rather than a native implementation.
    */
   async getPluginVersion(): Promise<PluginVersionResult> {
     return { version: 'web' };

@@ -34,18 +34,61 @@
 ## Overview
 
 `@cap-kit/ssl-pinning` is a Capacitor plugin that performs **runtime SSL certificate
-verification** by validating the **SHA-256 fingerprint** of a server certificate.
+fingerprint verification** on **iOS and Android** by validating the
+**SHA-256 fingerprint** of a server certificate during the TLS handshake.
 
-The plugin works on **iOS and Android** and is designed to:
+The plugin is designed to:
 
-- validate a single fingerprint (`checkCertificate`)
-- validate multiple fingerprints (`checkCertificates`)
+- validate a single fingerprint using `checkCertificate`
+- validate multiple fingerprints using `checkCertificates`
 - support configuration-based defaults via `capacitor.config.ts`
 - keep the JavaScript API platform-agnostic and stable
 
-This plugin **does not replace TLS** and **does not guarantee absolute security**.
-It enforces explicit trust decisions on top of standard TLS.
-It is a defense-in-depth mechanism that must be maintained correctly.
+By enforcing explicit trust decisions, SSL pinning helps protect against
+**man-in-the-middle attacks**.
+
+This plugin performs **certificate pinning only**.
+It does **not** expose full X.509 certificate inspection APIs at runtime,
+does **not replace TLS**, and does **not guarantee absolute security**.
+
+SSL pinning is a **defense-in-depth mechanism** and must be maintained correctly
+over time.
+
+---
+
+## Platform Support
+
+| Platform | Supported |
+| -------- | --------- |
+| iOS      | ✅        |
+| Android  | ✅        |
+| Web      | ❌        |
+
+On the Web, SSL certificate inspection is not possible due to browser security
+restrictions. All methods will reject with an `Unimplemented` error.
+
+---
+
+## Future Directions (Informational)
+
+In addition to runtime fingerprint-based SSL pinning, the long-term vision
+for this plugin includes exploring additional trust models and configuration
+strategies.
+
+Potential future enhancements may include:
+
+- **Loading trusted certificates from the application bundle**, for example
+  from a dedicated `certs/` directory, allowing certificate-based pinning
+  without hardcoding fingerprints.
+- **Domain-based exclusions**, enabling developers to explicitly bypass
+  SSL pinning for selected hosts (e.g. analytics, third-party services, or
+  development environments).
+
+These ideas are provided for informational purposes only.
+
+They are **not part of the current API**, **not guaranteed to be implemented**,
+and **may change or be discarded** based on platform constraints, security
+considerations, and real-world usage feedback.
 
 ---
 
@@ -68,8 +111,11 @@ npx cap sync
 To use SSL pinning, you must obtain the **SHA-256 fingerprint**
 of the SSL certificate you intend to trust.
 
-Fingerprints can be generated using standard tools or via the
-companion CLI utility provided by this project.
+A fingerprint is a cryptographic hash of the server certificate and is used
+to uniquely identify it during the TLS handshake.
+
+Fingerprints can be obtained using **standard tools** or via the
+**built-in CLI utility provided by this project**.
 
 ---
 
@@ -78,14 +124,14 @@ companion CLI utility provided by this project.
 1. Open the target website in a modern browser.
 2. View the website certificate details.
 3. Export or copy the certificate (public key).
-4. Use an online fingerprint generator, for example:
+4. Use a fingerprint generator, for example:
    https://www.samltool.com/fingerprint.php
 5. Select **SHA-256** as the algorithm.
-6. Copy the resulting fingerprint (colon-separated format is acceptable).
+6. Copy the resulting fingerprint.
 
 ---
 
-### Method 2 — Using the Command Line (OpenSSL)
+### Method 2 — Using OpenSSL
 
 If you have access to the certificate file (`.pem`, `.cer`, `.crt`):
 
@@ -103,12 +149,11 @@ SHA256 Fingerprint=EF:BA:26:D8:C1:CE:37:79:AC:77:63:0A:90:F8:21:63:A3:D6:89:2E:D
 
 ### Method 3 — Using the Built-in CLI Tool
 
-This project includes a CLI utility that can retrieve and display
-SSL certificate information for one or more domains.
+This project includes a **command-line utility** that can retrieve
+SSL certificates from remote servers and generate SHA-256 fingerprints.
 
-The CLI is intended as a **development and configuration helper**.
-It **does not perform SSL pinning** and does **not enforce trust decisions**
-at runtime.
+The CLI is intended to be used **at development time**.
+It **does not perform SSL pinning** and does **not make trust decisions at runtime**.
 
 Its purpose is to:
 
@@ -116,107 +161,62 @@ Its purpose is to:
 - extract SHA-256 fingerprints
 - assist in preparing configuration values for the runtime plugin
 
----
+#### Basic usage
 
-#### Installation & Usage
-
-You don't need to install the tool globally. You can run it directly using your package manager if the plugin is installed in your project.
-
-**Using pnpm (Recommended):**
-
-```bash
-pnpm exec ssl-fingerprint example.com
-```
-
-**Using npx:**
+> Note  
+> The CLI is exposed via the `cap-kit-ssl-pinning` command.  
+> Any internal script names shown in the help output (e.g. `fingerprint.js`)
+> are implementation details and should not be invoked directly.
 
 ```bash
-npx ssl-fingerprint example.com
+npx cap-kit-ssl-pinning example.com
 ```
 
-If you prefer a global installation:
+#### Multiple domains
 
 ```bash
-npm install -g @cap-kit/ssl-pinning
-# or
-yarn global add @cap-kit/ssl-pinning
-# then run:
-ssl-fingerprint example.com
+npx cap-kit-ssl-pinning example.com api.example.com
 ```
-
----
-
-#### Usage
-
-```bash
-# Using npx
-npx ssl-fingerprint example.com
-
-# Multiple domains
-npx ssl-fingerprint example.com example.org example.net
-
-# If installed globally
-ssl-fingerprint example.com
-```
-
----
 
 #### Modes
 
-The `--mode` flag controls how fingerprints are organized:
+The `--mode` flag controls how fingerprints are grouped:
 
-- `--mode single`
+- `single`
   Generates a single `fingerprint` value.
 
-- `--mode multi`
+- `multi`
   Generates a `fingerprints[]` array (useful for certificate rotation).
 
-Example:
-
 ```bash
-npx ssl-fingerprint example.com api.example.com --mode multi
+npx cap-kit-ssl-pinning example.com api.example.com --mode multi
 ```
 
----
+> ⚠️ Note
+>
+> When using `--mode multi` with multiple domains, each domain is processed independently.
+>
+> If a certificate cannot be retrieved for a specific domain (e.g. DNS error or TLS failure),
+> the error is reported in the output, but the CLI continues processing the remaining domains.
+>
+> The resulting `fingerprints` array will include **only successfully retrieved certificates**.
 
-You can also save the output to a file:
-
-```bash
-ssl-fingerprint example.com --out certs.json
-ssl-fingerprint example.com example.org example.net --out certs.json
-```
-
-Generate output in TypeScript format (useful for configuration files):
-
-```bash
-ssl-fingerprint example.com --out fingerprints.ts --format fingerprints
-```
-
----
-
-#### Formats
+#### Output formats
 
 The `--format` flag controls the output structure:
 
-- `json`
-  Raw certificate information (default)
-
-- `fingerprints`
-  TypeScript array of fingerprints
-
-- `capacitor`
-  Full `plugins` block for `capacitor.config.ts`
-
-- `capacitor-plugin`
-  Only the `SSLPinning` plugin block
-
-- `capacitor-json`
-  JSON equivalent of the Capacitor configuration
+| Format             | Description                                    |
+| ------------------ | ---------------------------------------------- |
+| `json`             | Full certificate information (default)         |
+| `fingerprints`     | JavaScript array of fingerprints               |
+| `capacitor`        | Full `plugins` block for `capacitor.config.ts` |
+| `capacitor-plugin` | `SSLPinning` config block only                 |
+| `capacitor-json`   | JSON-compatible Capacitor configuration        |
 
 Example:
 
 ```bash
-npx ssl-fingerprint example.com \
+npx cap-kit-ssl-pinning example.com \
   --mode multi \
   --format capacitor
 ```
@@ -231,13 +231,40 @@ plugins: {
 }
 ```
 
+Example (plugin block only):
+
+```bash
+npx cap-kit-ssl-pinning example.com api.example.com \
+  --mode multi \
+  --format capacitor-plugin
+```
+
+Output:
+
+```ts
+SSLPinning: {
+  fingerprints: ['AA:BB:CC:DD:...', '11:22:33:44:...'];
+}
+```
+
+#### Insecure mode
+
+By default, the CLI allows retrieving certificates even if the TLS
+chain is invalid.
+
+To enforce certificate validation:
+
+```bash
+npx cap-kit-ssl-pinning example.com --insecure=false
+```
+
 ---
 
-#### Notes
+### Notes
 
 - Fingerprints are normalized internally by the runtime plugin.
 - Uppercase/lowercase differences are ignored.
-- Colons (`:`) are optional.
+- Colon separators (`:`) are optional.
 
 The CLI **generates configuration**.
 The runtime plugin **consumes it**.
@@ -258,19 +285,25 @@ to production.
 
 ## Configuration
 
-The plugin supports static configuration via `capacitor.config.ts`.
-Configuration values are read **natively at runtime** and are not accessed from JavaScript.
+Static configuration can be provided in `capacitor.config.ts` under
+`plugins.SSLPinning`.
+
+These values are:
+
+- read natively at build/runtime
+- not accessible from JavaScript at runtime
+- treated as read-only fallback configuration
 
 <docgen-config>
 <!--Update the source file JSDoc comments and rerun docgen to update the docs below-->
 
 Configuration options for the SSLPinning plugin.
 
-| Prop                 | Type                  | Description                                                                                                                | Default                | Since  |
-| -------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------- | ---------------------- | ------ |
-| **`verboseLogging`** | <code>boolean</code>  | Enables detailed logging in the native console (Logcat/Xcode). Useful for debugging sensor data flow and lifecycle events. | <code>false</code>     | 0.0.15 |
-| **`fingerprint`**    | <code>string</code>   | Default fingerprint used by checkCertificate() if no arguments are provided.                                               | <code>undefined</code> | 0.0.14 |
-| **`fingerprints`**   | <code>string[]</code> | Default fingerprints used by checkCertificates() if no arguments are provided.                                             | <code>undefined</code> | 0.0.15 |
+| Prop                 | Type                  | Description                                                                                                | Default            | Since  |
+| -------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------ | ------ |
+| **`verboseLogging`** | <code>boolean</code>  | Enables verbose native logging (Logcat / Xcode console).                                                   | <code>false</code> | 0.0.15 |
+| **`fingerprint`**    | <code>string</code>   | Default fingerprint used by `checkCertificate()` when `options.fingerprint` is not provided at runtime.    |                    | 0.0.14 |
+| **`fingerprints`**   | <code>string[]</code> | Default fingerprints used by `checkCertificates()` when `options.fingerprints` is not provided at runtime. |                    | 0.0.15 |
 
 ### Examples
 
@@ -280,7 +313,7 @@ In `capacitor.config.json`:
 {
   "plugins": {
     "SSLPinning": {
-      "verboseLogging": true,
+      "verboseLogging": false,
       "fingerprint": "50:4B:A1:B5:48:96:71:F3:9F:87:7E:0A:09:FD:3E:1B:C0:4F:AA:9F:FC:83:3E:A9:3A:00:78:88:F8:BA:60:26",
       "fingerprints": [
         "50:4B:A1:B5:48:96:71:F3:9F:87:7E:0A:09:FD:3E:1B:C0:4F:AA:9F:FC:83:3E:A9:3A:00:78:88:F8:BA:60:26"
@@ -300,7 +333,7 @@ import { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   plugins: {
     SSLPinning: {
-      verboseLogging: true,
+      verboseLogging: false,
       fingerprint: '50:4B:A1:B5:48:96:71:F3:9F:87:7E:0A:09:FD:3E:1B:C0:4F:AA:9F:FC:83:3E:A9:3A:00:78:88:F8:BA:60:26',
       fingerprints: ['50:4B:A1:B5:48:96:71:F3:9F:87:7E:0A:09:FD:3E:1B:C0:4F:AA:9F:FC:83:3E:A9:3A:00:78:88:F8:BA:60:26'],
     },
@@ -312,140 +345,14 @@ export default config;
 
 </docgen-config>
 
----
+### Configuration precedence
 
-## 🔐 Pinning Mode (Runtime Behavior)
+For each method call, fingerprint resolution follows this order:
 
-This version of the plugin supports **fingerprint-based SSL pinning only**.
+1. Runtime options passed from JavaScript
+2. Static configuration from `capacitor.config.ts`
 
-### How it works
-
-At runtime, the plugin:
-
-1. Opens a TLS connection to the target HTTPS endpoint
-2. Extracts the **leaf SSL certificate** presented by the server
-3. Computes its **SHA-256 fingerprint**
-4. Compares it against the expected fingerprint(s)
-
-The certificate is considered trusted if **any fingerprint matches**.
-
----
-
-### Supported pinning modes
-
-| Mode                | Supported |
-| ------------------- | --------- |
-| Fingerprint pinning | ✅ Yes    |
-| Certificate pinning | ❌ No     |
-| Excluded domains    | ❌ No     |
-
----
-
-## 🛡️ Security Model
-
-This plugin mitigates **man-in-the-middle (MITM) attacks**
-by enforcing explicit trust decisions at the TLS layer
-using certificate fingerprint validation.
-
-### Security guarantees
-
-When correctly configured:
-
-- The connection is accepted **only if** the server certificate
-  fingerprint matches one of the expected values.
-- Trust decisions are performed **natively at runtime**,
-  outside of JavaScript control.
-- Certificate validation fails **closed** by default.
-
----
-
-### Limitations
-
-This plugin intentionally:
-
-- Validates **only the leaf certificate**
-- Does **not** evaluate the full trust chain
-- Does **not** check certificate revocation (CRL / OCSP)
-- Does **not** protect against compromised application binaries
-
-It is a **defense-in-depth control** and must be combined
-with proper TLS configuration and backend security practices.
-
----
-
-### Operational requirements
-
-Applications using this plugin must:
-
-- Monitor certificate expiration dates
-- Update fingerprints **before certificate rotation**
-- Test pinning behavior before production releases
-
-Incorrect configuration may result in **loss of connectivity** by design.
-
----
-
-### Priority rules
-
-Fingerprint values are selected in the following order:
-
-1. Fingerprints passed at runtime (`checkCertificate` / `checkCertificates`)
-2. Fingerprints defined in `capacitor.config.ts`
-
-If no fingerprints are available, the operation fails.
-
-There is **no automatic fallback**.
-
----
-
-## 🔧 Error Handling Model (Important)
-
-> ⚠️ **Read this before using `checkCertificate()` or `checkCertificates()`**
-
-This plugin uses a **state-based error model**, not exception-based errors.
-
-### Why?
-
-- On **iOS (Capacitor 8 + Swift Package Manager)**, native Promise rejection
-  is not reliably available.
-- To guarantee **cross-platform consistency**, the plugin always
-  **resolves Promises** and returns an explicit result object.
-
-### What this means
-
-- Promises are **never rejected** by the plugin.
-  This behavior applies to **all platforms** to ensure API consistency.
-- Errors are reported as part of the resolved result.
-- Consumers must **always inspect the returned object**, not rely on `catch()`.
-
-### Error fields
-
-When an error occurs, the result object may include:
-
-- `fingerprintMatched: false`
-- `error`: a human-readable diagnostic message
-- `errorCode`: a standardized error identifier
-
-Example:
-
-```ts
-const result = await SSLPinning.checkCertificate();
-
-if (!result.fingerprintMatched) {
-  console.error(result.error, result.errorCode);
-}
-```
-
-### Standardized error codes
-
-The `errorCode` field (when present) is one of the following:
-
-- `UNAVAILABLE` – the feature is not available at runtime
-- `PERMISSION_DENIED` – access was denied by the system or configuration
-- `INIT_FAILED` – initialization or runtime failure occurred
-- `UNKNOWN_TYPE` – unsupported or invalid pinning configuration
-
-These codes are intended for **programmatic handling**, not for user-facing messages.
+If no fingerprint is available from either source, the call will fail.
 
 ---
 
@@ -453,9 +360,7 @@ These codes are intended for **programmatic handling**, not for user-facing mess
 
 <docgen-index>
 
-- [`checkCertificate()`](#checkcertificate)
 - [`checkCertificate(...)`](#checkcertificate)
-- [`checkCertificates()`](#checkcertificates)
 - [`checkCertificates(...)`](#checkcertificates)
 - [`getPluginVersion()`](#getpluginversion)
 - [Interfaces](#interfaces)
@@ -465,37 +370,7 @@ These codes are intended for **programmatic handling**, not for user-facing mess
 <docgen-api>
 <!--Update the source file JSDoc comments and rerun docgen to update the docs below-->
 
-Interface defining the structure of an SSL Certificate Checker Plugin.
-
-Implementations of this interface should provide the logic for checking
-the status and details of an SSL certificate based on the provided options.
-
-### checkCertificate()
-
-```typescript
-checkCertificate() => Promise<SSLPinningResult>
-```
-
-Check the SSL certificate of a server.
-
-**Returns:** <code>Promise&lt;<a href="#sslpinningresult">SSLPinningResult</a>&gt;</code>
-
-**Since:** 0.0.14
-
-#### Example
-
-```typescript
-import { SSLPinning } from '@cap-kit/ssl-pinning';
-
-const result = await SSLPinning.checkCertificate({
-  url: 'https://example.com',
-  fingerprint: '50:4B:A1:B5:48:96:71:F3:9F:87:7E:0A:09:FD:3E:1B:C0:4F:AA:9F:FC:83:3E:A9:3A:00:78:88:F8:BA:60:26',
-});
-
-console.log('SSL Pinning Result:', result);
-```
-
----
+SSL Pinning Capacitor Plugin interface.
 
 ### checkCertificate(...)
 
@@ -503,93 +378,33 @@ console.log('SSL Pinning Result:', result);
 checkCertificate(options: SSLPinningOptions) => Promise<SSLPinningResult>
 ```
 
-Check the SSL certificate of a server.
+Checks the SSL certificate of a server using a single fingerprint.
 
-| Param         | Type                                                            | Description                                 |
-| ------------- | --------------------------------------------------------------- | ------------------------------------------- |
-| **`options`** | <code><a href="#sslpinningoptions">SSLPinningOptions</a></code> | - Options for checking the SSL certificate. |
+| Param         | Type                                                            |
+| ------------- | --------------------------------------------------------------- |
+| **`options`** | <code><a href="#sslpinningoptions">SSLPinningOptions</a></code> |
 
 **Returns:** <code>Promise&lt;<a href="#sslpinningresult">SSLPinningResult</a>&gt;</code>
 
 **Since:** 0.0.14
-
-#### Example
-
-```typescript
-import { SSLPinning } from '@cap-kit/ssl-pinning';
-
-const result = await SSLPinning.checkCertificate({
-  url: 'https://example.com',
-  fingerprint: '50:4B:A1:B5:48:96:71:F3:9F:87:7E:0A:09:FD:3E:1B:C0:4F:AA:9F:FC:83:3E:A9:3A:00:78:88:F8:BA:60:26',
-});
-
-console.log('SSL Pinning Result:', result);
-```
-
----
-
-### checkCertificates()
-
-```typescript
-checkCertificates() => Promise<SSLPinningResult[]>
-```
-
-Check the SSL certificates of multiple servers.
-
-**Returns:** <code>Promise&lt;SSLPinningResult[]&gt;</code>
-
-**Since:** 0.0.15
-
-#### Example
-
-```typescript
-import { SSLPinning } from '@cap-kit/ssl-pinning';
-
-const results = await SSLPinning.checkCertificates();
-
-results.forEach((result) => {
-  console.log('SSL Pinning Result:', result);
-});
-```
 
 ---
 
 ### checkCertificates(...)
 
 ```typescript
-checkCertificates(options: SSLPinningMultiOptions[]) => Promise<SSLPinningResult[]>
+checkCertificates(options: SSLPinningMultiOptions) => Promise<SSLPinningResult>
 ```
 
-Check the SSL certificates of multiple servers.
+Checks the SSL certificate of a server using multiple allowed fingerprints.
 
-| Param         | Type                                  | Description                                  |
-| ------------- | ------------------------------------- | -------------------------------------------- |
-| **`options`** | <code>SSLPinningMultiOptions[]</code> | - Options for checking the SSL certificates. |
+| Param         | Type                                                                      |
+| ------------- | ------------------------------------------------------------------------- |
+| **`options`** | <code><a href="#sslpinningmultioptions">SSLPinningMultiOptions</a></code> |
 
-**Returns:** <code>Promise&lt;SSLPinningResult[]&gt;</code>
+**Returns:** <code>Promise&lt;<a href="#sslpinningresult">SSLPinningResult</a>&gt;</code>
 
 **Since:** 0.0.15
-
-#### Example
-
-```typescript
-import { SSLPinning } from '@cap-kit/ssl-pinning';
-
-const results = await SSLPinning.checkCertificates([
-  {
-    url: 'https://example.com',
-    fingerprints: ['50:4B:A1:B5:48:96:71:F3:9F:87:7E:0A:09:FD:3E:1B:C0:4F:AA:9F:FC:83:3E:A9:3A:00:78:88:F8:BA:60:26'],
-  },
-  {
-    url: 'https://another-example.com',
-    fingerprints: ['AB:CD:EF:12:34:56:78:90:AB:CD:EF:12:34:56:78:90:AB:CD:EF:12:34:56:78:90:AB:CD:EF:12:34:56:78:90'],
-  },
-]);
-
-results.forEach((result) => {
-  console.log('SSL Pinning Result:', result);
-});
-```
 
 ---
 
@@ -620,41 +435,34 @@ const { version } = await SSLPinning.getPluginVersion();
 
 #### SSLPinningResult
 
-Result returned by the SSL certificate check.
+Result returned by a successful SSL certificate check.
 
-NOTE:
-On iOS (Swift Package Manager), errors are returned
-as part of the resolved result object rather than
-Promise rejections.
+This object is returned ONLY on success.
+Failures are delivered via Promise rejection.
 
-| Prop                      | Type                 | Description                                                                                                                                                           |
-| ------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`subject`**             | <code>string</code>  | The subject of the certificate, representing the entity the certificate is issued to.                                                                                 |
-| **`issuer`**              | <code>string</code>  | The issuer of the certificate, indicating the certificate authority that issued it. Results may vary slightly between iOS and Android platforms.                      |
-| **`validFrom`**           | <code>string</code>  | The start date from which the certificate is valid. Format: ISO 8601 string or platform-specific date representation.                                                 |
-| **`validTo`**             | <code>string</code>  | The end date until which the certificate is valid. Format: ISO 8601 string or platform-specific date representation.                                                  |
-| **`expectedFingerprint`** | <code>string</code>  | The fingerprint that is expected to match the certificate's actual fingerprint. This is typically provided in the <a href="#sslpinningoptions">SSLPinningOptions</a>. |
-| **`actualFingerprint`**   | <code>string</code>  | The actual fingerprint of the SSL certificate retrieved from the server.                                                                                              |
-| **`fingerprintMatched`**  | <code>boolean</code> | Indicates whether the actual fingerprint matches the expected fingerprint. `true` if they match, `false` otherwise.                                                   |
-| **`error`**               | <code>string</code>  | A descriptive error message if an issue occurred during the SSL certificate check.                                                                                    |
+| Prop                     | Type                 | Description                                            |
+| ------------------------ | -------------------- | ------------------------------------------------------ |
+| **`actualFingerprint`**  | <code>string</code>  | Actual SHA-256 fingerprint of the server certificate.  |
+| **`fingerprintMatched`** | <code>boolean</code> | Indicates whether the certificate fingerprint matched. |
+| **`matchedFingerprint`** | <code>string</code>  | The fingerprint that successfully matched, if any.     |
 
 #### SSLPinningOptions
 
 Options for checking a single SSL certificate.
 
-| Prop              | Type                | Description                                                                                                           |
-| ----------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| **`url`**         | <code>string</code> | The URL of the server whose SSL certificate needs to be checked.                                                      |
-| **`fingerprint`** | <code>string</code> | The expected fingerprint of the SSL certificate to validate against. This is typically a hash string such as SHA-256. |
+| Prop              | Type                | Description                                                                                                                                                                                                                                |
+| ----------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **`url`**         | <code>string</code> | HTTPS URL of the server whose SSL certificate must be checked. This value is REQUIRED and cannot be provided via configuration.                                                                                                            |
+| **`fingerprint`** | <code>string</code> | Expected SHA-256 fingerprint of the certificate. Resolution order: 1. `options.fingerprint` (runtime) 2. `plugins.SSLPinning.fingerprint` (config) If neither is provided, the Promise is rejected with `SSLPinningErrorCode.UNAVAILABLE`. |
 
 #### SSLPinningMultiOptions
 
-Options for checking multiple SSL certificates.
+Options for checking an SSL certificate using multiple allowed fingerprints.
 
-| Prop               | Type                  | Description                                                                                                                       |
-| ------------------ | --------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **`url`**          | <code>string</code>   | The URL of the server whose SSL certificate needs to be checked.                                                                  |
-| **`fingerprints`** | <code>string[]</code> | The expected fingerprints of the SSL certificate to validate against. This is typically an array of hash strings such as SHA-256. |
+| Prop               | Type                  | Description                                                                                                                                                                                                                                   |
+| ------------------ | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`url`**          | <code>string</code>   | HTTPS URL of the server whose SSL certificate must be checked. This value is REQUIRED and cannot be provided via configuration.                                                                                                               |
+| **`fingerprints`** | <code>string[]</code> | Expected SHA-256 fingerprints of the certificate. Resolution order: 1. `options.fingerprints` (runtime) 2. `plugins.SSLPinning.fingerprints` (config) If neither is provided, the Promise is rejected with `SSLPinningErrorCode.UNAVAILABLE`. |
 
 #### PluginVersionResult
 
@@ -670,7 +478,7 @@ Result returned by the getPluginVersion method.
 
 ## Usage
 
-### Single fingerprint
+### Single fingerprint check
 
 ```ts
 import { SSLPinning } from '@cap-kit/ssl-pinning';
@@ -681,34 +489,88 @@ const result = await SSLPinning.checkCertificate({
 });
 
 if (result.fingerprintMatched) {
-  // Certificate is trusted
+  console.log('Certificate is trusted');
 }
 ```
 
-### Multiple fingerprints
+### Multiple fingerprint check
 
 ```ts
+import { SSLPinning } from '@cap-kit/ssl-pinning';
+
 const result = await SSLPinning.checkCertificates({
   url: 'https://example.com',
   fingerprints: ['AA:BB:CC:DD:...', '11:22:33:44:...'],
 });
 
 if (result.fingerprintMatched) {
-  // At least one fingerprint matched
+  console.log('Certificate matched:', result.matchedFingerprint);
 }
 ```
 
-When no fingerprints are passed at runtime, the plugin will use the values
-defined in `capacitor.config.ts`.
+---
+
+## Result Object
+
+On success, the Promise resolves with the following object:
+
+```ts
+interface SSLPinningResult {
+  actualFingerprint: string;
+  fingerprintMatched: boolean;
+  matchedFingerprint?: string;
+}
+```
+
+---
+
+## Error Handling Model (Important)
+
+This plugin uses a **Promise rejection–based error model**.
+
+- Successful calls always resolve with `SSLPinningResult`
+- Failures always reject with `CapacitorException`
+- Error codes are exposed via `err.code`
+
+### Example
+
+```ts
+import { SSLPinning, SSLPinningErrorCode } from '@cap-kit/ssl-pinning';
+
+try {
+  await SSLPinning.checkCertificate({
+    url: 'https://example.com',
+  });
+} catch (err: any) {
+  if (err.code === SSLPinningErrorCode.UNAVAILABLE) {
+    console.error('No fingerprint provided');
+  } else {
+    console.error('SSL pinning failed', err);
+  }
+}
+```
+
+### Error codes
+
+| Code                | Description                                 |
+| ------------------- | ------------------------------------------- |
+| `UNAVAILABLE`       | No fingerprint provided (runtime or config) |
+| `PERMISSION_DENIED` | Required permission denied                  |
+| `INIT_FAILED`       | Runtime or initialization failure           |
+| `UNKNOWN_TYPE`      | Invalid or unsupported input                |
 
 ---
 
 ## Security Notes
 
-- SSL pinning **requires maintenance**. Expired or rotated certificates
-  must be updated before they become invalid.
-- Incorrect configuration can result in **loss of connectivity**.
-- SSL pinning may interfere with debugging tools and traffic inspection.
+- Only HTTPS URLs are accepted.
+- The system trust chain is **not** evaluated.
+- Certificate acceptance is based **solely on fingerprint matching**.
+
+- SSL pinning **requires ongoing maintenance**.
+  Certificates that expire or are rotated **must be updated** before they become invalid.
+- Incorrect configuration may result in **loss of network connectivity**.
+- SSL pinning can interfere with debugging tools and HTTPS traffic inspection.
 - This plugin is provided **as-is**, without warranty.
 
 Always test thoroughly in your target environment.
