@@ -24,55 +24,16 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Required for diffing against origin/main
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          registry-url: 'https://registry.npmjs.org' # CapKit registry protocol
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile # Prevents lockfile drift in CI
-
-      - name: Verify Root README sync
-        run: |
-          pnpm run readme:update
-          git diff --exit-code README.md || exit 1
-
-      # --- LINT ---
-
-      - name: Lint (main – full)
-        if: github.ref == 'refs/heads/main'
-        run: pnpm lint:packages
-
-      - name: Lint (PR – impacted only)
-        if: github.ref != 'refs/heads/main'
-        run: pnpm --filter "[origin/main]..." lint
-
-      - name: Show impacted packages (lint)
-        if: github.ref != 'refs/heads/main'
-        run: pnpm --filter "[origin/main]..." ls --depth -1
-
-  build-test:
-    name: Build and Test
-    runs-on: macos-latest # Required for xcodebuild and iOS tooling
-    needs: lint
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Ensure origin/main exists
+        run: |
+          git fetch origin main:refs/remotes/origin/main || true
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -89,17 +50,78 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # --- BUILD ---
+      - name: Verify Root README sync
+        run: |
+          pnpm run readme:update
+          git diff --exit-code README.md || exit 1
+
+      # -------- LINT --------
+
+      - name: Lint (main – full)
+        if: github.ref == 'refs/heads/main'
+        run: pnpm lint:all
+
+      - name: Lint (PR – impacted only)
+        if: github.ref != 'refs/heads/main'
+        run: |
+          AFFECTED=$(pnpm --filter "[origin/main]..." ls --json | jq length)
+
+          if [ "$AFFECTED" -eq 0 ]; then
+            echo "✅ No impacted packages – skipping lint"
+            exit 0
+          fi
+
+          pnpm --filter "[origin/main]..." run lint
+
+  build-test:
+    name: Build and Test
+    runs-on: macos-latest
+    needs: lint
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure origin/main exists
+        run: |
+          git fetch origin main:refs/remotes/origin/main || true
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # -------- BUILD --------
 
       - name: Build (main – full)
         if: github.ref == 'refs/heads/main'
-        run: pnpm build:packages
+        run: pnpm build:all
 
       - name: Build (PR – impacted + downstream)
         if: github.ref != 'refs/heads/main'
-        run: pnpm --filter "...[origin/main]" build
+        run: |
+          AFFECTED=$(pnpm --filter "...[origin/main]" ls --json | jq length)
 
-      # --- TEST ---
+          if [ "$AFFECTED" -eq 0 ]; then
+            echo "✅ No impacted packages – skipping build"
+            exit 0
+          fi
+
+          pnpm --filter "...[origin/main]" run build
+
+      # -------- TEST --------
 
       - name: Test (main – full, serial)
         if: github.ref == 'refs/heads/main'
@@ -107,8 +129,12 @@ jobs:
 
       - name: Test (PR – impacted only, serial)
         if: github.ref != 'refs/heads/main'
-        run: pnpm --filter "[origin/main]..." --workspace-concurrency=1 test
+        run: |
+          AFFECTED=$(pnpm --filter "[origin/main]..." ls --json | jq length)
 
-      - name: Show impacted packages (test)
-        if: github.ref != 'refs/heads/main'
-        run: pnpm --filter "[origin/main]..." ls --depth -1
+          if [ "$AFFECTED" -eq 0 ]; then
+            echo "✅ No impacted packages – skipping tests"
+            exit 0
+          fi
+
+          pnpm --filter "[origin/main]..." --workspace-concurrency=1 run test
