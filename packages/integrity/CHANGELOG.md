@@ -1,5 +1,11 @@
 # @cap-kit/test-plugin
 
+## 8.0.0-next.2
+
+### Patch Changes
+
+- 47342a6: feat(integrity): Implement configurable integrity checks and debug environment detection
+
 ## 8.0.0-next.1
 
 ### Minor Changes
