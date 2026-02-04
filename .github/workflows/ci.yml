@@ -93,12 +93,25 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       # Detect impacted packages
-      - name: Detect impacted packages with lint script
+      - name: Detect impacted packages with lint
         id: affected
         run: |
-          pnpm --filter "[origin/main]..." exec -- bash -c 'node -e "process.exit(require(\"./package.json\").scripts?.lint ? 0 : 1)"' \
-            && echo "none=false" >> $GITHUB_OUTPUT \
-            || echo "none=true" >> $GITHUB_OUTPUT
+          set -e
+          HAS_LINT=false
+
+          for pkg in $(pnpm --filter "[origin/main]..." list --depth -1 --json | jq -r '.[].path'); do
+            if jq -e '.scripts.lint' "$pkg/package.json" > /dev/null; then
+              HAS_LINT=true
+              break
+            fi
+          done
+
+          if [ "$HAS_LINT" = "true" ]; then
+            echo "none=false" >> $GITHUB_OUTPUT
+          else
+            echo "none=true" >> $GITHUB_OUTPUT
+          fi
+
 
       - name: Build (main)
         if: github.ref == 'refs/heads/main'
