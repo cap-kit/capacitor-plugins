@@ -1,5 +1,11 @@
 # @cap-kit/test-plugin
 
+## 8.0.0-next.1
+
+### Minor Changes
+
+- 89b40cf: feat(integrity): Initial release of the Integrity plugin for Capacitor v8
+
 ## 6.0.1
 
 ### Patch Changes
