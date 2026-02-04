@@ -46,18 +46,10 @@ jobs:
       - name: Verify Root README sync
         run: |
           pnpm run readme:update
-          git diff --exit-code README.md || (
-            echo "❌ Root README.md is out of sync." &&
-            exit 1
-          )
+          git diff --exit-code README.md || exit 1
 
-      - name: Lint (main)
-        if: github.ref == 'refs/heads/main'
-        run: pnpm -r lint
-
-      - name: Lint (impacted)
-        if: github.ref != 'refs/heads/main'
-        run: pnpm -r --filter "[origin/main]..." lint --if-present
+      - name: Lint
+        run: pnpm -r lint --if-present
 
   build-test:
     name: Build and Test
