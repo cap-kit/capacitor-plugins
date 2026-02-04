@@ -48,10 +48,7 @@ jobs:
       - name: Verify Root README sync
         run: |
           pnpm run readme:update
-          git diff --exit-code README.md || (
-            echo "❌ Root README.md is out of sync. Run 'pnpm run readme:update' and commit the changes."
-            && exit 1
-          )
+          git diff --exit-code README.md || exit 1
 
       # --- LINT ---
 
