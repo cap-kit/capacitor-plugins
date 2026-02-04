@@ -1,0 +1,11 @@
+{
+  "mode": "pre",
+  "tag": "next",
+  "initialVersions": {
+    "@cap-kit/integrity": "8.0.0-next.0",
+    "@cap-kit/settings": "8.0.2",
+    "@cap-kit/ssl-pinning": "8.0.0",
+    "@cap-kit/test-plugin": "6.0.1"
+  },
+  "changesets": []
+}
