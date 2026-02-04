@@ -58,7 +58,7 @@ jobs:
 
       - name: Lint (impacted)
         if: github.ref != 'refs/heads/main'
-        run: pnpm --filter "[origin/main]..." run lint
+        run: pnpm --filter "[origin/main]..." run lint --if-present
 
   build-test:
     name: Build and Test
@@ -103,7 +103,7 @@ jobs:
 
       - name: Build (impacted)
         if: github.ref != 'refs/heads/main' && steps.affected.outputs.none != 'true'
-        run: pnpm --filter "...[origin/main]" run build
+        run: pnpm --filter "...[origin/main]" run build --if-present
 
       - name: Test (main)
         if: github.ref == 'refs/heads/main'
@@ -111,4 +111,4 @@ jobs:
 
       - name: Test (impacted)
         if: github.ref != 'refs/heads/main' && steps.affected.outputs.none != 'true'
-        run: pnpm --filter "[origin/main]..." run test --workspace-concurrency=1
+        run: pnpm --filter "[origin/main]..." run test --if-present --workspace-concurrency=1
