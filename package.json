@@ -6,10 +6,10 @@
     "pnpm": ">=10.0.0"
   },
   "scripts": {
-    "build:all": "pnpm -r build",
-    "lint:all": "pnpm -r lint",
-    "test:all": "pnpm -r test --workspace-concurrency=1",
-    "clean:all": "pnpm -r clean",
+    "build": "pnpm -r build",
+    "clean": "pnpm -r run clean",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
     "verify": "pnpm -r run verify",
     "format": "pnpm -r run format",
     "docgen": "pnpm -r run docgen",

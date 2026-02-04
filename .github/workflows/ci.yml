@@ -48,8 +48,13 @@ jobs:
           pnpm run readme:update
           git diff --exit-code README.md || exit 1
 
-      - name: Lint
-        run: pnpm -r lint --if-present
+      - name: Lint (main)
+        if: github.ref == 'refs/heads/main'
+        run: pnpm lint
+
+      - name: Lint (impacted)
+        if: github.ref != 'refs/heads/main'
+        run: pnpm --filter "[origin/main]..." lint
 
   build-test:
     name: Build and Test
@@ -76,10 +81,14 @@ jobs:
       - name: Detect impacted packages
         id: affected
         run: |
+          echo "Checking for impacted packages..."
           pnpm --filter "[origin/main]..." list --depth -1 > affected.txt
           if [ ! -s affected.txt ]; then
+            echo "No impacted packages detected."
             echo "none=true" >> $GITHUB_OUTPUT
           else
+            echo "Impacted packages:"
+            cat affected.txt
             echo "none=false" >> $GITHUB_OUTPUT
           fi
 
@@ -89,7 +98,7 @@ jobs:
 
       - name: Build (impacted)
         if: github.ref != 'refs/heads/main' && steps.affected.outputs.none != 'true'
-        run: pnpm --filter "...[origin/main]" run build --if-present
+        run: pnpm --filter "[origin/main]..." build
 
       - name: Test (main)
         if: github.ref == 'refs/heads/main'
@@ -97,4 +106,4 @@ jobs:
 
       - name: Test (impacted)
         if: github.ref != 'refs/heads/main' && steps.affected.outputs.none != 'true'
-        run: pnpm --filter "[origin/main]..." run test --if-present --workspace-concurrency=1
+        run: pnpm --filter "[origin/main]..." test --workspace-concurrency=1
