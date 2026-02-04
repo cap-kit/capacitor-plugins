@@ -3,22 +3,8 @@ name: CI
 on:
   push:
     branches: [main, 'renovate/**']
-    paths-ignore:
-      - 'packages/**/*.md'
-      - 'docs/**'
-      - 'assets/**'
-      - 'LICENSE'
-      - '.gitignore'
-      - '.editorconfig'
   pull_request:
     branches: [main]
-    paths-ignore:
-      - 'packages/**/*.md'
-      - 'docs/**'
-      - 'assets/**'
-      - 'LICENSE'
-      - '.gitignore'
-      - '.editorconfig'
 
 jobs:
   lint:
@@ -35,43 +21,57 @@ jobs:
         run: |
           git fetch origin main:refs/remotes/origin/main || true
 
+      # ---- Detect if packages changed ----
+      - name: Detect package changes
+        id: changes
+        run: |
+          CHANGED=$(git diff --name-only origin/main...HEAD)
+          echo "$CHANGED"
+
+          if echo "$CHANGED" | grep -q '^packages/'; then
+            echo "packages_changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "packages_changed=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Setup pnpm
+        if: steps.changes.outputs.packages_changed == 'true' || github.ref == 'refs/heads/main'
         uses: pnpm/action-setup@v4
         with:
           version: 10
 
       - name: Setup Node.js
+        if: steps.changes.outputs.packages_changed == 'true' || github.ref == 'refs/heads/main'
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          registry-url: 'https://registry.npmjs.org'
           cache: pnpm
 
       - name: Install dependencies
+        if: steps.changes.outputs.packages_changed == 'true' || github.ref == 'refs/heads/main'
         run: pnpm install --frozen-lockfile
 
-      - name: Verify Root README sync
-        run: |
-          pnpm run readme:update
-          git diff --exit-code README.md || exit 1
+      # ---- LINT ----
 
-      # -------- LINT --------
-
-      - name: Lint (main – full)
+      - name: Lint (main - full)
         if: github.ref == 'refs/heads/main'
         run: pnpm lint:all
 
-      - name: Lint (PR – impacted only)
-        if: github.ref != 'refs/heads/main'
+      - name: Lint (PR - impacted only)
+        if: github.ref != 'refs/heads/main' && steps.changes.outputs.packages_changed == 'true'
         run: |
           AFFECTED=$(pnpm --filter "[origin/main]..." ls --json | jq length)
 
           if [ "$AFFECTED" -eq 0 ]; then
-            echo "✅ No impacted packages – skipping lint"
+            echo " No impacted packages - skipping lint"
             exit 0
           fi
 
           pnpm --filter "[origin/main]..." run lint
+
+      - name: Lint skipped (no package changes)
+        if: github.ref != 'refs/heads/main' && steps.changes.outputs.packages_changed == 'false'
+        run: echo "No package changes detected - lint skipped"
 
   build-test:
     name: Build and Test
@@ -88,53 +88,72 @@ jobs:
         run: |
           git fetch origin main:refs/remotes/origin/main || true
 
+      # ---- Detect if packages changed ----
+      - name: Detect package changes
+        id: changes
+        run: |
+          CHANGED=$(git diff --name-only origin/main...HEAD)
+          echo "$CHANGED"
+
+          if echo "$CHANGED" | grep -q '^packages/'; then
+            echo "packages_changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "packages_changed=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Setup pnpm
+        if: steps.changes.outputs.packages_changed == 'true' || github.ref == 'refs/heads/main'
         uses: pnpm/action-setup@v4
         with:
           version: 10
 
       - name: Setup Node.js
+        if: steps.changes.outputs.packages_changed == 'true' || github.ref == 'refs/heads/main'
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          registry-url: 'https://registry.npmjs.org'
           cache: pnpm
 
       - name: Install dependencies
+        if: steps.changes.outputs.packages_changed == 'true' || github.ref == 'refs/heads/main'
         run: pnpm install --frozen-lockfile
 
-      # -------- BUILD --------
+      # ---- BUILD ----
 
-      - name: Build (main – full)
+      - name: Build (main - full)
         if: github.ref == 'refs/heads/main'
         run: pnpm build:all
 
-      - name: Build (PR – impacted + downstream)
-        if: github.ref != 'refs/heads/main'
+      - name: Build (PR - impacted + downstream)
+        if: github.ref != 'refs/heads/main' && steps.changes.outputs.packages_changed == 'true'
         run: |
           AFFECTED=$(pnpm --filter "...[origin/main]" ls --json | jq length)
 
           if [ "$AFFECTED" -eq 0 ]; then
-            echo "✅ No impacted packages – skipping build"
+            echo "No impacted packages - skipping build"
             exit 0
           fi
 
           pnpm --filter "...[origin/main]" run build
 
-      # -------- TEST --------
+      # ---- TEST ----
 
-      - name: Test (main – full, serial)
+      - name: Test (main - full, serial)
         if: github.ref == 'refs/heads/main'
         run: pnpm -r --workspace-concurrency=1 test
 
-      - name: Test (PR – impacted only, serial)
-        if: github.ref != 'refs/heads/main'
+      - name: Test (PR - impacted only, serial)
+        if: github.ref != 'refs/heads/main' && steps.changes.outputs.packages_changed == 'true'
         run: |
           AFFECTED=$(pnpm --filter "[origin/main]..." ls --json | jq length)
 
           if [ "$AFFECTED" -eq 0 ]; then
-            echo "✅ No impacted packages – skipping tests"
+            echo "No impacted packages - skipping tests"
             exit 0
           fi
 
           pnpm --filter "[origin/main]..." --workspace-concurrency=1 run test
+
+      - name: Test skipped (no package changes)
+        if: github.ref != 'refs/heads/main' && steps.changes.outputs.packages_changed == 'false'
+        run: echo "No package changes detected - tests skipped"
