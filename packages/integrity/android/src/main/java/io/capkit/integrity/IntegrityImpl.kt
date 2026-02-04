@@ -52,20 +52,124 @@ class IntegrityImpl(
   }
 
   // ---------------------------------------------------------------------------
-  // Internal cache
+  // Options orchestrator
   // ---------------------------------------------------------------------------
 
-  /**
-   * Cached root-related signals.
-   *
-   * Root checks are relatively expensive and deterministic,
-   * therefore they are cached for the lifetime of the process.
-   */
-  private var cachedRootSignals: List<Map<String, Any>>? = null
+  fun performCheck(options: IntegrityCheckOptions): Map<String, Any> {
+    val signals = mutableListOf<Map<String, Any>>()
+
+    // --- BASIC ---------------------------------------------------------------
+    signals.addAll(checkRootSignals())
+
+    val isEmulator = checkEmulator()
+    if (isEmulator) {
+      signals.add(
+        signal(
+          id = "android_emulator",
+          category = "emulator",
+          confidence = "high",
+          options = options,
+        ),
+      )
+    }
+
+    // --- STANDARD ------------------------------------------------------------
+    if (options.level != "basic") {
+      if (checkDebug()) {
+        signals.add(
+          signal(
+            id = "android_debug_detected",
+            category = "debug",
+            confidence = "medium",
+            description = "Debugger or debuggable build detected",
+            options = options,
+          ),
+        )
+      }
+
+      if (checkFridaProcesses()) {
+        signals.add(
+          signal(
+            id = "android_frida_process",
+            category = "hook",
+            confidence = "high",
+            options = options,
+          ),
+        )
+      }
+
+      if (checkFridaPorts()) {
+        signals.add(
+          signal(
+            id = "android_frida_port",
+            category = "hook",
+            confidence = "medium",
+            options = options,
+          ),
+        )
+      }
+    }
+
+    // --- STRICT --------------------------------------------------------------
+    if (options.level == "strict") {
+      if (!checkAppSignature()) {
+        signals.add(
+          signal(
+            id = "android_signature_invalid",
+            category = "tamper",
+            confidence = "high",
+            options = options,
+          ),
+        )
+      }
+    }
+
+    val score = computeScore(signals)
+
+    return mapOf(
+      "signals" to signals,
+      "score" to score,
+      "compromised" to (score >= 30),
+      "environment" to
+        mapOf(
+          "platform" to "android",
+          "isEmulator" to isEmulator,
+          "isDebugBuild" to false,
+        ),
+      "timestamp" to System.currentTimeMillis(),
+    )
+  }
+
+  // ---------------------------------------------------------------------------
+  // Signal helper
+  // ---------------------------------------------------------------------------
+
+  private fun signal(
+    id: String,
+    category: String,
+    confidence: String,
+    description: String? = null,
+    options: IntegrityCheckOptions,
+  ): Map<String, Any> {
+    val map =
+      mutableMapOf<String, Any>(
+        "id" to id,
+        "category" to category,
+        "confidence" to confidence,
+      )
+
+    if (options.includeDebugInfo && description != null) {
+      map["description"] = description
+    }
+
+    return map
+  }
 
   // ---------------------------------------------------------------------------
   // Root detection
   // ---------------------------------------------------------------------------
+
+  private var cachedRootSignals: List<Map<String, Any>>? = null
 
   /**
    * Performs baseline root detection checks.
@@ -103,7 +207,7 @@ class IntegrityImpl(
     }
 
     val buildTags = android.os.Build.TAGS
-    if (buildTags != null && buildTags.contains("test-keys")) {
+    if (buildTags?.contains("test-keys") == true) {
       signals.add(
         mapOf(
           "id" to "android_test_keys",
@@ -128,23 +232,36 @@ class IntegrityImpl(
    *   If build information cannot be accessed.
    */
   fun checkEmulator(): Boolean {
-    try {
+    return try {
       val fingerprint = android.os.Build.FINGERPRINT
       val model = android.os.Build.MODEL
       val manufacturer = android.os.Build.MANUFACTURER
 
-      return fingerprint.contains("generic") ||
+      fingerprint.contains("generic") ||
         model.contains("Emulator", ignoreCase = true) ||
         manufacturer.contains("Genymotion", ignoreCase = true)
-    } catch (e: Exception) {
-      throw IntegrityError.Unavailable(
-        "Unable to determine emulator status.",
-      )
+    } catch (_: Exception) {
+      false
     }
   }
 
   // ---------------------------------------------------------------------------
-  // Frida detection — processes
+  // Debug detection (baseline)
+  // ---------------------------------------------------------------------------
+
+  fun checkDebug(): Boolean {
+    val debuggerAttached = android.os.Debug.isDebuggerConnected()
+    val debuggable =
+      (
+        context.applicationInfo.flags and
+          android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE
+      ) != 0
+
+    return debuggerAttached || debuggable
+  }
+
+  // ---------------------------------------------------------------------------
+  // Frida detection
   // ---------------------------------------------------------------------------
 
   /**
@@ -200,7 +317,7 @@ class IntegrityImpl(
   }
 
   // ---------------------------------------------------------------------------
-  // Application signature
+  // Signature integrity
   // ---------------------------------------------------------------------------
 
   /**
@@ -217,19 +334,26 @@ class IntegrityImpl(
           PackageManager.GET_SIGNING_CERTIFICATES,
         )
 
-      val signingInfo =
-        packageInfo.signingInfo
-          ?: throw IntegrityError.InitFailed(
-            "Signing information not available.",
-          )
-
-      return signingInfo.apkContentsSigners.isNotEmpty()
-    } catch (e: IntegrityError) {
-      throw e
+      return packageInfo.signingInfo?.apkContentsSigners?.isNotEmpty() == true
     } catch (e: Exception) {
       throw IntegrityError.InitFailed(
         "Failed to read application signing information.",
       )
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Scoring
+  // ---------------------------------------------------------------------------
+
+  private fun computeScore(signals: List<Map<String, Any>>): Int {
+    return signals.sumOf {
+      when (it["confidence"]) {
+        "high" -> 30
+        "medium" -> 15
+        "low" -> 5
+        else -> 0
+      }
     }
   }
 }

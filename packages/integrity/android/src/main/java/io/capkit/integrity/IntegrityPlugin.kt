@@ -88,125 +88,33 @@ class IntegrityPlugin : Plugin() {
   }
 
   // ---------------------------------------------------------------------------
-  // Signal categories & constants
-  // ---------------------------------------------------------------------------
-
-  private companion object {
-    const val CATEGORY_ROOT = "root"
-    const val CATEGORY_EMULATOR = "emulator"
-    const val CATEGORY_HOOK = "hook"
-    const val CATEGORY_TAMPER = "tamper"
-
-    const val SIGNAL_ANDROID_EMULATOR = "android_emulator"
-    const val SIGNAL_ANDROID_FRIDA_PROCESS = "android_frida_process"
-    const val SIGNAL_ANDROID_FRIDA_PORT = "android_frida_port"
-    const val SIGNAL_ANDROID_SIGNATURE_INVALID = "android_signature_invalid"
-  }
-
-  /**
-   * Confidence weights used to compute the integrity score.
-   *
-   * NOTE:
-   * This scoring model is provisional and non-normative.
-   */
-  private val confidenceWeights =
-    mapOf(
-      "high" to 30,
-      "medium" to 15,
-      "low" to 5,
-    )
-
-  // ---------------------------------------------------------------------------
   // Check
   // ---------------------------------------------------------------------------
 
   /**
-   * Executes a baseline integrity check.
+   * Executes an integrity check.
    *
    * This method:
-   * - aggregates platform-specific integrity signals
-   * - computes a provisional integrity score
-   * - derives a compromised flag
-   *
-   * Errors thrown by the native implementation
-   * are propagated to JavaScript via Promise rejection.
+   * - parses JS options
+   * - delegates execution to the native implementation
+   * - resolves a structured IntegrityReport
    */
   @PluginMethod
   fun check(call: PluginCall) {
     try {
-      val signals = mutableListOf<Map<String, Any>>()
-
-      // --- Root detection ---
-      signals.addAll(implementation.checkRootSignals())
-
-      // --- Emulator detection ---
-      val isEmulator = implementation.checkEmulator()
-      if (isEmulator) {
-        signals.add(
-          mapOf(
-            "id" to SIGNAL_ANDROID_EMULATOR,
-            "category" to CATEGORY_EMULATOR,
-            "confidence" to "high",
-          ),
+      val options =
+        IntegrityCheckOptions(
+          level = call.getString("level") ?: "basic",
+          includeDebugInfo = call.getBoolean("includeDebugInfo") ?: false,
         )
+
+      val result = implementation.performCheck(options)
+
+      val jsResult = JSObject()
+      for ((key, value) in result) {
+        jsResult.put(key, value)
       }
-
-      // --- Frida / instrumentation detection ---
-      if (implementation.checkFridaProcesses()) {
-        signals.add(
-          mapOf(
-            "id" to SIGNAL_ANDROID_FRIDA_PROCESS,
-            "category" to CATEGORY_HOOK,
-            "confidence" to "high",
-          ),
-        )
-      }
-
-      if (implementation.checkFridaPorts()) {
-        signals.add(
-          mapOf(
-            "id" to SIGNAL_ANDROID_FRIDA_PORT,
-            "category" to CATEGORY_HOOK,
-            "confidence" to "medium",
-          ),
-        )
-      }
-
-      // --- Tamper / signature integrity ---
-      if (!implementation.checkAppSignature()) {
-        signals.add(
-          mapOf(
-            "id" to SIGNAL_ANDROID_SIGNATURE_INVALID,
-            "category" to CATEGORY_TAMPER,
-            "confidence" to "high",
-          ),
-        )
-      }
-
-      // --- Score computation ---
-      var score = 0
-      for (signal in signals) {
-        val confidence = signal["confidence"] as? String
-        score += confidenceWeights[confidence] ?: 0
-      }
-
-      val result =
-        JSObject().apply {
-          put("signals", signals)
-          put("score", score)
-          put("compromised", score >= 30)
-          put(
-            "environment",
-            JSObject().apply {
-              put("platform", "android")
-              put("isEmulator", isEmulator)
-              put("isDebugBuild", false)
-            },
-          )
-          put("timestamp", System.currentTimeMillis())
-        }
-
-      call.resolve(result)
+      call.resolve(jsResult)
     } catch (e: IntegrityError) {
       reject(call, e)
     } catch (e: Exception) {

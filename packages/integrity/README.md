@@ -170,6 +170,43 @@ if (report.compromised) {
 }
 ```
 
+### Integrity check options
+
+`Integrity.check()` accepts optional parameters that control
+the strictness and verbosity of the integrity checks.
+
+```ts
+const report = await Integrity.check({
+  level: 'standard',
+  includeDebugInfo: true,
+});
+```
+
+#### Options
+
+| Option             | Type                                | Default   | Description                                          |
+| ------------------ | ----------------------------------- | --------- | ---------------------------------------------------- |
+| `level`            | `'basic' \| 'standard' \| 'strict'` | `'basic'` | Controls which categories of checks are executed     |
+| `includeDebugInfo` | `boolean`                           | `false`   | Includes diagnostic descriptions in returned signals |
+
+#### Levels behavior
+
+- **basic**
+  - Root / jailbreak detection
+  - Emulator / simulator detection
+
+- **standard**
+  - All `basic` checks
+  - Debugger / debug build detection
+  - Instrumentation / hooking heuristics
+
+- **strict**
+  - All `standard` checks
+  - Additional tamper and integrity heuristics
+
+> ⚠️ The returned integrity score remains provisional and
+> must not be used as the sole security decision signal.
+
 ---
 
 ### Presenting a block / warning page
@@ -462,6 +499,120 @@ These limitations are **intentional** to:
 - avoid store policy violations
 - reduce false positives
 - keep the plugin portable and maintainable
+
+### Debug environment detection
+
+The plugin may report a `debug` integrity signal when:
+
+- a debugger is attached to the process
+- the application is running in a debuggable build
+
+This signal is **informational only** and does not necessarily
+indicate a compromised device.
+
+Consumers MUST interpret debug signals in context and
+combine them with other integrity signals.
+
+---
+
+## 🔒 Integrity philosophy
+
+### Observation, not enforcement
+
+The Integrity plugin is designed as an **observation layer**, not as an enforcement or decision engine.
+
+Its responsibility is to **detect and report runtime integrity signals** in a consistent, cross-platform way.
+It deliberately **does not decide what action should be taken** when a signal is detected.
+
+This design allows applications to:
+
+- define their own security policies
+- adapt behavior to different environments
+- avoid hard-coded or platform-specific assumptions
+
+In short:
+
+> **The plugin observes.
+> The application decides.**
+
+---
+
+## 🧩 Why there are no single-purpose checks
+
+The public API intentionally exposes a **single entry point**:
+
+```ts
+Integrity.check(options?)
+```
+
+Rather than providing individual methods such as:
+
+- `checkRoot()`
+- `checkEmulator()`
+- `checkDebug()`
+
+the plugin returns a **structured integrity report** containing multiple **signals**, each classified by:
+
+- category (e.g. root, emulator, debug, hook, tamper)
+- confidence level (low / medium / high)
+
+This approach avoids:
+
+- API fragmentation
+- platform-specific behavior leaks
+- misuse of isolated checks
+- rigid or unsafe security decisions
+
+Applications can still derive fine-grained logic by inspecting the returned signals:
+
+```ts
+const hasRoot = report.signals.some((s) => s.category === 'root');
+const hasEmulator = report.signals.some((s) => s.category === 'emulator');
+```
+
+This keeps the API **stable, extensible, and policy-agnostic**.
+
+---
+
+## 🧠 Integrity levels
+
+Instead of selecting individual checks, applications choose a **strictness level**:
+
+- **basic** – lightweight and safe checks
+- **standard** – includes debug and hooking detection
+- **strict** – adds tampering and signature integrity checks
+
+The selected level controls **how deeply the environment is inspected**, not which single signal is exposed.
+
+---
+
+## 🔮 Future extensibility
+
+The current API focuses on a clean and minimal surface, but the architecture is designed to be **extensible**.
+
+In the future, the plugin may introduce:
+
+- more advanced signal classification
+- additional integrity signals
+- configurable inclusion or exclusion of signal groups
+- richer metadata for diagnostics and auditing
+
+Any future extension will preserve the same core principle:
+
+- **one entry point**
+- **no forced policy**
+- **no platform-specific leakage**
+
+Applications should always remain in full control of how integrity information is interpreted and enforced.
+
+---
+
+## ✅ Summary
+
+- The Integrity plugin **detects signals**, it does not block or enforce
+- Security decisions are **always owned by the application**
+- The API is designed for **long-term stability and flexibility**
+- Future enhancements will extend capabilities without breaking this model
 
 ---
 
