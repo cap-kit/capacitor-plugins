@@ -11,15 +11,6 @@
 
   "labels": ["dependencies"],
 
-  "pnpm": {
-    "enabled": true
-  },
-
-  "constraints": {
-    "node": ">=24.0.0",
-    "pnpm": ">=10.0.0"
-  },
-
   "lockFileMaintenance": {
     "enabled": true,
     "schedule": ["before 6am on monday"],
@@ -33,7 +24,7 @@
       "enabled": false
     },
     {
-      "description": "Capacitor peer deps: widen only, never bump major implicitly",
+      "description": "Capacitor peer deps: widen only",
       "matchDepTypes": ["peerDependencies"],
       "matchPackageNames": [
         "@capacitor/core",
@@ -43,7 +34,7 @@
       "rangeStrategy": "widen"
     },
     {
-      "description": "Group non-major devDependencies (no automerge, visible PRs)",
+      "description": "Group non-major devDependencies (visible PRs)",
       "matchDepTypes": ["devDependencies"],
       "matchUpdateTypes": ["patch", "minor"],
       "groupName": "devDependencies (non-major)",
