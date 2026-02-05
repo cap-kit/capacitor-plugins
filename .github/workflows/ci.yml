@@ -1,5 +1,8 @@
 name: CI
 
+env:
+  TURBO_TELEMETRY_DISABLED: 1
+
 on:
   push:
     branches: [main, 'renovate/**']
@@ -63,10 +66,7 @@ jobs:
 
       - name: Lint (PR - impacted only)
         if: github.ref != 'refs/heads/main' && steps.changes.outputs.packages_changed == 'true'
-        run: |
-          AFFECTED=$(pnpm --filter "[origin/main]..." ls --json | jq length)
-          [ "$AFFECTED" -eq 0 ] && exit 0
-          pnpm --filter "[origin/main]..." run lint
+        run: pnpm --filter "[origin/main]..." run lint
 
   build-test:
     name: Build and Test
@@ -79,14 +79,16 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Capacitor 8 requires Java 21
       - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
 
-      - name: Install jq
-        run: brew install jq
+      # Fix SwiftPM cache corruption on CI
+      - name: Clean SwiftPM cache
+        run: rm -rf ~/Library/Caches/org.swift.swiftpm
 
       - name: Cache Turbo
         uses: actions/cache@v5
@@ -134,10 +136,7 @@ jobs:
 
       - name: Build (PR - impacted + downstream)
         if: github.ref != 'refs/heads/main' && steps.changes.outputs.packages_changed == 'true'
-        run: |
-          AFFECTED=$(pnpm --filter "...[origin/main]" ls --json | jq length)
-          [ "$AFFECTED" -eq 0 ] && exit 0
-          pnpm --filter "...[origin/main]" run build
+        run: pnpm --filter "...[origin/main]" run build
 
       # ---- TEST ----
 
@@ -147,7 +146,4 @@ jobs:
 
       - name: Test (PR - impacted only, serial)
         if: github.ref != 'refs/heads/main' && steps.changes.outputs.packages_changed == 'true'
-        run: |
-          AFFECTED=$(pnpm --filter "[origin/main]..." ls --json | jq length)
-          [ "$AFFECTED" -eq 0 ] && exit 0
-          pnpm --filter "[origin/main]..." --workspace-concurrency=1 run test
+        run: pnpm --filter "[origin/main]..." --workspace-concurrency=1 run test
