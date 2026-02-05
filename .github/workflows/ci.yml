@@ -79,6 +79,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
       - name: Install jq
         run: brew install jq
 
