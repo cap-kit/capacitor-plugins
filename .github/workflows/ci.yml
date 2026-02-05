@@ -17,17 +17,22 @@ jobs:
         with:
           fetch-depth: 0 # Required for diffing against origin/main
 
+      - name: Cache Turbo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
       - name: Ensure origin/main exists
-        run: |
-          git fetch origin main:refs/remotes/origin/main || true
+        run: git fetch origin main:refs/remotes/origin/main || true
 
       # ---- Detect if packages changed ----
       - name: Detect package changes
         id: changes
         run: |
           CHANGED=$(git diff --name-only origin/main...HEAD)
-          echo "$CHANGED"
-
           if echo "$CHANGED" | grep -q '^packages/'; then
             echo "packages_changed=true" >> $GITHUB_OUTPUT
           else
@@ -62,17 +67,8 @@ jobs:
         if: github.ref != 'refs/heads/main' && steps.changes.outputs.packages_changed == 'true'
         run: |
           AFFECTED=$(pnpm --filter "[origin/main]..." ls --json | jq length)
-
-          if [ "$AFFECTED" -eq 0 ]; then
-            echo " No impacted packages - skipping lint"
-            exit 0
-          fi
-
+          [ "$AFFECTED" -eq 0 ] && exit 0
           pnpm --filter "[origin/main]..." run lint
-
-      - name: Lint skipped (no package changes)
-        if: github.ref != 'refs/heads/main' && steps.changes.outputs.packages_changed == 'false'
-        run: echo "No package changes detected - lint skipped"
 
   build-test:
     name: Build and Test
@@ -85,17 +81,25 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install jq
+        run: brew install jq
+
+      - name: Cache Turbo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
       - name: Ensure origin/main exists
-        run: |
-          git fetch origin main:refs/remotes/origin/main || true
+        run: git fetch origin main:refs/remotes/origin/main || true
 
       # ---- Detect if packages changed ----
       - name: Detect package changes
         id: changes
         run: |
           CHANGED=$(git diff --name-only origin/main...HEAD)
-          echo "$CHANGED"
-
           if echo "$CHANGED" | grep -q '^packages/'; then
             echo "packages_changed=true" >> $GITHUB_OUTPUT
           else
@@ -130,32 +134,18 @@ jobs:
         if: github.ref != 'refs/heads/main' && steps.changes.outputs.packages_changed == 'true'
         run: |
           AFFECTED=$(pnpm --filter "...[origin/main]" ls --json | jq length)
-
-          if [ "$AFFECTED" -eq 0 ]; then
-            echo "No impacted packages - skipping build"
-            exit 0
-          fi
-
+          [ "$AFFECTED" -eq 0 ] && exit 0
           pnpm --filter "...[origin/main]" run build
 
       # ---- TEST ----
 
       - name: Test (main - full, serial)
         if: github.ref == 'refs/heads/main'
-        run: pnpm -r --workspace-concurrency=1 test
+        run: pnpm test:all
 
       - name: Test (PR - impacted only, serial)
         if: github.ref != 'refs/heads/main' && steps.changes.outputs.packages_changed == 'true'
         run: |
           AFFECTED=$(pnpm --filter "[origin/main]..." ls --json | jq length)
-
-          if [ "$AFFECTED" -eq 0 ]; then
-            echo "No impacted packages - skipping tests"
-            exit 0
-          fi
-
+          [ "$AFFECTED" -eq 0 ] && exit 0
           pnpm --filter "[origin/main]..." --workspace-concurrency=1 run test
-
-      - name: Test skipped (no package changes)
-        if: github.ref != 'refs/heads/main' && steps.changes.outputs.packages_changed == 'false'
-        run: echo "No package changes detected - tests skipped"

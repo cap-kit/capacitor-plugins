@@ -141,3 +141,6 @@ vite.config.ts.timestamp-*
 
 # macOS files
 .DS_Store
+
+# Turborepo cache & daemon
+.turbo/**

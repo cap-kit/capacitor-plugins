@@ -1,0 +1,37 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+
+  "globalDependencies": [
+    "pnpm-lock.yaml",
+    "package.json",
+    "tsconfig*.json",
+    ".eslintrc*",
+    ".prettierrc*",
+    "turbo.json"
+  ],
+
+  "tasks": {
+    "lint": {
+      "outputs": []
+    },
+
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "android/build/**", "ios/DerivedData/**"]
+    },
+
+    "test": {
+      "dependsOn": ["build"],
+      "outputs": []
+    },
+
+    "verify": {
+      "dependsOn": ["build"],
+      "outputs": []
+    },
+
+    "docgen": {
+      "outputs": ["dist/docs.json"]
+    }
+  }
+}
