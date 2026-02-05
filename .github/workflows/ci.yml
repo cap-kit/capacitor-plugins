@@ -42,8 +42,6 @@ jobs:
       - name: Setup pnpm
         if: steps.changes.outputs.packages_changed == 'true' || github.ref == 'refs/heads/main'
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Setup Node.js
         if: steps.changes.outputs.packages_changed == 'true' || github.ref == 'refs/heads/main'
@@ -109,8 +107,6 @@ jobs:
       - name: Setup pnpm
         if: steps.changes.outputs.packages_changed == 'true' || github.ref == 'refs/heads/main'
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Setup Node.js
         if: steps.changes.outputs.packages_changed == 'true' || github.ref == 'refs/heads/main'
