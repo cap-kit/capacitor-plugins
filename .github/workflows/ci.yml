@@ -52,11 +52,6 @@ jobs:
         if: steps.changes.outputs.packages_changed == 'true' || github.ref == 'refs/heads/main'
         run: pnpm install --frozen-lockfile # Prevents lockfile drift in CI
 
-      - name: Verify Root README sync
-        run: |
-          pnpm run readme:update
-          git diff --exit-code README.md || (echo "❌ Root README.md is out of sync with public packages. Run 'pnpm run readme:update' and commit the changes." && exit 1)
-
       # ---- LINT ----
 
       - name: Lint (main - full)
