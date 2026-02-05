@@ -1,18 +1,20 @@
 {
   "name": "capacitor-plugins",
+  "author": "CapKit Team",
   "private": true,
   "engines": {
     "node": ">=24.0.0",
     "pnpm": ">=10.0.0"
   },
+  "packageManager": "pnpm@10.0.0",
   "scripts": {
-    "build": "pnpm -r build",
+    "build": "turbo run build",
     "clean": "pnpm -r run clean",
-    "lint": "pnpm -r lint",
-    "test": "pnpm -r test",
-    "lint:all": "pnpm -r lint",
-    "build:all": "pnpm -r build",
-    "test:all": "pnpm -r test",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "lint:all": "turbo run lint",
+    "build:all": "turbo run build",
+    "test:all": "turbo run test",
     "lint:packages": "pnpm -r lint",
     "build:packages": "pnpm -r build",
     "test:packages": "pnpm -r test",
@@ -26,7 +28,6 @@
     "version": "changeset version",
     "release": "pnpm build && pnpm changeset publish"
   },
-  "author": "CapKit Team",
   "lint-staged": {
     "packages/**/package.json": [
       "pnpm run readme:update",
@@ -55,6 +56,7 @@
     "@commitlint/config-conventional": "^20.4.1",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
-    "tsx": "^4.21.0"
+    "tsx": "^4.21.0",
+    "turbo": "^2.8.3"
   }
 }
