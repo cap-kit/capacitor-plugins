@@ -2,14 +2,16 @@ name: Renovate Changeset Helper
 
 on:
   pull_request:
-    branches:
-      - main
+    types: [opened, synchronize, labeled]
+    branches: [main]
 
 jobs:
   generate-changeset:
+    if: >
+      github.actor == 'renovate[bot]' &&
+      contains(github.event.pull_request.labels.*.name, 'requires-changeset')
     runs-on: ubuntu-latest
-    # Runs only if the actor is Renovate and the PR has the 'requires-changeset' label
-    if: github.actor == 'renovate[bot]' && contains(github.event.pull_request.labels.*.name, 'requires-changeset')
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -17,45 +19,50 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GH_PAT }}
 
-      - name: Detect Changed Packages and Create Changeset
-        shell: bash
+      - name: Ensure origin/main exists
         run: |
-          # 1. Find all modified package.json files (excluding the root one)
-          CHANGED_FILES=$(git diff --name-only origin/main...HEAD | grep "package.json" | grep "packages/" || true)
-          
-          if [ -z "$CHANGED_FILES" ]; then
-            echo "No package-level changes detected. Checking root dependencies..."
-            # If the change is only in the root, choose a default package (e.g. core)
-            # or apply different logic. Here we assume core as a fallback.
-            PACKAGES=("@cap-kit/core")
-          else
-            PACKAGES=()
-            for FILE in $CHANGED_FILES; do
-              # Extracts the "name" field from package.json using jq
-              PKG_NAME=$(jq -r '.name' $FILE)
-              PACKAGES+=("$PKG_NAME")
-            done
+          git fetch origin main:refs/remotes/origin/main || true
+
+      - name: Detect changed packages
+        id: packages
+        run: |
+          set -e
+
+          CHANGED=$(git diff --name-only origin/main...HEAD | grep '^packages/.*/package.json' || true)
+
+          if [ -z "$CHANGED" ]; then
+            echo "packages=[]" >> $GITHUB_OUTPUT
+            exit 0
           fi
 
-          # 2. Create the changeset file
-          DESC="${{ github.event.pull_request.title }}"
-          FILENAME=".changeset/renovate-$(date +%s).md"
-          
-          echo "---" > $FILENAME
-          for PKG in "${PACKAGES[@]}"; do
-            echo "'$PKG': patch" >> $FILENAME
-          done
-          echo "---" >> $FILENAME
-          echo "" >> $FILENAME
-          echo "$DESC" >> $FILENAME
-          
-          echo "✅ Created changeset for: ${PACKAGES[*]}"
+          PKGS=$(for f in $CHANGED; do jq -r '.name' "$f"; done | jq -R . | jq -s .)
+          echo "packages=$PKGS" >> $GITHUB_OUTPUT
 
-      - name: Commit Changeset
+      - name: Create changeset
+        if: steps.packages.outputs.packages != '[]'
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          set -e
+
+          FILENAME=".changeset/renovate-${{ github.event.pull_request.number }}.md"
+          TITLE="${{ github.event.pull_request.title }}"
+
+          echo "---" > "$FILENAME"
+
+          for PKG in $(echo '${{ steps.packages.outputs.packages }}' | jq -r '.[]'); do
+            echo "'$PKG': patch" >> "$FILENAME"
+          done
+
+          echo "---" >> "$FILENAME"
+          echo "" >> "$FILENAME"
+          echo "$TITLE" >> "$FILENAME"
+
+          cat "$FILENAME"
+
+      - name: Commit changeset
+        if: steps.packages.outputs.packages != '[]'
+        run: |
+          git config user.name "renovate[bot]"
+          git config user.email "renovate[bot]@users.noreply.github.com"
           git add .changeset/*.md
-          # [skip ci] prevents infinite CI pipeline loops
-          git commit -m "chore(release): Add dynamic changeset for renovate update [skip ci]"
+          git commit -m "chore(release): add changeset for renovate update"
           git push

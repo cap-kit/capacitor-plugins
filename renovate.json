@@ -1,24 +1,39 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+
   "extends": [
     "config:recommended",
     "schedule:earlyMondays",
-    ":preserveSemverRanges",
-    "group:allNonMajor"
+    ":preserveSemverRanges"
   ],
+
   "dependencyDashboard": true,
+
+  "labels": ["dependencies"],
+
+  "pnpm": {
+    "enabled": true
+  },
+
+  "constraints": {
+    "node": ">=24.0.0",
+    "pnpm": ">=10.0.0"
+  },
+
   "lockFileMaintenance": {
     "enabled": true,
+    "schedule": ["before 6am on monday"],
     "automerge": true
   },
+
   "packageRules": [
     {
-      "description": "Disable updates for our internal packages",
+      "description": "Never update internal workspace packages",
       "matchPackageNames": ["@cap-kit/*"],
       "enabled": false
     },
     {
-      "description": "Peer dependency protection for Capacitor v8+",
+      "description": "Capacitor peer deps: widen only, never bump major implicitly",
       "matchDepTypes": ["peerDependencies"],
       "matchPackageNames": [
         "@capacitor/core",
@@ -28,23 +43,16 @@
       "rangeStrategy": "widen"
     },
     {
-      "description": "Safe automerge for non-major devDependencies",
-      "matchUpdateTypes": ["patch", "minor"],
+      "description": "Group non-major devDependencies (no automerge, visible PRs)",
       "matchDepTypes": ["devDependencies"],
-      "automerge": true,
-      "labels": ["dependencies", "automerge"]
+      "matchUpdateTypes": ["patch", "minor"],
+      "groupName": "devDependencies (non-major)",
+      "automerge": false
     },
     {
       "description": "Require changeset for production dependencies",
       "matchDepTypes": ["dependencies"],
-      "labels": ["dependencies", "requires-changeset"]
+      "labels": ["requires-changeset"]
     }
-  ],
-  "constraints": {
-    "node": ">=24.0.0",
-    "pnpm": ">=10.0.0"
-  },
-  "pnpm": {
-    "enabled": true
-  }
+  ]
 }
