@@ -75,7 +75,7 @@ jobs:
 
     env:
       TURBO_TELEMETRY_DISABLED: 1
-      SWIFTPM_CACHE_PATH: ${{ runner.temp }}/swiftpm-cache
+      SWIFTPM_CACHE_PATH: "${RUNNER_TEMP}/swiftpm-cache"
 
     steps:
       - name: Checkout
