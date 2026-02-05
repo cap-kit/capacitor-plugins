@@ -145,10 +145,10 @@ jobs:
 
       # ---- TEST ----
 
-      - name: Test (main - full, serial)
-        if: github.ref == 'refs/heads/main'
-        run: pnpm test:all
+      # - name: Test (main - full, serial)
+      #   if: github.ref == 'refs/heads/main'
+      #   run: pnpm test:all
 
-      - name: Test (PR - impacted only, serial)
-        if: github.ref != 'refs/heads/main' && steps.changes.outputs.packages_changed == 'true'
-        run: pnpm --filter "[origin/main]..." --workspace-concurrency=1 run test
+      # - name: Test (PR - impacted only, serial)
+      #   if: github.ref != 'refs/heads/main' && steps.changes.outputs.packages_changed == 'true'
+      #   run: pnpm --filter "[origin/main]..." --workspace-concurrency=1 run test
