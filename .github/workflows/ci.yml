@@ -73,6 +73,10 @@ jobs:
     runs-on: macos-latest # Required for xcodebuild and iOS tooling
     needs: lint
 
+    env:
+      TURBO_TELEMETRY_DISABLED: 1
+      SWIFTPM_CACHE_PATH: ${{ runner.temp }}/swiftpm-cache
+
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -86,9 +90,10 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      # Fix SwiftPM cache corruption on CI
-      - name: Clean SwiftPM cache
-        run: rm -rf ~/Library/Caches/org.swift.swiftpm
+      - name: Prepare SwiftPM cache
+        run: |
+          rm -rf "$SWIFTPM_CACHE_PATH"
+          mkdir -p "$SWIFTPM_CACHE_PATH"
 
       - name: Cache Turbo
         uses: actions/cache@v5
