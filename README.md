@@ -12,6 +12,8 @@
     <a href="https://github.com/changesets/changesets"><img src="https://img.shields.io/badge/maintained%20with-changesets-176de3.svg?style=flat-square&logo=git&logoColor=white" alt="changesets" /></a>
     <a href="./LICENSE"><img src="https://img.shields.io/github/license/cap-kit/capacitor-plugins?style=flat-square&logo=open-source-initiative&logoColor=white&color=green" alt="License" /></a>
     <a href="https://github.com/cap-kit/capacitor-plugins/commits/main"><img src="https://img.shields.io/github/last-commit/cap-kit/capacitor-plugins?style=flat-square&logo=git&logoColor=white&label=last%20commit&color=blue" alt="Last Commit" /></a>
+    <a href="https://turbo.build/"><img src="https://img.shields.io/badge/maintained%20with-turborepo-EF4444?style=flat-square&logo=turborepo&logoColor=white" alt="Turborepo" /></a>
+    <a href="https://github.com/renovatebot/renovate"><img src="https://img.shields.io/badge/renovate-enabled-brightgreen.svg?style=flat-square&logo=renovatebot&logoColor=white" alt="Renovate" /></a>
   </p>
 </div>
 
@@ -32,7 +34,7 @@ Each package maintains its own documentation and setup guide.
 Here is the current list of available plugins:
 
 <p>
-  <strong>Total Plugins:</strong> 3 | <strong>Weekly Downloads:</strong> <img src="https://img.shields.io/npm/dw/@cap-kit/test-plugin?style=flat-square&logo=npm&label=&color=orange" alt="Downloads" valign="middle" />
+  <strong>Total Plugins:</strong> 2 | <strong>Weekly Downloads:</strong> <img src="https://img.shields.io/npm/dw/@cap-kit/test-plugin?style=flat-square&logo=npm&label=&color=orange" alt="Downloads" valign="middle" />
 </p>
 <br />
 
@@ -64,20 +66,6 @@ Here is the current list of available plugins:
   <p>
     <a href="./packages/ssl-pinning"><strong>Documentation</strong></a> | 
     <a href="https://www.npmjs.com/package/@cap-kit/ssl-pinning"><strong>NPM</strong></a>
-  </p>
-</td>
-
-<td align="center" width="33%">
-  <h3><a href="./packages/test-plugin">Test Plugin</a></h3>
-  <p><code>@cap-kit/test-plugin</code></p>
-  <p>
-    <a href="https://www.npmjs.com/package/@cap-kit/test-plugin"><img src="https://img.shields.io/npm/v/@cap-kit/test-plugin?style=flat-square&color=blue&label=npm&logo=npm" alt="npm version"></a>
-    <a href="https://www.npmjs.com/package/@cap-kit/test-plugin"><img src="https://img.shields.io/npm/dm/@cap-kit/test-plugin?style=flat-square&color=orange&label=downloads&logo=npm" alt="downloads"></a>
-  </p>
-  <p>Architectural reference and boilerplate for Cap-Kit plugins.</p>
-  <p>
-    <a href="./packages/test-plugin"><strong>Documentation</strong></a> | 
-    <a href="https://www.npmjs.com/package/@cap-kit/test-plugin"><strong>NPM</strong></a>
   </p>
 </td>
 </tr>
