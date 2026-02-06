@@ -196,6 +196,19 @@ export interface IntegritySignal {
    * and SHOULD NOT be relied upon programmatically.
    */
   description?: string;
+
+  /**
+   * Additional diagnostic metadata associated with the signal.
+   *
+   * Metadata provides granular details about the detection (e.g., matched
+   * filesystem paths, specific build properties, or runtime artifacts)
+   * without altering the stable signal identifier.
+   *
+   * This field is informational and intended for diagnostics only.
+   *
+   * @since 1.0.0
+   */
+  metadata?: Record<string, string | number | boolean>;
 }
 
 /**

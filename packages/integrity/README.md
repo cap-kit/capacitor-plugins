@@ -198,7 +198,9 @@ const report = await Integrity.check({
 - **standard**
   - All `basic` checks
   - Debugger / debug build detection
-  - Instrumentation / hooking heuristics
+  - Instrumentation / hooking heuristics (Frida, Substrate)
+  - **Memory map & Runtime image inspection**
+  - **Heuristic signal correlation**
 
 - **strict**
   - All `standard` checks
@@ -415,12 +417,13 @@ Signals represent _observations_, not decisions.
 Multiple signals may be combined by the host application
 to derive a security policy.
 
-| Prop              | Type                                                                        | Description                                                                                                                         |
-| ----------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| **`id`**          | <code>string</code>                                                         | Stable identifier for the signal. This value is intended for analytics, logging, and policy evaluation.                             |
-| **`category`**    | <code><a href="#integritysignalcategory">IntegritySignalCategory</a></code> | High-level category of the signal.                                                                                                  |
-| **`confidence`**  | <code>'low' \| 'medium' \| 'high'</code>                                    | Confidence level of the detection. Confidence expresses how strongly the signal correlates with a compromised or risky environment. |
-| **`description`** | <code>string</code>                                                         | Optional human-readable description. This field may be omitted in production builds and SHOULD NOT be relied upon programmatically. |
+| Prop              | Type                                                                        | Description                                                                                                                                                                                                                                                                                                       | Since |
+| ----------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| **`id`**          | <code>string</code>                                                         | Stable identifier for the signal. This value is intended for analytics, logging, and policy evaluation.                                                                                                                                                                                                           |       |
+| **`category`**    | <code><a href="#integritysignalcategory">IntegritySignalCategory</a></code> | High-level category of the signal.                                                                                                                                                                                                                                                                                |       |
+| **`confidence`**  | <code>'low' \| 'medium' \| 'high'</code>                                    | Confidence level of the detection. Confidence expresses how strongly the signal correlates with a compromised or risky environment.                                                                                                                                                                               |       |
+| **`description`** | <code>string</code>                                                         | Optional human-readable description. This field may be omitted in production builds and SHOULD NOT be relied upon programmatically.                                                                                                                                                                               |       |
+| **`metadata`**    | <code>Record&lt;string, string \| number \| boolean&gt;</code>              | Additional diagnostic metadata associated with the signal. Metadata provides granular details about the detection (e.g., matched filesystem paths, specific build properties, or runtime artifacts) without altering the stable signal identifier. This field is informational and intended for diagnostics only. | 1.0.0 |
 
 #### IntegrityEnvironment
 
@@ -490,7 +493,7 @@ whenever possible to avoid breaking consumers.
 
 - Root / jailbreak detection can be bypassed
 - Emulator detection is heuristic
-- Frida detection is best-effort only
+- Frida detection uses memory and runtime inspection
 - No cryptographic attestation is performed
 - No device identity is established
 
