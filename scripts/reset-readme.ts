@@ -39,13 +39,13 @@ const activeHeaderBadges = [
   // --- ADD MORE BADGES AS NEEDED ---
 
   // Turborepo (High performance build system)
-  // `<a href="https://turbo.build/"><img src="https://img.shields.io/badge/maintained%20with-turborepo-EF4444?style=flat-square&logo=turborepo&logoColor=white" alt="Turborepo" /></a>`,
+  `<a href="https://turbo.build/"><img src="https://img.shields.io/badge/maintained%20with-turborepo-EF4444?style=flat-square&logo=turborepo&logoColor=white" alt="Turborepo" /></a>`,
 
   // Prettier (Code Style)
   // `<a href="https://prettier.io"><img src="https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square&logo=prettier&logoColor=white" alt="Prettier" /></a>`,
 
   // Renovate (Dependency Automation)
-  // `<a href="https://github.com/renovatebot/renovate"><img src="https://img.shields.io/badge/renovate-enabled-brightgreen.svg?style=flat-square&logo=renovatebot&logoColor=white" alt="Renovate" /></a>`,
+  `<a href="https://github.com/renovatebot/renovate"><img src="https://img.shields.io/badge/renovate-enabled-brightgreen.svg?style=flat-square&logo=renovatebot&logoColor=white" alt="Renovate" /></a>`,
 
   // --- TECH STACK (LANGUAGES) ---
 

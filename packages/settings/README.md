@@ -112,14 +112,11 @@ export default config;
 
 Public JavaScript API for the Settings Capacitor plugin.
 
-This plugin uses standard Promise semantics:
+This plugin uses a state-based result model:
 
-- operations resolve with no value on success
-- failures reject the Promise with an error code
-- consumers are expected to handle errors using `try / catch`
-
-This design aligns with Capacitor v8 error handling conventions
-and ensures consistent behavior across Android, iOS, and Web.
+- operations never throw
+- Promise rejection is not used
+- failures are reported via `{ success, error?, code? }`
 
 This design ensures consistent behavior across Android, iOS, and Web.
 
