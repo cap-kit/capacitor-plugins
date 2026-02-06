@@ -5,16 +5,13 @@ import MachO
  Native iOS implementation for the Integrity plugin.
 
  Responsibilities:
- - Perform platform-specific integrity checks
- - Interact with system-level APIs
- - Produce integrity signals
- - THROW typed IntegrityError on unrecoverable failures
+ - Perform platform-specific integrity checks (Jailbreak, Simulator, Debug, Hooking).
+ - Interact with iOS system APIs and runtime.
+ - Produce structured integrity signals with diagnostic metadata.
 
  Forbidden:
- - Accessing CAPPluginCall
- - Referencing Capacitor APIs
- - Resolving or rejecting JS calls
- - Reading configuration directly
+ - Accessing PluginCall or Capacitor-specific bridge APIs.
+ - Referencing configuration directly (must be injected).
  */
 @objc
 public final class IntegrityImpl: NSObject {
@@ -35,6 +32,11 @@ public final class IntegrityImpl: NSObject {
      This method MUST be called exactly once.
      */
     func applyConfig(_ config: IntegrityConfig) {
+        // WARNING:
+        // This method is not protected against multiple invocations.
+        // A second call would silently override configuration and logger state.
+        // The Plugin layer MUST guarantee single invocation during load().
+
         self.config = config
         IntegrityLogger.verbose = config.verboseLogging
 
@@ -44,64 +46,81 @@ public final class IntegrityImpl: NSObject {
         )
     }
 
-    // MARK: - Options orchestrator
+    // MARK: - Execution Orchestrator
 
+    /**
+     Executes the requested integrity checks and aggregates signals.
+
+     - IMPORTANT:
+     This method assumes configuration has already been applied.
+     If `applyConfig(_:)` was not called, behavior is undefined.
+
+     - NOTE:
+     This method performs synchronous checks only.
+     It MUST NOT be called on the main thread if future checks
+     introduce blocking I/O.
+     */
     func performCheck(
         options: IntegrityCheckOptions
     ) throws -> [String: Any] {
+        // NOTE:
+        // Consider explicitly throwing an error if `config == nil`
+        // to make the precondition failure explicit and diagnosable.
 
-        var signals = try checkJailbreakSignals()
+        var signals: [[String: Any]] = []
+
+        // --- BASIC -----------------------------------------------------------
+        // BASIC level MUST include only deterministic, low-cost checks.
+        // These checks are expected to be safe to cache.
+        signals.append(contentsOf: try checkJailbreakSignals())
 
         let isSimulator = isSimulator()
         if isSimulator {
             signals.append([
                 "id": "ios_simulator",
                 "category": "emulator",
-                "confidence": "high"
+                "confidence": "high",
+                "metadata": ["type": "apple_simulator"]
             ])
         }
 
-        // --- STANDARD ------------------------------------------------------------
+        // --- STANDARD & STRICT -----------------------------------------------
+        // Levels above BASIC may include:
+        // - Runtime inspection
+        // - Debug / tracing detection
+        // - Hooking and instrumentation heuristics
+        //
+        // These checks may produce false positives and MUST be scored accordingly.
         if options.level != "basic" {
+            // Debug detection
+            signals.append(contentsOf: checkDebugSignals(options: options))
 
-            if checkDebug() {
-                var signal: [String: Any] = [
-                    "id": "ios_debug_detected",
-                    "category": "debug",
-                    "confidence": "medium"
-                ]
-
-                if options.includeDebugInfo == true {
-                    signal["description"] = "Debugger attached to the process"
-                }
-
+            // Hooking detection (Frida/Substrate)
+            let hookingSignal = checkHookingSignals(options: options)
+            if let signal = hookingSignal {
                 signals.append(signal)
             }
 
-            if try checkFridaLibraries() {
+            // Port-based detection
+            let portDetected = checkFridaPort()
+            if portDetected {
                 signals.append([
-                    "id": "ios_frida_library",
+                    "id": "ios_frida_port_detected",
                     "category": "hook",
-                    "confidence": "high"
+                    "confidence": "medium",
+                    "metadata": ["port": 27042]
                 ])
             }
 
-            if try checkFridaThreads() {
+            // --- SIGNAL CORRELATION ------------------------------------------
+            // If both library and port are detected, emit a high-confidence
+            // correlation signal to confirm active instrumentation.
+            if hookingSignal != nil && portDetected {
                 signals.append([
-                    "id": "ios_frida_thread",
+                    "id": "ios_frida_correlation_confirmed",
                     "category": "hook",
-                    "confidence": "medium"
-                ])
-            }
-        }
-
-        // --- STRICT --------------------------------------------------------------
-        if options.level == "strict" {
-            if try !checkBundleIntegrity() {
-                signals.append([
-                    "id": "ios_bundle_integrity",
-                    "category": "tamper",
-                    "confidence": "high"
+                    "confidence": "high",
+                    "metadata": ["source": "library+port"]
                 ])
             }
         }
@@ -121,23 +140,33 @@ public final class IntegrityImpl: NSObject {
         ]
     }
 
-    // MARK: - Internal cache
+    // MARK: - Jailbreak Detection
 
     /**
      Cached jailbreak-related signals.
 
      Jailbreak checks are deterministic and relatively expensive,
      therefore they are cached for the lifetime of the process.
+
+     - WARNING:
+     Cached results are NOT invalidated if filesystem state changes
+     during runtime (e.g. after dynamic instrumentation).
      */
     private var cachedJailbreakSignals: [[String: Any]]?
 
-    // MARK: - Jailbreak detection
-
     /**
-     Performs baseline jailbreak detection.
+     Performs jailbreak detection using expanded filesystem heuristics.
 
-     @throws IntegrityError.unavailable
-     If filesystem inspection is restricted.
+     - NOTE:
+     This method intentionally avoids:
+     - fork()
+     - syscalls requiring entitlements
+     - write attempts outside sandbox
+
+     - LIMITATION:
+     This does NOT detect:
+     - Rootless jailbreaks reliably
+     - Runtime-only jailbreak environments
      */
     func checkJailbreakSignals() throws -> [[String: Any]] {
         if let cached = cachedJailbreakSignals {
@@ -148,36 +177,146 @@ public final class IntegrityImpl: NSObject {
             "/Applications/Cydia.app",
             "/Library/MobileSubstrate/MobileSubstrate.dylib",
             "/bin/bash",
-            "/usr/sbin/sshd"
+            "/usr/sbin/sshd",
+            "/etc/apt",
+            "/usr/bin/ssh",
+            "/private/var/lib/apt",
+            "/private/var/lib/cydia",
+            "/usr/libexec/sftp-server",
+            "/Applications/Sileo.app",
+            "/Applications/Zebra.app"
         ]
 
         var signals: [[String: Any]] = []
 
-        for path in suspiciousPaths {
-            do {
-                if FileManager.default.fileExists(atPath: path) {
-                    signals.append([
-                        "id": "ios_jailbreak_path",
-                        "category": "jailbreak",
-                        "confidence": "high"
-                    ])
-                    break
-                }
-            } catch {
-                throw IntegrityError.unavailable(
-                    "Filesystem access denied while performing jailbreak checks."
-                )
-            }
+        for path in suspiciousPaths
+        where FileManager.default.fileExists(atPath: path) {
+
+            signals.append([
+                "id": "ios_jailbreak_path",
+                "category": "jailbreak",
+                "confidence": "high",
+                "metadata": ["path": path]
+            ])
+            break
         }
 
         cachedJailbreakSignals = signals
         return signals
     }
 
-    // MARK: - Simulator detection
+    // MARK: - Debug & Hooking Detection
 
     /**
-     Indicates whether the application is running in a simulator.
+     Detects if a debugger is attached or if the process is being traced.
+
+     - NOTE:
+     This implementation uses `sysctl` + `P_TRACED` only.
+
+     - LIMITATION:
+     Does NOT detect:
+     - ptrace-based evasion
+     - LLDB attach after launch
+     - Kernel-level debugging
+     */
+    func checkDebugSignals(options: IntegrityCheckOptions) -> [[String: Any]] {
+        var signals: [[String: Any]] = []
+
+        var info = kinfo_proc()
+        var size = MemoryLayout.size(ofValue: info)
+        var mib: [Int32] = [
+            CTL_KERN,
+            KERN_PROC,
+            KERN_PROC_PID,
+            getpid()
+        ]
+
+        if sysctl(&mib, UInt32(mib.count), &info, &size, nil, 0) == 0 {
+            if (info.kp_proc.p_flag & P_TRACED) != 0 {
+                signals.append([
+                    "id": "ios_debugger_attached",
+                    "category": "debug",
+                    "confidence": "high",
+                    "metadata": ["method": "sysctl_p_traced"]
+                ])
+            }
+        }
+
+        return signals
+    }
+
+    /**
+     Inspects loaded dyld images to detect hooking frameworks like Frida.
+
+     - WARNING:
+     This method may produce false positives if:
+     - App bundles legitimately include similarly named libraries
+     - Vendor SDKs embed substrings like "gadget"
+
+     - SCORING:
+     Results from this method SHOULD always be weighted,
+     never treated as a single-source compromise signal.
+     */
+    func checkHookingSignals(options: IntegrityCheckOptions) -> [String: Any]? {
+        let imageCount = _dyld_image_count()
+
+        for index in 0..<imageCount {
+            if let cName = _dyld_get_image_name(index) {
+                let imageName = String(cString: cName).lowercased()
+                if imageName.contains("frida")
+                    || imageName.contains("gadget")
+                    || imageName.contains("substrate") {
+
+                    return [
+                        "id": "ios_hooking_library_detected",
+                        "category": "hook",
+                        "confidence": "high",
+                        "metadata": ["library_path": imageName]
+                    ]
+                }
+            }
+        }
+
+        return nil
+    }
+
+    /**
+     Checks for active Frida server ports on the local interface.
+
+     - WARNING:
+     This performs an actual socket connection attempt.
+
+     - LIMITATION:
+     - May fail on hardened devices even if Frida is present
+     - May succeed on non-compromised devices with port reuse
+
+     - SECURITY:
+     This MUST never be extended to scan arbitrary ports.
+     */
+    func checkFridaPort() -> Bool {
+        var serverAddress = sockaddr_in()
+        serverAddress.sin_family = sa_family_t(AF_INET)
+        serverAddress.sin_addr.s_addr = inet_addr("127.0.0.1")
+        serverAddress.sin_port = UInt16(27042).bigEndian
+
+        let sock = socket(AF_INET, SOCK_STREAM, 0)
+        if sock < 0 { return false }
+        defer { close(sock) }
+
+        return withUnsafePointer(to: &serverAddress) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                connect(sock, $0, socklen_t(MemoryLayout<sockaddr_in>.size)) == 0
+            }
+        }
+    }
+
+    // MARK: - Helpers
+
+    /**
+     Determines whether the current process is running under the iOS Simulator.
+
+     - NOTE:
+     This uses compile-time environment checks and is not spoofable at runtime.
      */
     func isSimulator() -> Bool {
         #if targetEnvironment(simulator)
@@ -187,102 +326,23 @@ public final class IntegrityImpl: NSObject {
         #endif
     }
 
-    // MARK: - Debug detection
-
-    /**
-     Detects whether the process is being debugged.
-
-     Uses sysctl-based detection.
-     */
-    func checkDebug() -> Bool {
-        var info = kinfo_proc()
-        var size = MemoryLayout<kinfo_proc>.stride
-
-        var mib: [Int32] = [
-            CTL_KERN,
-            KERN_PROC,
-            KERN_PROC_PID,
-            getpid()
-        ]
-
-        let sysctlResult = sysctl(
-            &mib,
-            UInt32(mib.count),
-            &info,
-            &size,
-            nil,
-            0
-        )
-
-        if sysctlResult != 0 {
-            return false
-        }
-
-        return (info.kp_proc.p_flag & P_TRACED) != 0
-    }
-
-    // MARK: - Frida detection — loaded libraries
-
-    /**
-     Performs best-effort Frida Gadget detection by inspecting
-     loaded dynamic libraries via dyld.
-
-     @throws IntegrityError.unavailable
-     If dyld inspection is restricted.
-     */
-    func checkFridaLibraries() throws -> Bool {
-        let imageCount = _dyld_image_count()
-
-        for index in 0..<imageCount {
-            guard let cName = _dyld_get_image_name(index) else {
-                continue
-            }
-
-            let imageName = String(cString: cName).lowercased()
-            if imageName.contains("frida") || imageName.contains("gadget") {
-                return true
-            }
-        }
-
-        return false
-    }
-
-    // MARK: - Frida detection — threads
-
-    /**
-     Detects suspicious Frida-related threads.
-
-     Failure to inspect threads is treated as unavailable,
-     not as a negative detection.
-     */
-    func checkFridaThreads() throws -> Bool {
-        guard let threadName = Thread.current.name?.lowercased() else {
-            return false
-        }
-
-        return threadName.contains("frida")
-    }
-
-    // MARK: - Bundle integrity
-
-    /**
-     Performs a basic application bundle integrity check.
-
-     @throws IntegrityError.initFailed
-     If bundle information cannot be accessed.
-     */
-    func checkBundleIntegrity() throws -> Bool {
-        guard let executablePath = Bundle.main.executablePath else {
-            throw IntegrityError.initFailed(
-                "Unable to determine application executable path."
-            )
-        }
-
-        return FileManager.default.fileExists(atPath: executablePath)
-    }
-
     // MARK: - Scoring
 
+    /**
+     Computes a numeric risk score based on signal confidence.
+
+     - NOTE:
+     This scoring model is heuristic-based and intentionally simple.
+
+     - POLICY:
+     - high   → 30 points
+     - medium → 15 points
+     - low    → 5 points
+
+     - WARNING:
+     This method MUST remain platform-agnostic.
+     Platform-specific weighting is FORBIDDEN here.
+     */
     private func computeScore(
         _ signals: [[String: Any]]
     ) -> Int {

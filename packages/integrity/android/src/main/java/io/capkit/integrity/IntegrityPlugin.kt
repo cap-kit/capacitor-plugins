@@ -7,9 +7,14 @@ import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
+import io.capkit.integrity.utils.IntegrityUtils
 
 /**
  * Capacitor bridge for the Integrity plugin (Android).
+ *
+ * CONTRACT:
+ * - This class is the ONLY entry point from JavaScript.
+ * - All PluginCall instances MUST be resolved or rejected exactly once.
  *
  * Responsibilities:
  * - Parse JavaScript input
@@ -19,7 +24,7 @@ import com.getcapacitor.annotation.CapacitorPlugin
  *
  * Forbidden:
  * - Platform-specific business logic
- * - System API usage
+ * - System API usage (except Activity / Intent orchestration)
  * - Throwing uncaught exceptions
  */
 @CapacitorPlugin(
@@ -32,13 +37,22 @@ class IntegrityPlugin : Plugin() {
 
   /**
    * Immutable plugin configuration.
-   * Read once during plugin initialization.
+   *
+   * CONTRACT:
+   * - Initialized exactly once in load()
+   * - Treated as read-only afterwards
+   * - MUST NOT be mutated at runtime
    */
   private lateinit var config: IntegrityConfig
 
   /**
    * Native implementation layer.
-   * Contains platform-specific logic only.
+   *
+   * CONTRACT:
+   * - Owned by the Plugin layer
+   * - Lifetime == plugin lifetime
+   * - MUST NOT access PluginCall or Capacitor APIs
+   * - MUST NOT perform UI operations
    */
   private lateinit var implementation: IntegrityImpl
 
@@ -49,10 +63,16 @@ class IntegrityPlugin : Plugin() {
   /**
    * Called once when the plugin is loaded by the Capacitor bridge.
    *
-   * This is the correct place to:
-   * - read static configuration
-   * - initialize the native implementation
-   * - inject configuration into the implementation
+   * CONTRACT:
+   * - Called exactly once
+   * - This is the ONLY valid place to:
+   *   - read static configuration
+   *   - initialize the native implementation
+   *   - inject configuration into the implementation
+   *
+   * WARNING:
+   * - Re-initializing config or implementation outside this method
+   *   is considered a plugin defect.
    */
   override fun load() {
     super.load()
@@ -69,8 +89,13 @@ class IntegrityPlugin : Plugin() {
   /**
    * Maps native IntegrityError values to JavaScript-facing error codes.
    *
-   * This method MUST be the only place where native errors
-   * are translated into JS-visible failures.
+   * CONTRACT:
+   * - This method is the ONLY place where native errors
+   *   are translated into JS-visible failures.
+   * - Error codes MUST be:
+   *   - stable
+   *   - documented
+   *   - identical across platforms
    */
   private fun reject(
     call: PluginCall,
@@ -94,13 +119,25 @@ class IntegrityPlugin : Plugin() {
   /**
    * Executes an integrity check.
    *
-   * This method:
-   * - parses JS options
-   * - delegates execution to the native implementation
-   * - resolves a structured IntegrityReport
+   * CONTRACT:
+   * - Resolves exactly once on success
+   * - Rejects exactly once on failure
+   * - Never throws outside this method
+   *
+   * NOTE:
+   * - Option defaulting happens here by design.
+   * - The Impl layer MUST receive fully normalized options.
    */
   @PluginMethod
   fun check(call: PluginCall) {
+    // NOTE:
+    // JSObject creation happens here to avoid leaking
+    // Android-specific data structures outside the Plugin layer.
+
+    // WARNING:
+    // Any exception escaping performCheck() MUST be caught here.
+    // Uncaught native exceptions are considered a plugin defect.
+
     try {
       val options =
         IntegrityCheckOptions(
@@ -110,10 +147,8 @@ class IntegrityPlugin : Plugin() {
 
       val result = implementation.performCheck(options)
 
-      val jsResult = JSObject()
-      for ((key, value) in result) {
-        jsResult.put(key, value)
-      }
+      val jsResult = IntegrityUtils.toJSObject(result)
+
       call.resolve(jsResult)
     } catch (e: IntegrityError) {
       reject(call, e)
@@ -132,11 +167,28 @@ class IntegrityPlugin : Plugin() {
   /**
    * Presents the configured integrity block page, if enabled.
    *
-   * This method NEVER decides when it should be called.
-   * The decision is fully delegated to the host application.
+   * CONTRACT:
+   * - This method NEVER decides when it should be called.
+   * - The decision is fully delegated to the host application.
+   *
+   * NOTE:
+   * - Returning `{ presented: false }` is NOT an error.
+   * - This allows deterministic branching on the JS side.
+   *
+   * WARNING:
+   * - UI navigation is allowed ONLY in the Plugin layer.
+   * - The Impl layer MUST NEVER start Activities.
    */
   @PluginMethod
   fun presentBlockPage(call: PluginCall) {
+    // WARNING:
+    // This method relies on FLAG_ACTIVITY_NEW_TASK because
+    // Capacitor plugins do not own an Activity lifecycle.
+
+    // NOTE:
+    // Clearing the task when not dismissible enforces
+    // a hard block policy without relying on JS state.
+
     if (!config.blockPageEnabled || config.blockPageUrl == null) {
       call.resolve(JSObject().put("presented", false))
       return
@@ -179,7 +231,10 @@ class IntegrityPlugin : Plugin() {
   /**
    * Returns the native plugin version.
    *
-   * This method is guaranteed not to fail.
+   * - Used for diagnostics and compatibility checks only
+   *
+   * NOTE:
+   * - This method is guaranteed not to fail.
    */
   @PluginMethod
   fun getPluginVersion(call: PluginCall) {
