@@ -1,5 +1,11 @@
 # @cap-kit/test-plugin
 
+## 8.0.0-next.3
+
+### Patch Changes
+
+- 080cffe: feat(integrity): Add diagnostic metadata and enhanced runtime heuristics for Android and iOS.
+
 ## 8.0.0-next.2
 
 ### Patch Changes
