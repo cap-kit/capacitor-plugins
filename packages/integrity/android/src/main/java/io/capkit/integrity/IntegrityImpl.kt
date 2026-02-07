@@ -29,9 +29,31 @@ class IntegrityImpl(
   private val context: Context,
 ) {
   // ---------------------------------------------------------------------------
-  // ???
+  // Signal lifecycle & execution model
   // ---------------------------------------------------------------------------
 
+  /**
+   * Signal production in this implementation follows a two-phase model:
+   *
+   * 1. Early boot phase (optional, best-effort)
+   *    - Signals may be captured before the Capacitor bridge is initialized.
+   *    - Early signals are collected via the static `onApplicationCreate` entry point.
+   *    - Captured signals are stored in a volatile in-memory buffer (`bootSignals`).
+   *    - Early boot detection is opportunistic and NOT guaranteed.
+   *
+   * 2. Runtime phase (authoritative)
+   *    - Signals are produced when `check(...)` is invoked from JavaScript.
+   *    - Any previously captured boot signals are merged into the first report.
+   *    - Subsequent checks operate exclusively on runtime detection.
+   *
+   * IMPORTANT SEMANTICS:
+   * - Boot signals are best-effort and may be absent depending on
+   *   process lifecycle, OS behavior, or warm starts.
+   * - Boot signals do NOT provide stronger guarantees than runtime signals.
+   * - The absence of boot signals does NOT indicate a clean environment.
+   *
+   * This design improves detection timing, not detection coverage.
+   */
   companion object {
     /**
      * Volatile buffer for signals captured during early boot.
