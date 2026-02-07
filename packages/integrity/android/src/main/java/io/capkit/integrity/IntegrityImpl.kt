@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import io.capkit.integrity.utils.IntegrityLogger
 import java.io.File
 import java.net.Socket
+import java.util.Collections
 
 /**
  * Native Android implementation for the Integrity plugin.
@@ -27,6 +28,47 @@ import java.net.Socket
 class IntegrityImpl(
   private val context: Context,
 ) {
+  // ---------------------------------------------------------------------------
+  // ???
+  // ---------------------------------------------------------------------------
+
+  companion object {
+    /**
+     * Volatile buffer for signals captured during early boot.
+     */
+    private val bootSignals = Collections.synchronizedList(mutableListOf<Map<String, Any>>())
+
+    /**
+     * Native entry point for MainActivity.onCreate.
+     * Captures security signals before the Capacitor bridge is initialized.
+     */
+    @JvmStatic
+    fun onApplicationCreate(context: Context) {
+      val impl = IntegrityImpl(context)
+      // Capture basic root signals immediately at boot
+      val signals =
+        impl.checkRootSignals(
+          IntegrityCheckOptions(
+            level = "basic",
+            includeDebugInfo = false,
+          ),
+        )
+      bootSignals.addAll(signals)
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Remote Attestation
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Stub for Google Play Integrity integration.
+   * To be implemented in a future evolution step.
+   */
+  fun getPlayIntegritySignal() {
+    // Placeholder for com.google.android.play.core.integrity logic
+  }
+
   // ---------------------------------------------------------------------------
   // Configuration
   // ---------------------------------------------------------------------------
@@ -83,12 +125,19 @@ class IntegrityImpl(
   fun performCheck(options: IntegrityCheckOptions): Map<String, Any> {
     val signals = mutableListOf<Map<String, Any>>()
 
-    // --- BASIC ---------------------------------------------------------------
+    // --- BOOT SIGNALS ----------------------------------------------------
+    // Merge signals captured during early boot and clear the buffer.
+    synchronized(bootSignals) {
+      signals.addAll(bootSignals)
+      bootSignals.clear()
+    }
+
+    // --- BASIC -----------------------------------------------------------
 
     // NOTE:
     // BASIC checks are deterministic and safe to cache.
 
-    signals.addAll(checkRootSignals())
+    signals.addAll(checkRootSignals(options))
 
     val isEmulator = checkEmulator()
     if (isEmulator) {
@@ -97,12 +146,13 @@ class IntegrityImpl(
           id = "android_emulator",
           category = "emulator",
           confidence = "high",
+          description = "Execution environment matches known emulator characteristics",
           options = options,
         ),
       )
     }
 
-    // --- STANDARD ------------------------------------------------------------
+    // --- STANDARD & STRICT -----------------------------------------------
 
     // NOTE:
     // STANDARD checks may introduce false positives
@@ -112,9 +162,9 @@ class IntegrityImpl(
       // checkDebug returns a list of signals
       signals.addAll(checkDebug(options))
 
-      // --- HOOKING DETECTION -------------------------------------------------
+      // --- HOOKING DETECTION --------------------------------------------
 
-      // Check Frida via memory maps
+      // Frida detection via memory maps
       val fridaMemoryDetected = checkFridaMemory()
       if (fridaMemoryDetected) {
         signals.add(
@@ -122,12 +172,13 @@ class IntegrityImpl(
             id = "android_frida_memory",
             category = "hook",
             confidence = "high",
+            description = "Process memory contains known instrumentation artifacts",
             options = options,
           ),
         )
       }
 
-      // Check Frida via known ports
+      // Frida detection via known ports
       val fridaPortDetected = checkFridaPorts()
       if (fridaPortDetected) {
         signals.add(
@@ -135,6 +186,7 @@ class IntegrityImpl(
             id = "android_frida_port",
             category = "hook",
             confidence = "medium",
+            description = "Known instrumentation ports are reachable on localhost",
             options = options,
           ),
         )
@@ -149,6 +201,7 @@ class IntegrityImpl(
             id = "android_frida_correlation_confirmed",
             category = "hook",
             confidence = "high",
+            description = "Multiple instrumentation indicators detected simultaneously",
             metadata = mapOf("source" to "memory+port"),
             options = options,
           ),
@@ -169,6 +222,7 @@ class IntegrityImpl(
             id = "android_signature_invalid",
             category = "tamper",
             confidence = "high",
+            description = "Application signing information does not match expected format",
             options = options,
           ),
         )
@@ -259,7 +313,7 @@ class IntegrityImpl(
    * @throws IntegrityError.Unavailable
    *   If filesystem access is restricted by the OS.
    */
-  fun checkRootSignals(): List<Map<String, Any>> {
+  fun checkRootSignals(options: IntegrityCheckOptions): List<Map<String, Any>> {
     // WARNING:
     // Filesystem heuristics may be bypassed by advanced root hiding tools.
 
@@ -274,25 +328,32 @@ class IntegrityImpl(
         "/system/xbin/su",
         "/sbin/su",
         "/system/app/Superuser.apk",
+        "/system/app/Superuser/Superuser.apk",
         "/data/local/xbin/su",
         "/data/local/bin/su",
         "/system/sd/xbin/su",
         "/su/bin/su",
+        "/magisk/.core/bin/su",
+        "/system/usr/we-need-root/su-backup/su",
+        "/system/bin/.ext/.su/su",
+        "/system/bin/failsafe/su",
+        "/data/local/su",
       )
 
     try {
       for (path in suPaths) {
         if (File(path).exists()) {
           signals.add(
-            mapOf(
-              "id" to "android_root_su",
-              "category" to "root",
-              "confidence" to "high",
-              // Diagnostic metadata
-              "metadata" to mapOf("path" to path),
+            signal(
+              id = "android_root_su",
+              category = "root",
+              confidence = "high",
+              description = "Presence of su binary detected in system paths",
+              metadata = mapOf("path" to path),
+              options = options,
             ),
           )
-          break
+          break // Found one, enough to flag
         }
       }
     } catch (e: SecurityException) {
@@ -304,11 +365,13 @@ class IntegrityImpl(
     val buildTags = android.os.Build.TAGS
     if (buildTags?.contains("test-keys") == true) {
       signals.add(
-        mapOf(
-          "id" to "android_test_keys",
-          "category" to "root",
-          "confidence" to "medium",
-          "metadata" to mapOf("tags" to buildTags),
+        signal(
+          id = "android_test_keys",
+          category = "root",
+          confidence = "medium",
+          description = "Device build signed with test keys",
+          metadata = mapOf("tags" to buildTags),
+          options = options,
         ),
       )
     }
@@ -381,6 +444,7 @@ class IntegrityImpl(
           id = "android_debugger_attached",
           category = "debug",
           confidence = "high",
+          description = "A debugger is currently attached to the running process",
           metadata = mapOf("method" to "Debug.isDebuggerConnected"),
           options = options,
         ),
@@ -390,9 +454,10 @@ class IntegrityImpl(
     if (isDebuggable) {
       debugSignals.add(
         signal(
-          id = "android_debuggable_build",
+          id = "android_runtime_debuggable",
           category = "debug",
           confidence = "medium",
+          description = "Process is debuggable at runtime",
           metadata = mapOf("flag" to "FLAG_DEBUGGABLE"),
           options = options,
         ),

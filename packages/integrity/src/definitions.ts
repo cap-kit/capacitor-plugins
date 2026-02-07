@@ -1,5 +1,7 @@
 /// <reference types="@capacitor/cli" />
 
+import { PluginListenerHandle } from '@capacitor/core';
+
 /**
  * Capacitor configuration extension for the Integrity plugin.
  *
@@ -23,6 +25,30 @@ declare module '@capacitor/cli' {
 }
 
 // -----------------------------------------------------------------------------
+// Events
+// -----------------------------------------------------------------------------
+
+/**
+ * Event payload emitted when a new integrity signal is detected.
+ *
+ * This event represents a *real-time observation* of a potential
+ * integrity-relevant condition on the device.
+ *
+ * IMPORTANT:
+ * - Signals are observational only.
+ * - Emitting a signal does NOT imply that the environment is compromised.
+ * - No blocking or enforcement is performed by the plugin.
+ *
+ * The host application is responsible for:
+ * - interpreting signals
+ * - correlating multiple signals
+ * - applying any security or UX policy
+ *
+ * @since 8.0.0
+ */
+export type IntegritySignalEvent = IntegritySignal;
+
+// -----------------------------------------------------------------------------
 // Enums
 // -----------------------------------------------------------------------------
 
@@ -32,7 +58,7 @@ declare module '@capacitor/cli' {
  * Errors are delivered via Promise rejection with a structured
  * `{ message, code }` object matching `IntegrityError`.
  *
- * @since 1.0.0
+ * @since 8.0.0
  */
 export enum IntegrityErrorCode {
   /** Required data is missing or the feature is not available. */
@@ -55,7 +81,7 @@ export enum IntegrityErrorCode {
  * These values are OPTIONAL and provided for convenience only.
  * Applications may define and use their own custom reason strings.
  *
- * @since 1.0.0
+ * @since 8.0.0
  */
 export enum IntegrityBlockReason {
   COMPROMISED_ENVIRONMENT = 'compromised_environment',
@@ -88,7 +114,7 @@ export interface IntegrityConfig {
    *
    * @default false
    * @example true
-   * @since 1.0.0
+   * @since 8.0.0
    */
   verboseLogging?: boolean;
 
@@ -108,14 +134,14 @@ export interface IntegrityConfig {
    * the block page. Presentation is always explicitly triggered
    * by the host application via the public API.
    *
-   * @since 1.0.0
+   * @since 8.0.0
    */
   blockPage?: IntegrityBlockPageConfig;
 }
 
 /**
  *
- * @since 1.0.0
+ * @since 8.0.0
  */
 export interface IntegrityBlockPageConfig {
   /**
@@ -126,7 +152,7 @@ export interface IntegrityBlockPageConfig {
    *
    * @default false
    * @example true
-   * @since 1.0.0
+   * @since 8.0.0
    */
   enabled?: boolean;
 
@@ -142,7 +168,7 @@ export interface IntegrityBlockPageConfig {
    *
    * @example 'integrity-block.html'
    * @example 'https://example.com/integrity.html'
-   * @since 1.0.0
+   * @since 8.0.0
    */
   url: string;
 }
@@ -154,59 +180,93 @@ export interface IntegrityBlockPageConfig {
  * New detection techniques MUST reuse existing categories
  * whenever possible to avoid breaking consumers.
  *
- * @since 1.0.0
+ * @since 8.0.0
  */
 export type IntegritySignalCategory = 'root' | 'jailbreak' | 'emulator' | 'debug' | 'hook' | 'tamper' | 'environment';
+
+/**
+ * Internal confidence levels used by native implementations.
+ *
+ * IMPORTANT:
+ * This enum is INTERNAL and MUST NOT be considered a public API.
+ * It exists to freeze semantic meaning and avoid string drift
+ * across platforms and future refactors.
+ */
+enum IntegrityConfidenceLevel {
+  LOW = 'low',
+  MEDIUM = 'medium',
+  HIGH = 'high',
+}
 
 /**
  * A single integrity signal detected on the current device.
  *
  * Signals represent *observations*, not decisions.
- * Multiple signals may be combined by the host application
+ * Multiple signals MAY be combined by the host application
  * to derive a security policy.
  *
- * @since 1.0.0
+ * Signals:
+ * - are emitted asynchronously
+ * - may occur at any time during the app lifecycle
+ * - may be emitted before or after the first call to `check()`
+ *
+ * @since 8.0.0
  */
 export interface IntegritySignal {
   /**
    * Stable identifier for the signal.
    *
-   * This value is intended for analytics, logging,
-   * and policy evaluation.
+   * This value:
+   * - is stable across releases
+   * - MUST NOT be parsed or pattern-matched
+   * - is intended for analytics, logging, and policy evaluation
    */
   id: string;
 
   /**
    * High-level category of the signal.
+   *
+   * Categories allow grouping related signals
+   * without relying on specific identifiers.
    */
   category: IntegritySignalCategory;
 
   /**
    * Confidence level of the detection.
    *
-   * Confidence expresses how strongly the signal
-   * correlates with a compromised or risky environment.
+   * This value expresses how strongly the signal correlates
+   * with a potentially compromised or risky environment.
+   *
+   * NOTE:
+   * Although typed as a string union in the public API,
+   * native implementations MUST only emit values defined
+   * by the internal IntegrityConfidenceLevel enum.
    */
-  confidence: 'low' | 'medium' | 'high';
+  confidence: IntegrityConfidenceLevel;
 
   /**
    * Optional human-readable description.
    *
-   * This field may be omitted in production builds
-   * and SHOULD NOT be relied upon programmatically.
+   * This field:
+   * - is intended for diagnostics and debugging only
+   * - MAY be omitted or redacted in production builds
+   * - MUST NOT be relied upon programmatically
    */
   description?: string;
 
   /**
    * Additional diagnostic metadata associated with the signal.
    *
-   * Metadata provides granular details about the detection (e.g., matched
-   * filesystem paths, specific build properties, or runtime artifacts)
-   * without altering the stable signal identifier.
+   * Metadata provides granular details about the detection
+   * (e.g. matched filesystem paths, runtime artifacts,
+   * or environment properties) without altering the
+   * stable signal identifier.
    *
-   * This field is informational and intended for diagnostics only.
-   *
-   * @since 1.0.0
+   * IMPORTANT:
+   * - Metadata is informational only.
+   * - Keys and values are NOT guaranteed to be stable.
+   * - Applications MUST NOT rely on specific metadata fields
+   *   for security decisions.
    */
   metadata?: Record<string, string | number | boolean>;
 }
@@ -215,7 +275,7 @@ export interface IntegritySignal {
  * Summary of the execution environment in which
  * the integrity check was performed.
  *
- * @since 1.0.0
+ * @since 8.0.0
  */
 export interface IntegrityEnvironment {
   /**
@@ -242,7 +302,7 @@ export interface IntegrityEnvironment {
  * This object aggregates all detected signals
    and provides a provisional integrity score.
  *
- * @since 1.0.0
+ * @since 8.0.0
  */
 export interface IntegrityReport {
   /**
@@ -285,7 +345,7 @@ export interface IntegrityReport {
  * These options influence *how* checks are performed,
    not *what* the public API returns.
  *
- * @since 1.0.0
+ * @since 8.0.0
  */
 export interface IntegrityCheckOptions {
   /**
@@ -306,7 +366,7 @@ export interface IntegrityCheckOptions {
 /**
  * Options for presenting the integrity block page.
  *
- * @since 1.0.0
+ * @since 8.0.0
  */
 export interface PresentBlockPageOptions {
   /**
@@ -315,7 +375,7 @@ export interface PresentBlockPageOptions {
    * This value may be used for analytics,
    * localization, or user messaging.
    *
-   * @since 1.0.0
+   * @since 8.0.0
    */
   reason?: string;
 
@@ -326,7 +386,7 @@ export interface PresentBlockPageOptions {
    * In production environments, this should typically remain disabled.
    *
    * @default false
-   * @since 1.0.0
+   * @since 8.0.0
    */
   dismissible?: boolean;
 }
@@ -338,7 +398,7 @@ export interface PresentBlockPageOptions {
 /**
  * Result object returned by `presentBlockPage()`.
  *
- * @since 1.0.0
+ * @since 8.0.0
  */
 export interface PresentBlockPageResult {
   /**
@@ -361,7 +421,7 @@ export interface PluginVersionResult {
  * This object allows consumers to handle errors without relying
  * on exception-based control flow.
  *
- * @since 1.0.0
+ * @since 8.0.0
  */
 export interface IntegrityError {
   /**
@@ -394,7 +454,7 @@ export interface IntegrityPlugin {
    * const report = await Integrity.check();
    * ```
    *
-   * @since 1.0.0
+   * @since 8.0.0
    */
   check(options?: IntegrityCheckOptions): Promise<IntegrityReport>;
 
@@ -409,7 +469,7 @@ export interface IntegrityPlugin {
    * await Integrity.presentBlockPage({ reason: 'integrity_failed' });
    * ```
    *
-   * @since 1.0.0
+   * @since 8.0.0
    */
   presentBlockPage(options?: PresentBlockPageOptions): Promise<PresentBlockPageResult>;
 
@@ -426,7 +486,47 @@ export interface IntegrityPlugin {
    * const { version } = await Integrity.getPluginVersion();
    * ```
    *
-   * @since 0.0.1
+   * @since 8.0.0
    */
   getPluginVersion(): Promise<PluginVersionResult>;
+
+  /**
+   * Registers a listener for real-time integrity signals.
+   *
+   * The provided callback is invoked every time a new integrity
+   * signal is detected by the native layer.
+   *
+   * BEHAVIOR:
+   * - Signals may be emitted at any time after plugin initialization.
+   * - Signals detected before listener registration MAY be delivered
+   *   immediately after registration.
+   * - No guarantees are made about signal frequency or ordering
+   *   across platforms.
+   *
+   * IMPORTANT:
+   * - This listener is non-blocking.
+   * - The plugin does NOT enforce any policy based on signals.
+   *
+   * @param eventName The event to listen for ('integritySignal').
+   * @param listenerFunc Callback invoked with the detected signal.
+   * @returns A Promise resolving to a `PluginListenerHandle`.
+   *
+   * @since 8.0.0
+   */
+  addListener(
+    eventName: 'integritySignal',
+    listenerFunc: (signal: IntegritySignalEvent) => void,
+  ): Promise<PluginListenerHandle>;
+
+  /**
+   * Removes all registered listeners for this plugin.
+   *
+   * NOTE:
+   * - Removing listeners does NOT stop signal detection natively.
+   * - Signals may continue to be detected and buffered
+   *   until a listener is registered again.
+   *
+   * @since 8.0.0
+   */
+  removeAllListeners(): Promise<void>;
 }
