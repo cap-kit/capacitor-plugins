@@ -1,5 +1,11 @@
 # @cap-kit/test-plugin
 
+## 8.0.0-next.4
+
+### Patch Changes
+
+- a7dd019: feat(integrity): Add real-time integrity signal listeners.
+
 ## 8.0.0-next.3
 
 ### Patch Changes

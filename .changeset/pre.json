@@ -6,5 +6,10 @@
     "@cap-kit/settings": "8.0.2",
     "@cap-kit/ssl-pinning": "8.0.0"
   },
-  "changesets": ["green-dolls-work", "grumpy-boxes-learn", "many-ravens-look"]
+  "changesets": [
+    "green-dolls-work",
+    "grumpy-boxes-learn",
+    "many-ravens-look",
+    "nice-gifts-call"
+  ]
 }
