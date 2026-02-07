@@ -38,8 +38,9 @@ def getPluginVersion() {
         }
     } catch (Exception e) {
         // Ignore errors and fallback
+        logger.info("Exception", e)
     }
-    return "0.0.15" // Fallback version
+    return "8.0.0"
 }
 
 def pluginVersion = getPluginVersion()
@@ -48,16 +49,16 @@ android {
     namespace = "io.capkit.sslpinning"
     compileSdk = project.hasProperty('compileSdkVersion') ? rootProject.ext.compileSdkVersion as Integer  : 36
 
-    // AGP 8.0+ disables BuildConfig by default for libraries. 
+    // AGP 8.0+ disables BuildConfig by default for libraries.
     // We need to enable it to inject the plugin version.
     buildFeatures {
         buildConfig = true
     }
 
     defaultConfig {
-        minSdkVersion = project.hasProperty('minSdkVersion') ? rootProject.ext.minSdkVersion as Integer  : 24
-        targetSdkVersion = project.hasProperty('targetSdkVersion') ? rootProject.ext.targetSdkVersion as Integer  : 36
-        versionCode = 1
+        minSdkVersion project.hasProperty('minSdkVersion') ? rootProject.ext.minSdkVersion as Integer  : 24
+        targetSdkVersion project.hasProperty('targetSdkVersion') ? rootProject.ext.targetSdkVersion as Integer  : 36
+        versionCode 1
 
         // Dynamic versioning (feature enabled)
         versionName = pluginVersion
