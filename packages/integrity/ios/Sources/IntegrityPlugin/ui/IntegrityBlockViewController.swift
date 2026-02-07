@@ -3,43 +3,55 @@ import WebKit
 
 /**
  Dedicated view controller used to present the integrity block page.
- *
+
+ ROLE:
+ This view controller is a pure UI component responsible for rendering
+ a blocking screen when the host application decides to interrupt
+ normal execution due to integrity-related conditions.
+
  Responsibilities:
  - Display a developer-provided HTML block page
- - Support query parameters (e.g. "reason")
- - Optionally allow dismissal when explicitly enabled
- *
+ - Support both remote URLs and bundled local assets
+ - Preserve query parameters for diagnostic or UX purposes
+ - Optionally allow user dismissal when explicitly enabled
+
  This controller:
  - is presented explicitly by the Integrity plugin
  - never performs integrity checks
  - never decides when it should be shown
- *
+
  Security note:
- - By default, the block page is NOT dismissible.
- * - Dismissal must be explicitly enabled by the host application.
+ - By default, the block page is NOT dismissible
+ - Dismissal must be explicitly enabled by the host application
  */
 final class IntegrityBlockViewController: UIViewController {
 
-    // -------------------------------------------------------------------------
-    // Properties
-    // -------------------------------------------------------------------------
+    // MARK: - Properties
 
-    /// URL or local asset path passed by the plugin.
+    /// URL or local asset path provided by the plugin.
+    /// Can include optional query parameters.
     private let url: String
 
     /// Whether the block page can be dismissed by the user.
+    /// When false, interactive dismissal is explicitly disabled.
     private let dismissible: Bool
 
-    // -------------------------------------------------------------------------
-    // Initialization
-    // -------------------------------------------------------------------------
+    // MARK: - Initialization
 
+    /**
+     Designated initializer.
+
+     - Parameters:
+     - url: Remote URL or local asset path to load.
+     - dismissible: Whether the user is allowed to dismiss the block page.
+     */
     init(url: String, dismissible: Bool) {
         self.url = url
         self.dismissible = dismissible
         super.init(nibName: nil, bundle: nil)
 
-        // Prevent swipe-to-dismiss unless explicitly allowed
+        // Prevent swipe-to-dismiss gestures unless explicitly allowed.
+        // This ensures the block page cannot be bypassed unintentionally.
         self.isModalInPresentation = !dismissible
     }
 
@@ -47,21 +59,17 @@ final class IntegrityBlockViewController: UIViewController {
         fatalError("init(coder:) has not been implemented")
     }
 
-    // -------------------------------------------------------------------------
-    // Lifecycle
-    // -------------------------------------------------------------------------
+    // MARK: - Lifecycle
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
         view.backgroundColor = .systemBackground
 
-        // ---------------------------------------------------------------------
-        // Navigation bar (demo / dismissible mode only)
-        // ---------------------------------------------------------------------
+        // Navigation bar (dismissible mode only) ------------------------------
 
-        // When dismissible is enabled, provide a native Close button.
-        // This is the ONLY correct way to dismiss a native modal on iOS.
+        // When dismissal is enabled, expose an explicit Close button.
+        // This is the ONLY supported way to dismiss a modal view controller on iOS.
         if dismissible {
             let closeButton = UIBarButtonItem(
                 title: "Close",
@@ -72,10 +80,10 @@ final class IntegrityBlockViewController: UIViewController {
             navigationItem.rightBarButtonItem = closeButton
         }
 
-        // ---------------------------------------------------------------------
-        // WebView setup
-        // ---------------------------------------------------------------------
+        // WebView setup -------------------------------------------------------
 
+        // Create an isolated WKWebView instance to render the block page.
+        // No custom message handlers or JS bridges are attached.
         let configuration = WKWebViewConfiguration()
         let webView = WKWebView(frame: .zero, configuration: configuration)
 
@@ -89,19 +97,15 @@ final class IntegrityBlockViewController: UIViewController {
             webView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
         ])
 
-        // ---------------------------------------------------------------------
-        // URL handling
-        // ---------------------------------------------------------------------
+        // URL handling --------------------------------------------------------
 
-        // Remote URLs (http / https)
+        // Remote URLs (http / https) are loaded directly via URLRequest.
         if url.starts(with: "http"), let remoteURL = URL(string: url) {
             webView.load(URLRequest(url: remoteURL))
             return
         }
 
-        // ---------------------------------------------------------------------
-        // Local asset loading with query support
-        // ---------------------------------------------------------------------
+        // Local asset loading with query support ------------------------------
 
         // Example:
         //   url = "public/integrity-block.html?reason=integrity_failed"
@@ -114,24 +118,24 @@ final class IntegrityBlockViewController: UIViewController {
             let fileURL = Bundle.main.url(forResource: assetPath, withExtension: nil),
             let html = try? String(contentsOf: fileURL, encoding: .utf8)
         else {
+            // Fail silently if the asset cannot be loaded.
+            // The plugin layer is responsible for validating inputs.
             return
         }
 
         // Create a synthetic base URL to preserve:
         // - window.location.search (query parameters)
-        // - relative paths inside the HTML
+        // - relative paths inside the HTML document
         let baseURL = fileURL.deletingLastPathComponent()
         let fakeURL = URL(string: baseURL.absoluteString + "/" + assetPath + query)
 
         webView.loadHTMLString(html, baseURL: fakeURL)
     }
 
-    // -------------------------------------------------------------------------
-    // Actions
-    // -------------------------------------------------------------------------
+    // MARK: - Actions
 
     /**
-     Dismisses the block page when allowed.
+     Dismisses the block page when dismissal is explicitly allowed.
      */
     @objc private func closeTapped() {
         dismiss(animated: true)

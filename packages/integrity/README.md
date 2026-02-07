@@ -71,6 +71,55 @@ All decisions are explicitly delegated to the **host application**.
 
 ---
 
+## Versioning & Release Policy (IMPORTANT)
+
+The `@cap-kit/integrity` plugin is currently under **active development** toward
+a stable `v8.0.0` release.
+
+All versions published as `v8.0.0-next.x` are considered:
+
+- **internal development milestones**
+- **non-final**
+- **subject to change without notice**
+- **not intended for production use**
+
+### What `next.x` versions represent
+
+Each `next.x` version corresponds to a **focused implementation step**
+(e.g. internal refactoring, architectural groundwork, or a single new capability),
+not to a user-facing release milestone.
+
+Examples:
+
+- `next.4` introduces **real-time integrity listeners**
+- other planned capabilities (attestation, early boot detection, advanced RASP)
+  are intentionally deferred to later `next.x` stages
+
+These intermediate versions exist to:
+
+- keep development incremental and auditable
+- reduce risk by isolating architectural changes
+- avoid bundling unrelated features into a single step
+
+### Publication policy
+
+Until a stable `v8.0.0` release is published:
+
+- `next.x` versions MAY be published for testing and feedback
+- no backward-compatibility guarantees are provided
+- API details MAY evolve as part of the stabilization process
+
+Consumers should consider `next.x` builds as **pre-release artifacts**
+and plan adoption accordingly.
+
+The `v8.0.0` release will mark:
+
+- API stabilization
+- documented support guarantees
+- readiness for production usage
+
+---
+
 ## Security Model (IMPORTANT)
 
 This plugin follows an **observational security model**.
@@ -100,6 +149,118 @@ npx cap sync
 
 ---
 
+## Native Configuration (Optional — Early Boot Enhancement)
+
+To capture security signals at the earliest possible stage (before the Capacitor bridge is initialized), you can manually integrate the plugin into your App Host's native entry points. This is highly recommended for detecting advanced threats like Root/Jailbreak or early instrumentation.
+
+### When should you use native early boot integration?
+
+Native early boot integration is **optional** and exists to improve
+**signal timing**, not signal correctness.
+
+You SHOULD consider this integration if:
+
+- you want to observe potential root / jailbreak conditions
+  **as early as possible**
+- you need visibility into instrumentation that may attach
+  before the JavaScript runtime starts
+- you are building high-risk or security-sensitive applications
+
+You do NOT need this integration if:
+
+- you only require integrity signals during normal runtime
+- you rely exclusively on `Integrity.check()` from JavaScript
+- early detection timing is not critical for your use case
+
+### Android Integration
+
+In your `MainActivity.kt`, call `IntegrityImpl.onApplicationCreate(context)` inside the `onCreate` method:
+
+```diff
+
+package io.ionic.starter // Use your actual package name
+
+import android.os.Bundle
+import com.getcapacitor.BridgeActivity
++ import io.capkit.integrity.IntegrityImpl
+
+class MainActivity : BridgeActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
++         // Capture security signals during early boot
++         IntegrityImpl.onApplicationCreate(this)
+
+        super.onCreate(savedInstanceState)
+    }
+}
+
+```
+
+### iOS Integration
+
+In your `AppDelegate.swift`, call `IntegrityImpl.onAppLaunch()` inside the `application(_:didFinishLaunchingWithOptions:)` method:
+
+```diff
+
+import UIKit
+import Capacitor
++ import Integrity // Import the plugin module
+
+@UIApplicationMain
+class AppDelegate: UIResponder, UIApplicationDelegate {
+
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+
++        // Capture security signals at the earliest stage possible
++        IntegrityImpl.onAppLaunch()
+
+        return true
+    }
+}
+
+```
+
+> **Important**
+>
+> If native early boot integration is not performed:
+>
+> - the plugin remains fully functional
+> - no integrity capability is lost
+> - detection simply starts when the JavaScript layer invokes `Integrity.check()`
+>
+> Native integration improves **timing**, not **coverage**.
+
+---
+
+### Early boot signals (IMPORTANT)
+
+When integrated at the native application entry points
+(`MainActivity.onCreate` on Android, `AppDelegate.didFinishLaunchingWithOptions`
+on iOS), the Integrity plugin may capture **early boot integrity signals**
+before the Capacitor bridge is fully initialized.
+
+IMPORTANT NOTES:
+
+- Early boot signals are **best-effort**.
+- They are **not guaranteed** to be captured on every app launch.
+- They may be affected by:
+  - process restarts
+  - OS-level lifecycle optimizations
+  - multi-process behavior (Android)
+  - warm launches vs cold starts
+
+Behavioral guarantees:
+
+- Early boot signals are **merged into the first `Integrity.check()` report**
+  when available.
+- If early boot integration is not performed, the plugin continues
+  to function correctly without them.
+- Applications MUST NOT rely exclusively on early boot signals
+  for security decisions.
+
+> Early boot detection improves visibility, not certainty.
+
+---
+
 ## Configuration
 
 Configuration is **static** and read **natively** from `capacitor.config`.
@@ -117,8 +278,8 @@ Configuration options for the Integrity plugin.
 
 | Prop                 | Type                                  | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Default            | Since |
 | -------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ----- |
-| **`verboseLogging`** | <code>boolean</code>                  | Enables verbose native logging. When enabled, additional debug information is printed to the native console (Logcat on Android, Xcode on iOS). This option affects native logging behavior only and has no impact on the JavaScript API or runtime behavior.                                                                                                                                                                                                                                             | <code>false</code> | 1.0.0 |
-| **`blockPage`**      | <code>IntegrityBlockPageConfig</code> | Optional configuration for the integrity block page. This configuration controls the availability and source of a developer-provided HTML page that may be presented to the end user when the host application decides to do so. This configuration is: - read only by native code - immutable at runtime - NOT accessible from JavaScript The Integrity plugin will NEVER automatically present the block page. Presentation is always explicitly triggered by the host application via the public API. |                    | 1.0.0 |
+| **`verboseLogging`** | <code>boolean</code>                  | Enables verbose native logging. When enabled, additional debug information is printed to the native console (Logcat on Android, Xcode on iOS). This option affects native logging behavior only and has no impact on the JavaScript API or runtime behavior.                                                                                                                                                                                                                                             | <code>false</code> | 8.0.0 |
+| **`blockPage`**      | <code>IntegrityBlockPageConfig</code> | Optional configuration for the integrity block page. This configuration controls the availability and source of a developer-provided HTML page that may be presented to the end user when the host application decides to do so. This configuration is: - read only by native code - immutable at runtime - NOT accessible from JavaScript The Integrity plugin will NEVER automatically present the block page. Presentation is always explicitly triggered by the host application via the public API. |                    | 8.0.0 |
 
 ### Examples
 
@@ -294,6 +455,16 @@ The following methods will reject with `IntegrityErrorCode.UNAVAILABLE` on Web:
 
 ---
 
+## Permissions
+
+On Android, this plugin requires the `android.permission.INTERNET` permission. This permission is necessary for internal integrity checks, specifically for attempting socket connections to `localhost` to detect hooking frameworks like Frida.
+
+This permission is automatically added to your AndroidManifest.xml when you install the plugin. However, it's important to be aware of its presence.
+
+No additional permissions are required for iOS.
+
+---
+
 ## API
 
 The public API is fully typed and documented via TypeScript definitions.
@@ -305,8 +476,11 @@ See `definitions.ts` for the complete contract.
 - [`check(...)`](#check)
 - [`presentBlockPage(...)`](#presentblockpage)
 - [`getPluginVersion()`](#getpluginversion)
+- [`addListener('integritySignal', ...)`](#addlistenerintegritysignal-)
+- [`removeAllListeners()`](#removealllisteners)
 - [Interfaces](#interfaces)
 - [Type Aliases](#type-aliases)
+- [Enums](#enums)
 
 </docgen-index>
 
@@ -332,7 +506,7 @@ Executes a runtime integrity check.
 
 **Returns:** <code>Promise&lt;<a href="#integrityreport">IntegrityReport</a>&gt;</code>
 
-**Since:** 1.0.0
+**Since:** 8.0.0
 
 #### Example
 
@@ -359,7 +533,7 @@ Invocation is entirely controlled by the host application.
 
 **Returns:** <code>Promise&lt;<a href="#presentblockpageresult">PresentBlockPageResult</a>&gt;</code>
 
-**Since:** 1.0.0
+**Since:** 8.0.0
 
 #### Example
 
@@ -382,13 +556,66 @@ bundled with the application.
 
 **Returns:** <code>Promise&lt;<a href="#pluginversionresult">PluginVersionResult</a>&gt;</code>
 
-**Since:** 0.0.1
+**Since:** 8.0.0
 
 #### Example
 
 ```ts
 const { version } = await Integrity.getPluginVersion();
 ```
+
+---
+
+### addListener('integritySignal', ...)
+
+```typescript
+addListener(eventName: 'integritySignal', listenerFunc: (signal: IntegritySignalEvent) => void) => Promise<PluginListenerHandle>
+```
+
+Registers a listener for real-time integrity signals.
+
+The provided callback is invoked every time a new integrity
+signal is detected by the native layer.
+
+BEHAVIOR:
+
+- Signals may be emitted at any time after plugin initialization.
+- Signals detected before listener registration MAY be delivered
+  immediately after registration.
+- No guarantees are made about signal frequency or ordering
+  across platforms.
+
+IMPORTANT:
+
+- This listener is non-blocking.
+- The plugin does NOT enforce any policy based on signals.
+
+| Param              | Type                                                                             | Description                                  |
+| ------------------ | -------------------------------------------------------------------------------- | -------------------------------------------- |
+| **`eventName`**    | <code>'integritySignal'</code>                                                   | The event to listen for ('integritySignal'). |
+| **`listenerFunc`** | <code>(signal: <a href="#integritysignal">IntegritySignal</a>) =&gt; void</code> | Callback invoked with the detected signal.   |
+
+**Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### removeAllListeners()
+
+```typescript
+removeAllListeners() => Promise<void>
+```
+
+Removes all registered listeners for this plugin.
+
+NOTE:
+
+- Removing listeners does NOT stop signal detection natively.
+- Signals may continue to be detected and buffered
+  until a listener is registered again.
+
+**Since:** 8.0.0
 
 ---
 
@@ -414,16 +641,22 @@ and provides a provisional integrity score.
 A single integrity signal detected on the current device.
 
 Signals represent _observations_, not decisions.
-Multiple signals may be combined by the host application
+Multiple signals MAY be combined by the host application
 to derive a security policy.
 
-| Prop              | Type                                                                        | Description                                                                                                                                                                                                                                                                                                       | Since |
-| ----------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
-| **`id`**          | <code>string</code>                                                         | Stable identifier for the signal. This value is intended for analytics, logging, and policy evaluation.                                                                                                                                                                                                           |       |
-| **`category`**    | <code><a href="#integritysignalcategory">IntegritySignalCategory</a></code> | High-level category of the signal.                                                                                                                                                                                                                                                                                |       |
-| **`confidence`**  | <code>'low' \| 'medium' \| 'high'</code>                                    | Confidence level of the detection. Confidence expresses how strongly the signal correlates with a compromised or risky environment.                                                                                                                                                                               |       |
-| **`description`** | <code>string</code>                                                         | Optional human-readable description. This field may be omitted in production builds and SHOULD NOT be relied upon programmatically.                                                                                                                                                                               |       |
-| **`metadata`**    | <code>Record&lt;string, string \| number \| boolean&gt;</code>              | Additional diagnostic metadata associated with the signal. Metadata provides granular details about the detection (e.g., matched filesystem paths, specific build properties, or runtime artifacts) without altering the stable signal identifier. This field is informational and intended for diagnostics only. | 1.0.0 |
+Signals:
+
+- are emitted asynchronously
+- may occur at any time during the app lifecycle
+- may be emitted before or after the first call to `check()`
+
+| Prop              | Type                                                                          | Description                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ----------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`id`**          | <code>string</code>                                                           | Stable identifier for the signal. This value: - is stable across releases - MUST NOT be parsed or pattern-matched - is intended for analytics, logging, and policy evaluation                                                                                                                                                                                                                                                   |
+| **`category`**    | <code><a href="#integritysignalcategory">IntegritySignalCategory</a></code>   | High-level category of the signal. Categories allow grouping related signals without relying on specific identifiers.                                                                                                                                                                                                                                                                                                           |
+| **`confidence`**  | <code><a href="#integrityconfidencelevel">IntegrityConfidenceLevel</a></code> | Confidence level of the detection. This value expresses how strongly the signal correlates with a potentially compromised or risky environment. NOTE: Although typed as a string union in the public API, native implementations MUST only emit values defined by the internal <a href="#integrityconfidencelevel">IntegrityConfidenceLevel</a> enum.                                                                           |
+| **`description`** | <code>string</code>                                                           | Optional human-readable description. This field: - is intended for diagnostics and debugging only - MAY be omitted or redacted in production builds - MUST NOT be relied upon programmatically                                                                                                                                                                                                                                  |
+| **`metadata`**    | <code>Record&lt;string, string \| number \| boolean&gt;</code>                | Additional diagnostic metadata associated with the signal. Metadata provides granular details about the detection (e.g. matched filesystem paths, runtime artifacts, or environment properties) without altering the stable signal identifier. IMPORTANT: - Metadata is informational only. - Keys and values are NOT guaranteed to be stable. - Applications MUST NOT rely on specific metadata fields for security decisions. |
 
 #### IntegrityEnvironment
 
@@ -462,8 +695,8 @@ Options for presenting the integrity block page.
 
 | Prop              | Type                 | Description                                                                                                                                | Default            | Since |
 | ----------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------ | ----- |
-| **`reason`**      | <code>string</code>  | Optional reason code passed to the block page. This value may be used for analytics, localization, or user messaging.                      |                    | 1.0.0 |
-| **`dismissible`** | <code>boolean</code> | Whether the block page can be dismissed by the user. Defaults to false. In production environments, this should typically remain disabled. | <code>false</code> | 1.0.0 |
+| **`reason`**      | <code>string</code>  | Optional reason code passed to the block page. This value may be used for analytics, localization, or user messaging.                      |                    | 8.0.0 |
+| **`dismissible`** | <code>boolean</code> | Whether the block page can be dismissed by the user. Defaults to false. In production environments, this should typically remain disabled. | <code>false</code> | 8.0.0 |
 
 #### PluginVersionResult
 
@@ -472,6 +705,12 @@ Result returned by the getPluginVersion method.
 | Prop          | Type                | Description                              |
 | ------------- | ------------------- | ---------------------------------------- |
 | **`version`** | <code>string</code> | The native version string of the plugin. |
+
+#### PluginListenerHandle
+
+| Prop         | Type                                      |
+| ------------ | ----------------------------------------- |
+| **`remove`** | <code>() =&gt; Promise&lt;void&gt;</code> |
 
 ### Type Aliases
 
@@ -485,7 +724,65 @@ whenever possible to avoid breaking consumers.
 
 <code>'root' | 'jailbreak' | 'emulator' | 'debug' | 'hook' | 'tamper' | 'environment'</code>
 
+#### IntegritySignalEvent
+
+Event payload emitted when a new integrity signal is detected.
+
+This event represents a _real-time observation_ of a potential
+integrity-relevant condition on the device.
+
+IMPORTANT:
+
+- Signals are observational only.
+- Emitting a signal does NOT imply that the environment is compromised.
+- No blocking or enforcement is performed by the plugin.
+
+The host application is responsible for:
+
+- interpreting signals
+- correlating multiple signals
+- applying any security or UX policy
+
+<code>
+  <a href="#integritysignal">IntegritySignal</a>
+</code>
+
+### Enums
+
+#### IntegrityConfidenceLevel
+
+| Members      | Value                 |
+| ------------ | --------------------- |
+| **`LOW`**    | <code>'low'</code>    |
+| **`MEDIUM`** | <code>'medium'</code> |
+| **`HIGH`**   | <code>'high'</code>   |
+
 </docgen-api>
+
+---
+
+## Integrity events semantics (IMPORTANT)
+
+The `integritySignal` event documented above represents a
+**real-time observational snapshot**, not an incremental update.
+
+Important clarifications:
+
+- Integrity events **may include signals already returned**
+  by a previous `Integrity.check()` call.
+- Events are **NOT incremental** and **NOT deltas**.
+- Each emitted event is a **standalone integrity observation**
+  produced at a specific moment in time.
+
+Implications for applications:
+
+- Consumers MUST be prepared to receive duplicate signals.
+- Applications SHOULD implement their own de-duplication or
+  correlation logic if required.
+- Events MUST NOT be interpreted as a continuous stream of
+  unique integrity changes.
+
+> Events report observations, not transitions.
 
 ---
 
@@ -515,6 +812,30 @@ indicate a compromised device.
 
 Consumers MUST interpret debug signals in context and
 combine them with other integrity signals.
+
+### Hooking detection signal behavior (iOS)
+
+On iOS, runtime hooking detection is intentionally designed to emit
+**at most one hooking-related signal per check execution**.
+
+Design characteristics:
+
+- The detector stops at the **first confirmed hooking artifact**.
+- Only a single signal is emitted, even if multiple suspicious
+  libraries or runtime indicators are present.
+- This behavior is **intentional** and optimized for:
+  - low noise
+  - predictable signal volume
+  - reduced false-positive amplification
+
+Implications:
+
+- The absence of multiple hooking signals does **not** imply
+  that only one artifact was present.
+- Diagnostic depth is intentionally limited in favor of
+  stability and signal clarity.
+
+> This is a design choice, not a detection limitation.
 
 ---
 
@@ -589,6 +910,30 @@ The selected level controls **how deeply the environment is inspected**, not whi
 
 ---
 
+## Score interpretation (IMPORTANT)
+
+The integrity `score` returned by `Integrity.check()` is a **heuristic indicator**, not a guarantee.
+
+Key points:
+
+- The score is derived from detected integrity signals and their confidence levels.
+- A score **greater than or equal to 30** currently marks the environment as `compromised`.
+- This threshold is **internal, heuristic-based, and subject to change**.
+- The score **must NOT** be treated as:
+  - a security guarantee
+  - a cryptographic proof
+  - a definitive compromise verdict
+
+Applications MUST:
+
+- interpret the score in context
+- combine it with individual signals
+- apply their own business or security logic
+
+> ⚠️ Do not rely on the score alone to make irreversible security decisions.
+
+---
+
 ## 🔮 Future extensibility
 
 The current API focuses on a clean and minimal surface, but the architecture is designed to be **extensible**.
@@ -620,6 +965,9 @@ Applications should always remain in full control of how integrity information i
 ---
 
 ## Roadmap (Non-binding)
+
+> The roadmap below is indicative and non-binding.
+> Items may be implemented across multiple `next.x` iterations.
 
 - Optional platform attestation helpers
 - Extended tamper heuristics

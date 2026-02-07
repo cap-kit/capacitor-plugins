@@ -81,6 +81,23 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
     // - NEVER read directly by the Impl layer
     private var config: IntegrityConfig?
 
+    // MARK: - Event-related properties
+
+    /// Buffer for integrity signals captured before a JS listener is registered.
+    ///
+    /// NOTE:
+    /// - Stored in-memory only
+    /// - Flushed when the first listener becomes available
+    /// - Cleared immediately after delivery
+    private var bufferedSignals: [[String: Any]] = []
+
+    /// Canonical event name emitted to the JavaScript layer.
+    ///
+    /// CONTRACT:
+    /// - MUST remain stable (breaking change otherwise)
+    /// - MUST match the JS-side event subscription
+    private static let integritySignalEvent = "integritySignal"
+
     // MARK: - Lifecycle
 
     /**
@@ -92,33 +109,113 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
      - read plugin configuration
      - create IntegrityConfig
      - inject configuration into the Impl layer
+     - register system event observers (NotificationCenter)
 
      WARNING:
      - Calling applyConfig(_:) outside this method is FORBIDDEN
+     - Observers registered here MUST be detached in `deinit`
      */
     override public func load() {
-        // NOTE:
-        // Consider guarding against double-initialization in debug builds
-        // to detect invalid Capacitor lifecycle usage early.
-
-        // Initialize IntegrityConfig with the correct type
+        // Initialize IntegrityConfig
         let cfg = IntegrityConfig(plugin: self)
         self.config = cfg
         implementation.applyConfig(cfg)
-
-        // Log if verbose logging is enabled
         IntegrityLogger.debug("Integrity plugin loaded")
+
+        // Register passive system observers
+        addEventObservers()
+    }
+
+    /// Plugin teardown.
+    ///
+    /// NOTE:
+    /// - Invoked when the plugin instance is deallocated
+    /// - Responsible for detaching all NotificationCenter observers
+    deinit {
+        removeEventObservers()
+    }
+
+    // MARK: - Event emission and buffering
+
+    /**
+     Emits an integrity signal to JavaScript or buffers it if no listeners exist.
+
+     - If at least one listener is registered, the signal is emitted immediately.
+     - Otherwise, the signal is queued in memory until a listener becomes available.
+
+     - Parameter signal: A fully-formed integrity signal payload.
+     */
+    private func emitOrBufferSignal(_ signal: [String: Any]) {
+        if hasListeners(IntegrityPlugin.integritySignalEvent) {
+            notifyListeners(IntegrityPlugin.integritySignalEvent, data: signal, retainUntilConsumed: true)
+        } else {
+            bufferedSignals.append(signal)
+        }
+    }
+
+    /**
+     Flushes all buffered integrity signals to JavaScript listeners.
+
+     NOTE:
+     - This method is idempotent.
+     - Signals are delivered in FIFO order.
+     - Buffer is cleared immediately after dispatch.
+     */
+    @objc private func flushBufferedSignals() {
+        if hasListeners(IntegrityPlugin.integritySignalEvent) && !bufferedSignals.isEmpty {
+            for signal in bufferedSignals {
+                notifyListeners(IntegrityPlugin.integritySignalEvent, data: signal, retainUntilConsumed: true)
+            }
+            bufferedSignals.removeAll()
+        }
+    }
+
+    // MARK: - NotificationCenter registration
+
+    /**
+     Registers passive system observers required for real-time integrity signals.
+
+     NOTE:
+     - Observers are scoped strictly to the plugin lifecycle.
+     - No polling, timers, or background tasks are introduced.
+     */
+    private func addEventObservers() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleDidBecomeActiveNotification(_:)),
+            name: UIApplication.didBecomeActiveNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(flushBufferedSignals),
+            name: UIApplication.willEnterForegroundNotification,
+            object: nil
+        )
+    }
+
+    /**
+     Detaches all NotificationCenter observers.
+
+     NOTE:
+     - This method is invoked exclusively from `deinit`.
+     - The SwiftLint rule is suppressed intentionally as the call is lifecycle-safe.
+     */
+    private func removeEventObservers() {
+        // swiftlint:disable notification_center_detachment
+        NotificationCenter.default.removeObserver(self)
+        // swiftlint:enable notification_center_detachment
     }
 
     // MARK: - Error mapping
 
     /**
-     Maps native IntegrityError values to JS-facing error codes.
+     Maps native `IntegrityError` values to JS-facing error codes.
 
      CONTRACT:
      - Error codes MUST be stable and documented
      - Error codes MUST match across platforms
-     - No platform-specific codes are allowed here
+     - Platform-specific error codes are FORBIDDEN
      */
     private func reject(
         _ call: CAPPluginCall,
@@ -151,18 +248,10 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
      - Never throws outside this scope
 
      NOTE:
-     - All option normalization happens here
-     - The Impl layer MUST receive fully normalized options
+     - All option normalization happens here.
+     - The Impl layer MUST receive fully normalized options.
      */
     @objc func check(_ call: CAPPluginCall) {
-        // NOTE:
-        // Defaulting logic lives in the Plugin layer by design.
-        // The Impl layer MUST NOT know about JS defaults or option absence.
-
-        // WARNING:
-        // Any error escaping `performCheck` MUST be mapped here.
-        // Uncaught native errors are considered a plugin defect.
-
         do {
             let options =
                 try call.decode(IntegrityCheckOptions.self)
@@ -203,15 +292,6 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
      - Failure to access the root view controller MUST reject the call
      */
     @objc func presentBlockPage(_ call: CAPPluginCall) {
-        // NOTE:
-        // Returning `{ presented: false }` is NOT an error.
-        // This allows the JS side to branch deterministically
-        // without relying on rejection for control flow.
-
-        // WARNING:
-        // The Impl layer MUST NEVER perform UI presentation.
-        // This method is the ONLY allowed UI entry point for this plugin.
-
         guard
             let blockPage = config?.blockPage,
             blockPage.enabled,
@@ -255,12 +335,46 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
 
     /**
      Returns the native plugin version.
-     - Used for diagnostics and compatibility checks only
+
+     - Used exclusively for diagnostics and compatibility checks.
+     - Must not be used for feature detection.
      */
     @objc func getPluginVersion(_ call: CAPPluginCall) {
         // Standardized enum name across all CapKit plugins
         call.resolve([
             "version": PluginVersion.number
         ])
+    }
+
+    // MARK: - Notification handlers
+
+    /**
+     Handles application foreground transitions.
+
+     PURPOSE:
+     - Detects runtime integrity changes (e.g. debugger attachment)
+     when the app becomes active.
+
+     NOTE:
+     - Failures are logged but NOT propagated to JS.
+     - This is a background signal, not a direct API invocation.
+     */
+    @objc private func handleDidBecomeActiveNotification(_ notification: Notification) {
+        // Trigger an integrity check on app foreground (e.g., for debugger attachment)
+        let options = IntegrityCheckOptions(
+            // Use standard level for event-driven checks
+            level: "standard",
+            includeDebugInfo: false
+        )
+
+        do {
+            let result = try implementation.performCheck(options: options)
+            emitOrBufferSignal(result)
+        } catch {
+            IntegrityLogger.error(
+                "handleDidBecomeActiveNotification: Error during integrity check:",
+                error.localizedDescription
+            )
+        }
     }
 }

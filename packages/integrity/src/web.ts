@@ -1,12 +1,6 @@
 import { WebPlugin } from '@capacitor/core';
 
-import {
-  IntegrityPlugin,
-  IntegrityReport,
-  PresentBlockPageResult,
-  PluginVersionResult,
-  IntegrityErrorCode,
-} from './definitions';
+import { IntegrityPlugin, IntegrityReport, PresentBlockPageResult, PluginVersionResult } from './definitions';
 
 /**
  * Web implementation of the Integrity plugin.
@@ -32,10 +26,9 @@ export class IntegrityWeb extends WebPlugin implements IntegrityPlugin {
    * On Web, this feature is not available.
    */
   async check(): Promise<IntegrityReport> {
-    return Promise.reject({
-      message: 'Integrity checks are not available on the Web platform.',
-      code: IntegrityErrorCode.UNAVAILABLE,
-    });
+    // Web platform does not support native integrity checks.
+    // Throw to satisfy TypeScript return flow analysis.
+    throw this.unavailable('Integrity checks are not available on the Web platform.');
   }
 
   // ---------------------------------------------------------------------------
@@ -48,10 +41,9 @@ export class IntegrityWeb extends WebPlugin implements IntegrityPlugin {
    * On Web, this feature is not available.
    */
   async presentBlockPage(): Promise<PresentBlockPageResult> {
-    return Promise.reject({
-      message: 'Integrity block page is not available on the Web platform.',
-      code: IntegrityErrorCode.UNAVAILABLE,
-    });
+    // Web platform cannot present native block pages.
+    // Throw to satisfy TypeScript return flow analysis.
+    throw this.unavailable('Integrity block page is not available on the Web platform.');
   }
 
   // ---------------------------------------------------------------------------

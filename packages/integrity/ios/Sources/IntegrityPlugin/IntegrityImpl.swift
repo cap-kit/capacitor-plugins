@@ -1,17 +1,35 @@
 import Foundation
 import MachO
+import DeviceCheck // Required for DCAppAttestService stub
 
 /**
  Native iOS implementation for the Integrity plugin.
 
+ ROLE:
+ This type acts as a pure orchestration layer.
+
+ It coordinates:
+ - execution order of integrity checks
+ - aggregation of integrity signals
+ - correlation between independent detections
+ - final report assembly via helper builders
+
+ It does NOT:
+ - implement low-level detection logic directly
+ - own UI or Capacitor bridge concerns
+ - perform configuration reads on demand
+
  Responsibilities:
- - Perform platform-specific integrity checks (Jailbreak, Simulator, Debug, Hooking).
- - Interact with iOS system APIs and runtime.
- - Produce structured integrity signals with diagnostic metadata.
+ - Invoke platform-specific integrity detectors
+ (jailbreak, emulator, debug, hooking)
+ - Interact with iOS runtime APIs only through
+ dedicated helper types
+ - Produce structured, JS-bridge-safe payloads
 
  Forbidden:
- - Accessing PluginCall or Capacitor-specific bridge APIs.
- - Referencing configuration directly (must be injected).
+ - Accessing PluginCall or Capacitor-specific bridge APIs
+ - Referencing configuration directly (must be injected)
+ - Performing long-running or asynchronous work
  */
 @objc
 public final class IntegrityImpl: NSObject {
@@ -27,15 +45,39 @@ public final class IntegrityImpl: NSObject {
     private var config: IntegrityConfig?
 
     /**
+     Static buffer for signals captured during early boot.
+     These are merged into the first JavaScript-triggered report.
+     */
+    private static var bootSignals: [[String: Any]] = []
+
+    /**
+     Native entry point for AppDelegate.didFinishLaunchingWithOptions.
+     Allows capturing security signals before the Capacitor bridge is initialized.
+     */
+    @objc public static func onAppLaunch() {
+        // Capture jailbreak-related filesystem signals immediately at boot.
+        // This uses pure, deterministic checks and does not depend on plugin configuration.
+        let signals =
+            IntegrityJailbreakDetector.detect(
+                includeDebug: false
+            )
+
+        self.bootSignals.append(contentsOf: signals)
+    }
+
+    /**
      Applies static plugin configuration.
 
      This method MUST be called exactly once.
      */
     func applyConfig(_ config: IntegrityConfig) {
-        // WARNING:
-        // This method is not protected against multiple invocations.
-        // A second call would silently override configuration and logger state.
-        // The Plugin layer MUST guarantee single invocation during load().
+        // Defensive programming:
+        // This method MUST be called exactly once by the Plugin layer.
+        // A second invocation indicates a programming error and is caught early in development.
+        precondition(
+            self.config == nil,
+            "IntegrityImpl.applyConfig(_:) must be called exactly once"
+        )
 
         self.config = config
         IntegrityLogger.verbose = config.verboseLogging
@@ -44,6 +86,16 @@ public final class IntegrityImpl: NSObject {
             "Integrity configuration applied. Verbose logging:",
             config.verboseLogging
         )
+    }
+
+    // MARK: - Remote Attestation Stubs
+
+    /**
+     Stub for Apple App Attest integration.
+     To be implemented in a future evolution step.
+     */
+    func getAppAttestSignal() {
+        // Placeholder for DCAppAttestService logic
     }
 
     // MARK: - Execution Orchestrator
@@ -63,250 +115,157 @@ public final class IntegrityImpl: NSObject {
     func performCheck(
         options: IntegrityCheckOptions
     ) throws -> [String: Any] {
-        // NOTE:
-        // Consider explicitly throwing an error if `config == nil`
-        // to make the precondition failure explicit and diagnosable.
 
+        // Aggregated list of integrity signals produced during this execution.
+        // Signals are appended in a deterministic order.
         var signals: [[String: Any]] = []
 
-        // --- BASIC -----------------------------------------------------------
-        // BASIC level MUST include only deterministic, low-cost checks.
-        // These checks are expected to be safe to cache.
-        signals.append(contentsOf: try checkJailbreakSignals())
+        // Whether diagnostic descriptions should be included in signals.
+        // This flag only affects verbosity, never detection behavior.
+        let includeDebug = options.includeDebugInfo ?? false
 
-        let isSimulator = isSimulator()
-        if isSimulator {
-            signals.append([
-                "id": "ios_simulator",
-                "category": "emulator",
-                "confidence": "high",
-                "metadata": ["type": "apple_simulator"]
-            ])
+        // Merge integrity signals captured during early application boot
+        // (before the Capacitor bridge and plugin lifecycle are initialized).
+        signals.append(contentsOf: IntegrityImpl.bootSignals)
+        IntegrityImpl.bootSignals.removeAll()
+
+        // Execute BASIC integrity checks.
+        // These checks are deterministic, low-cost, and always executed.
+        // The return value indicates whether the app is running in a simulator.
+        let isSimulator = performBasicChecks(
+            signals: &signals,
+            includeDebug: includeDebug
+        )
+
+        // Execute additional checks for STANDARD and STRICT levels.
+        // These checks may include runtime inspection and instrumentation heuristics
+        // and are intentionally skipped for BASIC level.
+        if (options.level ?? "basic") != "basic" {
+            performStandardChecks(
+                signals: &signals,
+                includeDebug: includeDebug
+            )
         }
 
-        // --- STANDARD & STRICT -----------------------------------------------
-        // Levels above BASIC may include:
-        // - Runtime inspection
-        // - Debug / tracing detection
-        // - Hooking and instrumentation heuristics
-        //
-        // These checks may produce false positives and MUST be scored accordingly.
-        if options.level != "basic" {
-            // Debug detection
-            signals.append(contentsOf: checkDebugSignals(options: options))
-
-            // Hooking detection (Frida/Substrate)
-            let hookingSignal = checkHookingSignals(options: options)
-            if let signal = hookingSignal {
-                signals.append(signal)
-            }
-
-            // Port-based detection
-            let portDetected = checkFridaPort()
-            if portDetected {
-                signals.append([
-                    "id": "ios_frida_port_detected",
-                    "category": "hook",
-                    "confidence": "medium",
-                    "metadata": ["port": 27042]
-                ])
-            }
-
-            // --- SIGNAL CORRELATION ------------------------------------------
-            // If both library and port are detected, emit a high-confidence
-            // correlation signal to confirm active instrumentation.
-            if hookingSignal != nil && portDetected {
-                signals.append([
-                    "id": "ios_frida_correlation_confirmed",
-                    "category": "hook",
-                    "confidence": "high",
-                    "metadata": ["source": "library+port"]
-                ])
-            }
-        }
-
-        let score = computeScore(signals)
-
-        return [
-            "signals": signals,
-            "score": score,
-            "compromised": score >= 30,
-            "environment": [
-                "platform": "ios",
-                "isEmulator": isSimulator,
-                "isDebugBuild": false
-            ],
-            "timestamp": Int(Date().timeIntervalSince1970 * 1000)
-        ]
+        // Assemble the final integrity report.
+        // This step computes the overall score and produces a JS-bridge-safe payload.
+        return IntegrityReportBuilder.buildReport(
+            signals: signals,
+            isEmulator: isSimulator,
+            platform: "ios"
+        )
     }
 
-    // MARK: - Jailbreak Detection
+    // MARK: - Basic Checks
 
     /**
-     Cached jailbreak-related signals.
-
-     Jailbreak checks are deterministic and relatively expensive,
-     therefore they are cached for the lifetime of the process.
-
-     - WARNING:
-     Cached results are NOT invalidated if filesystem state changes
-     during runtime (e.g. after dynamic instrumentation).
+     Executes BASIC integrity checks.
+     Returns whether the app is running in a simulator.
      */
-    private var cachedJailbreakSignals: [[String: Any]]?
+    private func performBasicChecks(
+        signals: inout [[String: Any]],
+        includeDebug: Bool
+    ) -> Bool {
 
-    /**
-     Performs jailbreak detection using expanded filesystem heuristics.
+        signals.append(
+            contentsOf: IntegrityJailbreakDetector.detect(
+                includeDebug: includeDebug
+            )
+        )
 
-     - NOTE:
-     This method intentionally avoids:
-     - fork()
-     - syscalls requiring entitlements
-     - write attempts outside sandbox
-
-     - LIMITATION:
-     This does NOT detect:
-     - Rootless jailbreaks reliably
-     - Runtime-only jailbreak environments
-     */
-    func checkJailbreakSignals() throws -> [[String: Any]] {
-        if let cached = cachedJailbreakSignals {
-            return cached
+        if IntegrityFilesystemChecks.canEscapeSandbox() {
+            signals.append(
+                IntegrityUtils.buildSignal(
+                    id: "ios_sandbox_escaped",
+                    category: "jailbreak",
+                    confidence: "high",
+                    description: "Successfully wrote to a protected system directory",
+                    includeDebug: includeDebug
+                )
+            )
         }
 
-        let suspiciousPaths = [
-            "/Applications/Cydia.app",
-            "/Library/MobileSubstrate/MobileSubstrate.dylib",
-            "/bin/bash",
-            "/usr/sbin/sshd",
-            "/etc/apt",
-            "/usr/bin/ssh",
-            "/private/var/lib/apt",
-            "/private/var/lib/cydia",
-            "/usr/libexec/sftp-server",
-            "/Applications/Sileo.app",
-            "/Applications/Zebra.app"
-        ]
-
-        var signals: [[String: Any]] = []
-
-        for path in suspiciousPaths
-        where FileManager.default.fileExists(atPath: path) {
-
-            signals.append([
-                "id": "ios_jailbreak_path",
-                "category": "jailbreak",
-                "confidence": "high",
-                "metadata": ["path": path]
-            ])
-            break
+        if IntegrityFilesystemChecks.hasSuspiciousSymlinks() {
+            signals.append(
+                IntegrityUtils.buildSignal(
+                    id: "ios_suspicious_symlink",
+                    category: "jailbreak",
+                    confidence: "high",
+                    description: "System directories are redirected via symbolic links",
+                    includeDebug: includeDebug
+                )
+            )
         }
 
-        cachedJailbreakSignals = signals
-        return signals
+        let simulator = isSimulator()
+        if simulator {
+            signals.append(
+                IntegrityUtils.buildSignal(
+                    id: "ios_simulator",
+                    category: "emulator",
+                    confidence: "high",
+                    description: "Application is running in an iOS simulator environment",
+                    metadata: ["type": "apple_simulator"],
+                    includeDebug: includeDebug
+                )
+            )
+        }
+
+        return simulator
     }
 
-    // MARK: - Debug & Hooking Detection
+    // MARK: - Standard & Strict Checks
 
     /**
-     Detects if a debugger is attached or if the process is being traced.
-
-     - NOTE:
-     This implementation uses `sysctl` + `P_TRACED` only.
-
-     - LIMITATION:
-     Does NOT detect:
-     - ptrace-based evasion
-     - LLDB attach after launch
-     - Kernel-level debugging
+     Executes STANDARD and STRICT integrity checks.
      */
-    func checkDebugSignals(options: IntegrityCheckOptions) -> [[String: Any]] {
-        var signals: [[String: Any]] = []
+    private func performStandardChecks(
+        signals: inout [[String: Any]],
+        includeDebug: Bool
+    ) {
 
-        var info = kinfo_proc()
-        var size = MemoryLayout.size(ofValue: info)
-        var mib: [Int32] = [
-            CTL_KERN,
-            KERN_PROC,
-            KERN_PROC_PID,
-            getpid()
-        ]
+        signals.append(
+            contentsOf: IntegrityRuntimeChecks.debugSignals(
+                includeDebug: includeDebug
+            )
+        )
 
-        if sysctl(&mib, UInt32(mib.count), &info, &size, nil, 0) == 0 {
-            if (info.kp_proc.p_flag & P_TRACED) != 0 {
-                signals.append([
-                    "id": "ios_debugger_attached",
-                    "category": "debug",
-                    "confidence": "high",
-                    "metadata": ["method": "sysctl_p_traced"]
-                ])
-            }
+        let hookingDetected =
+            IntegrityRuntimeChecks.hookingSignal(
+                includeDebug: includeDebug
+            )
+
+        if let hookingDetected {
+            signals.append(hookingDetected)
         }
 
-        return signals
-    }
+        let portDetected =
+            IntegrityRuntimeChecks.isFridaPortOpen()
 
-    /**
-     Inspects loaded dyld images to detect hooking frameworks like Frida.
-
-     - WARNING:
-     This method may produce false positives if:
-     - App bundles legitimately include similarly named libraries
-     - Vendor SDKs embed substrings like "gadget"
-
-     - SCORING:
-     Results from this method SHOULD always be weighted,
-     never treated as a single-source compromise signal.
-     */
-    func checkHookingSignals(options: IntegrityCheckOptions) -> [String: Any]? {
-        let imageCount = _dyld_image_count()
-
-        for index in 0..<imageCount {
-            if let cName = _dyld_get_image_name(index) {
-                let imageName = String(cString: cName).lowercased()
-                if imageName.contains("frida")
-                    || imageName.contains("gadget")
-                    || imageName.contains("substrate") {
-
-                    return [
-                        "id": "ios_hooking_library_detected",
-                        "category": "hook",
-                        "confidence": "high",
-                        "metadata": ["library_path": imageName]
-                    ]
-                }
-            }
+        if portDetected {
+            signals.append(
+                IntegrityUtils.buildSignal(
+                    id: "ios_frida_port_detected",
+                    category: "hook",
+                    confidence: "medium",
+                    description: "Known instrumentation service port is reachable on localhost",
+                    metadata: ["port": 27042],
+                    includeDebug: includeDebug
+                )
+            )
         }
 
-        return nil
-    }
-
-    /**
-     Checks for active Frida server ports on the local interface.
-
-     - WARNING:
-     This performs an actual socket connection attempt.
-
-     - LIMITATION:
-     - May fail on hardened devices even if Frida is present
-     - May succeed on non-compromised devices with port reuse
-
-     - SECURITY:
-     This MUST never be extended to scan arbitrary ports.
-     */
-    func checkFridaPort() -> Bool {
-        var serverAddress = sockaddr_in()
-        serverAddress.sin_family = sa_family_t(AF_INET)
-        serverAddress.sin_addr.s_addr = inet_addr("127.0.0.1")
-        serverAddress.sin_port = UInt16(27042).bigEndian
-
-        let sock = socket(AF_INET, SOCK_STREAM, 0)
-        if sock < 0 { return false }
-        defer { close(sock) }
-
-        return withUnsafePointer(to: &serverAddress) {
-            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                connect(sock, $0, socklen_t(MemoryLayout<sockaddr_in>.size)) == 0
-            }
+        if hookingDetected != nil && portDetected {
+            signals.append(
+                IntegrityUtils.buildSignal(
+                    id: "ios_frida_correlation_confirmed",
+                    category: "hook",
+                    confidence: "high",
+                    description: "Multiple instrumentation indicators detected simultaneously",
+                    metadata: ["source": "library+port"],
+                    includeDebug: includeDebug
+                )
+            )
         }
     }
 
@@ -324,39 +283,5 @@ public final class IntegrityImpl: NSObject {
         #else
         return false
         #endif
-    }
-
-    // MARK: - Scoring
-
-    /**
-     Computes a numeric risk score based on signal confidence.
-
-     - NOTE:
-     This scoring model is heuristic-based and intentionally simple.
-
-     - POLICY:
-     - high   → 30 points
-     - medium → 15 points
-     - low    → 5 points
-
-     - WARNING:
-     This method MUST remain platform-agnostic.
-     Platform-specific weighting is FORBIDDEN here.
-     */
-    private func computeScore(
-        _ signals: [[String: Any]]
-    ) -> Int {
-        return signals.reduce(0) { acc, signal in
-            guard let confidence = signal["confidence"] as? String else {
-                return acc
-            }
-
-            switch confidence {
-            case "high": return acc + 30
-            case "medium": return acc + 15
-            case "low": return acc + 5
-            default: return acc
-            }
-        }
     }
 }
