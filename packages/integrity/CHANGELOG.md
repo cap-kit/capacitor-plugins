@@ -1,5 +1,11 @@
 # @cap-kit/test-plugin
 
+## 8.0.0-next.6
+
+### Major Changes
+
+- 99248b1: Final stable release of Integrity v8. Adds real-time RASP monitoring, overlay detection for Android, and entitlement validation for iOS. Includes a synchronized boot buffer to ensure no early security signals are lost during app startup.
+
 ## 8.0.0-next.5
 
 ### Patch Changes
