@@ -37,6 +37,9 @@ struct IntegrityReportBuilder {
         // Compute the aggregate integrity score based on signal confidence.
         let score = computeScore(from: signals)
 
+        // Build informational explanation metadata for the score.
+        let scoreExplanation = buildScoreExplanation(from: signals)
+
         return [
             // Ordered list of all detected integrity signals.
             "signals": signals,
@@ -53,6 +56,10 @@ struct IntegrityReportBuilder {
                 platform: platform,
                 isEmulator: isEmulator
             ),
+
+            // Informational explanation describing how the score was derived.
+            // This metadata MUST NOT be treated as a security decision.
+            "scoreExplanation": scoreExplanation,
 
             // Millisecond-precision UNIX timestamp of report generation.
             "timestamp": currentTimestamp()
@@ -89,6 +96,52 @@ struct IntegrityReportBuilder {
             default: return acc
             }
         }
+    }
+
+    // MARK: - Score Explanation
+
+    /**
+     Builds an informational explanation describing how the integrity
+     score was derived from the detected signals.
+
+     IMPORTANT:
+     - This metadata is informational only.
+     - It MUST NOT influence scoring or enforcement decisions.
+     */
+    private static func buildScoreExplanation(
+        from signals: [[String: Any]]
+    ) -> [String: Any] {
+
+        var high = 0
+        var medium = 0
+        var low = 0
+
+        let contributors = signals.compactMap {
+            $0["id"] as? String
+        }
+
+        for signal in signals {
+            switch signal["confidence"] as? String {
+            case "high":
+                high += 1
+            case "medium":
+                medium += 1
+            case "low":
+                low += 1
+            default:
+                break
+            }
+        }
+
+        return [
+            "totalSignals": signals.count,
+            "byConfidence": [
+                "high": high,
+                "medium": medium,
+                "low": low
+            ],
+            "contributors": contributors
+        ]
     }
 
     // MARK: - Environment

@@ -137,6 +137,23 @@ export interface IntegrityConfig {
    * @since 8.0.0
    */
   blockPage?: IntegrityBlockPageConfig;
+
+  /**
+   * Optional configuration for jailbreak URL scheme probing (iOS only).
+   *
+   * When enabled, the native iOS implementation may probe for
+   * known jailbreak-related applications using URL schemes
+   * such as `cydia://`.
+   *
+   * This configuration:
+   * - is read natively at runtime
+   * - is immutable
+   * - is NOT accessible from JavaScript
+   * - does NOT alter the public JavaScript API
+   *
+   * @since 8.0.0
+   */
+  jailbreakUrlSchemes?: JailbreakUrlSchemesConfig;
 }
 
 /**
@@ -171,6 +188,45 @@ export interface IntegrityBlockPageConfig {
    * @since 8.0.0
    */
   url: string;
+}
+
+/**
+ * Configuration for jailbreak URL scheme probing (iOS only).
+ *
+ * This configuration enables the Integrity plugin to probe for
+ * known jailbreak-related applications by checking whether
+ * specific URL schemes can be opened by the system.
+ *
+ * IMPORTANT:
+ * - This feature is **disabled by default**.
+ * - It is read natively and is NOT accessible from JavaScript at runtime.
+ * - Enabling this feature requires declaring the corresponding
+ *   schemes in `LSApplicationQueriesSchemes` inside `Info.plist`.
+ * - This detection emits a LOW confidence signal and MUST NOT
+ *   be treated as a standalone jailbreak decision.
+ *
+ * @since 8.0.0
+ */
+export interface JailbreakUrlSchemesConfig {
+  /**
+   * Enables jailbreak URL scheme probing.
+   *
+   * When set to false or omitted, no URL scheme probing
+   * will be performed by the native iOS implementation.
+   *
+   * @default false
+   * @example true
+   */
+  enabled?: boolean;
+
+  /**
+   * List of URL schemes to probe.
+   *
+   * Each scheme should be provided WITHOUT the `://` suffix.
+   *
+   * @example ['cydia', 'sileo', 'zbra']
+   */
+  schemes: string[];
 }
 
 /**
@@ -333,6 +389,46 @@ export interface IntegrityReport {
    * Unix timestamp (milliseconds) when the check was performed.
    */
   timestamp: number;
+
+  /**
+   * Optional explanation metadata describing how the integrity score
+   * was derived from the detected signals.
+   *
+   * This field is informational only and MUST NOT be treated
+   * as a security decision or enforcement mechanism.
+   *
+   * @since 8.0.0
+   */
+  scoreExplanation?: IntegrityScoreExplanation;
+}
+
+/**
+ * Describes how the integrity score was derived.
+ *
+ * This structure provides transparency and auditability
+ * without exposing internal scoring algorithms.
+ *
+ * @since 8.0.0
+ */
+export interface IntegrityScoreExplanation {
+  /**
+   * Total number of detected signals.
+   */
+  totalSignals: number;
+
+  /**
+   * Breakdown of signals by confidence level.
+   */
+  byConfidence: {
+    high: number;
+    medium: number;
+    low: number;
+  };
+
+  /**
+   * List of signal identifiers that contributed to the score.
+   */
+  contributors: string[];
 }
 
 // -----------------------------------------------------------------------------

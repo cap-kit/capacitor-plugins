@@ -59,7 +59,10 @@ struct IntegrityJailbreakDetector {
                     : nil,
 
                 // Include the matched path for diagnostic purposes only.
-                "metadata": ["path": path]
+                "metadata": [
+                    "path": path,
+                    "source": "filesystem"
+                ]
             ].compactMapValues { $0 }]
         }
 

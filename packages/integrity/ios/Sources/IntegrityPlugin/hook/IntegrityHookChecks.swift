@@ -2,53 +2,13 @@ import Foundation
 import MachO
 
 /**
- Runtime integrity checks related to debugging
- and instrumentation frameworks.
+ Runtime integrity checks related to instrumentation frameworks (e.g., Frida).
  */
-struct IntegrityRuntimeChecks {
+struct IntegrityHookChecks {
 
-    static func debugSignals(
-        includeDebug: Bool
-    ) -> [[String: Any]] {
-
-        // Collected runtime debug-related signals.
-        // This array is usually empty on non-compromised devices.
-        var signals: [[String: Any]] = []
-
-        // Prepare sysctl query to inspect the current process.
-        // This specifically targets the P_TRACED flag.
-        var info = kinfo_proc()
-        var size = MemoryLayout.size(ofValue: info)
-        var mib: [Int32] = [
-            CTL_KERN,
-            KERN_PROC,
-            KERN_PROC_PID,
-            getpid()
-        ]
-
-        // Execute sysctl and inspect process flags.
-        // A non-zero P_TRACED flag indicates an attached debugger.
-        if sysctl(&mib, UInt32(mib.count), &info, &size, nil, 0) == 0 {
-            if (info.kp_proc.p_flag & P_TRACED) != 0 {
-
-                // Emit a high-confidence debug signal.
-                // This signal alone does not necessarily imply compromise,
-                // but it is a strong indicator when correlated.
-                signals.append([
-                    "id": "ios_debugger_attached",
-                    "category": "debug",
-                    "confidence": "high",
-                    "description": includeDebug
-                        ? "A debugger is currently attached to the running process"
-                        : nil,
-                    "metadata": ["method": "sysctl_p_traced"]
-                ].compactMapValues { $0 })
-            }
-        }
-
-        return signals
-    }
-
+    /**
+     Scans loaded dynamic libraries for suspicious instrumentation frameworks.
+     */
     static func hookingSignal(
         includeDebug: Bool
     ) -> [String: Any]? {
@@ -93,6 +53,9 @@ struct IntegrityRuntimeChecks {
         return nil
     }
 
+    /**
+     Detects if a known instrumentation port (Frida) is open on localhost.
+     */
     static func isFridaPortOpen() -> Bool {
 
         // Known default Frida server port.

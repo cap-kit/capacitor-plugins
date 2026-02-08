@@ -26,6 +26,11 @@ public struct IntegrityConfig {
         static let blockPage = "blockPage"
         static let blockPageEnabled = "enabled"
         static let blockPageUrl = "url"
+
+        // Jailbreak URL scheme probing (opt-in)
+        static let jailbreakUrlSchemes = "jailbreakUrlSchemes"
+        static let jailbreakUrlSchemesEnabled = "enabled"
+        static let jailbreakUrlSchemesList = "schemes"
     }
 
     // MARK: - Public Configuration Values
@@ -44,6 +49,9 @@ public struct IntegrityConfig {
      Optional configuration for the integrity block page.
      */
     public let blockPage: BlockPageConfig?
+
+    // Optional jailbreak URL scheme probing configuration
+    public let jailbreakUrlSchemes: JailbreakUrlSchemeConfig?
 
     // MARK: - Defaults
 
@@ -87,6 +95,22 @@ public struct IntegrityConfig {
         } else {
             self.blockPage = nil
         }
+
+        // Jailbreak URL scheme probing configuration (opt-in)
+        if let schemeConfig = config.getObject(Keys.jailbreakUrlSchemes) {
+            let enabled =
+                schemeConfig[Keys.jailbreakUrlSchemesEnabled] as? Bool ?? false
+
+            let schemes =
+                schemeConfig[Keys.jailbreakUrlSchemesList] as? [String] ?? []
+
+            self.jailbreakUrlSchemes = JailbreakUrlSchemeConfig(
+                enabled: enabled,
+                schemes: schemes
+            )
+        } else {
+            self.jailbreakUrlSchemes = nil
+        }
     }
 }
 
@@ -98,4 +122,14 @@ public struct IntegrityConfig {
 public struct BlockPageConfig {
     public let enabled: Bool
     public let url: String?
+}
+
+// MARK: - Jailbreak Url Scheme Config
+
+/**
+ Configuration for jailbreak URL scheme probing.
+ */
+public struct JailbreakUrlSchemeConfig {
+    public let enabled: Bool
+    public let schemes: [String]
 }

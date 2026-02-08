@@ -1,10 +1,13 @@
 package io.capkit.integrity
 
 import android.content.Context
-import android.content.pm.PackageManager
+import io.capkit.integrity.emulator.IntegrityEmulatorChecks
+import io.capkit.integrity.filesystem.IntegrityFilesystemChecks
+import io.capkit.integrity.hook.IntegrityHookChecks
+import io.capkit.integrity.remote.IntegrityRemoteAttestor
+import io.capkit.integrity.root.IntegrityRootDetector
+import io.capkit.integrity.runtime.IntegrityRuntimeChecks
 import io.capkit.integrity.utils.IntegrityLogger
-import java.io.File
-import java.net.Socket
 import java.util.Collections
 
 /**
@@ -66,14 +69,14 @@ class IntegrityImpl(
      */
     @JvmStatic
     fun onApplicationCreate(context: Context) {
-      val impl = IntegrityImpl(context)
-      // Capture basic root signals immediately at boot
+      // Capture basic root signals immediately at boot using the dedicated detector
       val signals =
-        impl.checkRootSignals(
+        IntegrityRootDetector.checkRootSignals(
           IntegrityCheckOptions(
             level = "basic",
             includeDebugInfo = false,
           ),
+          allowCache = false,
         )
       bootSignals.addAll(signals)
     }
@@ -87,8 +90,8 @@ class IntegrityImpl(
    * Stub for Google Play Integrity integration.
    * To be implemented in a future evolution step.
    */
-  fun getPlayIntegritySignal() {
-    // Placeholder for com.google.android.play.core.integrity logic
+  fun getPlayIntegritySignal(options: IntegrityCheckOptions): Map<String, Any>? {
+    return IntegrityRemoteAttestor.getPlayIntegritySignal(context, options)
   }
 
   // ---------------------------------------------------------------------------
@@ -97,26 +100,11 @@ class IntegrityImpl(
 
   /**
    * Cached immutable plugin configuration.
-   *
-   * CONTRACT:
-   * - Injected exactly once by the Plugin layer during load()
-   * - Treated as read-only afterwards
-   *
-   * WARNING:
-   * - Accessing this before updateConfig() is a programming error.
    */
   private lateinit var config: IntegrityConfig
 
   /**
    * Applies static plugin configuration.
-   *
-   * CONTRACT:
-   * - MUST be called exactly once
-   * - Caller (Plugin layer) guarantees lifecycle correctness
-   *
-   * NOTE:
-   * - Defensive double-initialization guards are intentionally omitted
-   *   to keep the Impl layer minimal and deterministic.
    */
   fun updateConfig(newConfig: IntegrityConfig) {
     this.config = newConfig
@@ -134,15 +122,6 @@ class IntegrityImpl(
 
   /**
    * Executes the requested integrity checks and aggregates signals.
-   *
-   * CONTRACT:
-   * - Synchronous execution only
-   * - MUST NOT perform UI operations
-   * - MUST return a fully structured, platform-agnostic report
-   *
-   * NOTE:
-   * - Scoring and compromise threshold are heuristic-based.
-   * - This method assumes configuration has already been injected.
    */
   fun performCheck(options: IntegrityCheckOptions): Map<String, Any> {
     val signals = mutableListOf<Map<String, Any>>()
@@ -156,15 +135,31 @@ class IntegrityImpl(
 
     // --- BASIC -----------------------------------------------------------
 
-    // NOTE:
-    // BASIC checks are deterministic and safe to cache.
+    // Root filesystem & build-tag detection (cached, runtime)
+    signals.addAll(
+      IntegrityRootDetector.checkRootSignals(
+        options = options,
+        allowCache = true,
+      ),
+    )
 
-    signals.addAll(checkRootSignals(options))
+    // Known root management packages (runtime-only)
+    signals.addAll(
+      IntegrityRootDetector.checkRootPackages(
+        context = context,
+        options = options,
+      ),
+    )
 
-    val isEmulator = checkEmulator()
+    // Sandbox escape heuristics (non-deterministic, filesystem-based)
+    IntegrityFilesystemChecks
+      .checkSandboxEscape(options)
+      ?.let { signals.add(it) }
+
+    val isEmulator = IntegrityEmulatorChecks.isEmulator()
     if (isEmulator) {
       signals.add(
-        signal(
+        IntegritySignalBuilder.build(
           id = "android_emulator",
           category = "emulator",
           confidence = "high",
@@ -176,21 +171,18 @@ class IntegrityImpl(
 
     // --- STANDARD & STRICT -----------------------------------------------
 
-    // NOTE:
-    // STANDARD checks may introduce false positives
-    // and are therefore weighted accordingly.
-
     if (options.level != "basic") {
       // checkDebug returns a list of signals
-      signals.addAll(checkDebug(options))
+      signals.addAll(IntegrityRuntimeChecks.checkDebugSignals(context, options))
 
       // --- HOOKING DETECTION --------------------------------------------
 
       // Frida detection via memory maps
-      val fridaMemoryDetected = checkFridaMemory()
-      if (fridaMemoryDetected) {
+      val memHook = IntegrityHookChecks.checkFridaMemory()
+
+      if (memHook) {
         signals.add(
-          signal(
+          IntegritySignalBuilder.build(
             id = "android_frida_memory",
             category = "hook",
             confidence = "high",
@@ -201,10 +193,10 @@ class IntegrityImpl(
       }
 
       // Frida detection via known ports
-      val fridaPortDetected = checkFridaPorts()
-      if (fridaPortDetected) {
+      val portHook = IntegrityHookChecks.checkFridaPorts()
+      if (portHook) {
         signals.add(
-          signal(
+          IntegritySignalBuilder.build(
             id = "android_frida_port",
             category = "hook",
             confidence = "medium",
@@ -214,12 +206,10 @@ class IntegrityImpl(
         )
       }
 
-      // --- SIGNAL CORRELATION ------------------------------------------------
-      // If both memory artifacts and ports are detected, emit a high-confidence
-      // correlation signal to confirm active instrumentation.
-      if (fridaMemoryDetected && fridaPortDetected) {
+      // Signal correlation logic
+      if (memHook && portHook) {
         signals.add(
-          signal(
+          IntegritySignalBuilder.build(
             id = "android_frida_correlation_confirmed",
             category = "hook",
             confidence = "high",
@@ -233,14 +223,16 @@ class IntegrityImpl(
 
     // --- STRICT --------------------------------------------------------------
 
-    // NOTE:
-    // STRICT checks are allowed to be more invasive
-    // and SHOULD be used sparingly by the host app.
-
     if (options.level == "strict") {
-      if (!checkAppSignature()) {
+      // Google Play Integrity (future remote attestation)
+      IntegrityRemoteAttestor
+        .getPlayIntegritySignal(context, options)
+        ?.let { signals.add(it) }
+
+      // Verify application signature integrity
+      if (!IntegrityRuntimeChecks.checkAppSignature(context)) {
         signals.add(
-          signal(
+          IntegritySignalBuilder.build(
             id = "android_signature_invalid",
             category = "tamper",
             confidence = "high",
@@ -251,367 +243,10 @@ class IntegrityImpl(
       }
     }
 
-    val score = computeScore(signals)
-
-    return mapOf(
-      "signals" to signals,
-      "score" to score,
-      "compromised" to (score >= 30),
-      "environment" to
-        mapOf(
-          "platform" to "android",
-          "isEmulator" to isEmulator,
-          "isDebugBuild" to false,
-        ),
-      "timestamp" to System.currentTimeMillis(),
+    // Final report assembly using the dedicated builder
+    return IntegrityReportBuilder.buildReport(
+      signals,
+      isEmulator,
     )
-  }
-
-  // ---------------------------------------------------------------------------
-  // Signal helper
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Internal helper to construct a signal map.
-   *
-   * CONTRACT:
-   * - Returned maps MUST be JSON-serializable
-   * - Keys MUST remain stable across platforms
-   *
-   * NOTE:
-   * - Description and metadata are optional and gated by options.
-   */
-  private fun signal(
-    id: String,
-    category: String,
-    confidence: String,
-    description: String? = null,
-    metadata: Map<String, Any>? = null,
-    options: IntegrityCheckOptions,
-  ): Map<String, Any> {
-    val map =
-      mutableMapOf<String, Any>(
-        "id" to id,
-        "category" to category,
-        "confidence" to confidence,
-      )
-
-    // NOTE:
-    // Description is included ONLY when explicitly requested
-    // to avoid leaking sensitive diagnostics by default.
-
-    // Include description only if requested in options
-    if (options.includeDebugInfo && description != null) {
-      map["description"] = description
-    }
-
-    // Include metadata if present
-    if (metadata != null) {
-      map["metadata"] = metadata
-    }
-
-    return map
-  }
-
-  // ---------------------------------------------------------------------------
-  // Root detection
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Cached root-related signals.
-   *
-   * CONTRACT:
-   * - Root checks are deterministic and cached
-   * - Cache lifetime == process lifetime
-   *
-   * LIMITATION:
-   * - Does NOT detect runtime-only or kernel-level rooting
-   */
-  private var cachedRootSignals: List<Map<String, Any>>? = null
-
-  /**
-   * Performs expanded root detection using filesystem heuristics.
-   *
-   * @throws IntegrityError.Unavailable
-   *   If filesystem access is restricted by the OS.
-   */
-  fun checkRootSignals(options: IntegrityCheckOptions): List<Map<String, Any>> {
-    // WARNING:
-    // Filesystem heuristics may be bypassed by advanced root hiding tools.
-
-    cachedRootSignals?.let { return it }
-
-    val signals = mutableListOf<Map<String, Any>>()
-
-    // Expanded su paths
-    val suPaths =
-      listOf(
-        "/system/bin/su",
-        "/system/xbin/su",
-        "/sbin/su",
-        "/system/app/Superuser.apk",
-        "/system/app/Superuser/Superuser.apk",
-        "/data/local/xbin/su",
-        "/data/local/bin/su",
-        "/system/sd/xbin/su",
-        "/su/bin/su",
-        "/magisk/.core/bin/su",
-        "/system/usr/we-need-root/su-backup/su",
-        "/system/bin/.ext/.su/su",
-        "/system/bin/failsafe/su",
-        "/data/local/su",
-      )
-
-    try {
-      for (path in suPaths) {
-        if (File(path).exists()) {
-          signals.add(
-            signal(
-              id = "android_root_su",
-              category = "root",
-              confidence = "high",
-              description = "Presence of su binary detected in system paths",
-              metadata = mapOf("path" to path),
-              options = options,
-            ),
-          )
-          break // Found one, enough to flag
-        }
-      }
-    } catch (e: SecurityException) {
-      throw IntegrityError.Unavailable(
-        "Filesystem access denied while performing root checks.",
-      )
-    }
-
-    val buildTags = android.os.Build.TAGS
-    if (buildTags?.contains("test-keys") == true) {
-      signals.add(
-        signal(
-          id = "android_test_keys",
-          category = "root",
-          confidence = "medium",
-          description = "Device build signed with test keys",
-          metadata = mapOf("tags" to buildTags),
-          options = options,
-        ),
-      )
-    }
-
-    cachedRootSignals = signals
-    return signals
-  }
-
-  // ---------------------------------------------------------------------------
-  // Emulator detection
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Detects emulators using correlated build properties.
-   *
-   * NOTE:
-   * - This method uses a best-effort heuristic approach.
-   *
-   * LIMITATION:
-   * - No single signal is authoritative.
-   * - Results MUST always be interpreted in aggregate.
-   */
-  fun checkEmulator(): Boolean {
-    return try {
-      val fingerprint = android.os.Build.FINGERPRINT
-      val model = android.os.Build.MODEL
-      val manufacturer = android.os.Build.MANUFACTURER
-      val hardware = android.os.Build.HARDWARE
-      val product = android.os.Build.PRODUCT
-
-      fingerprint.contains("generic") ||
-        fingerprint.startsWith("unknown") ||
-        model.contains("google_sdk") ||
-        model.contains("Emulator", ignoreCase = true) ||
-        model.contains("Android SDK built for x86") ||
-        manufacturer.contains("Genymotion", ignoreCase = true) ||
-        hardware.contains("goldfish") ||
-        hardware.contains("ranchu") ||
-        product.contains("sdk_google") ||
-        product.contains("google_sdk") ||
-        product.contains("vbox86p")
-    } catch (_: Exception) {
-      false
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Debug detection
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Detects debugging conditions.
-   *
-   * CONTRACT:
-   * - Returns zero or more debug-related signals
-   *
-   * LIMITATION:
-   * - Does NOT detect:
-   *   - native ptrace-based debugging
-   *   - kernel-level instrumentation
-   */
-  fun checkDebug(options: IntegrityCheckOptions): List<Map<String, Any>> {
-    val debugSignals = mutableListOf<Map<String, Any>>()
-    val isDebuggerConnected = android.os.Debug.isDebuggerConnected()
-    val isDebuggable = (context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
-
-    if (isDebuggerConnected) {
-      debugSignals.add(
-        signal(
-          id = "android_debugger_attached",
-          category = "debug",
-          confidence = "high",
-          description = "A debugger is currently attached to the running process",
-          metadata = mapOf("method" to "Debug.isDebuggerConnected"),
-          options = options,
-        ),
-      )
-    }
-
-    if (isDebuggable) {
-      debugSignals.add(
-        signal(
-          id = "android_runtime_debuggable",
-          category = "debug",
-          confidence = "medium",
-          description = "Process is debuggable at runtime",
-          metadata = mapOf("flag" to "FLAG_DEBUGGABLE"),
-          options = options,
-        ),
-      )
-    }
-
-    return debugSignals
-  }
-
-  // ---------------------------------------------------------------------------
-  // Frida detection
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Frida detection via process memory map inspection.
-   *
-   * NOTE:
-   * - Chosen over process listing (`ps`) for:
-   *   - better stealth
-   *   - lower overhead
-   *
-   * LIMITATION:
-   * - May miss renamed or obfuscated Frida payloads
-   */
-  fun checkFridaMemory(): Boolean {
-    // NOTE:
-    // SecurityException is intentionally swallowed here
-    // to allow other checks to complete.
-
-    return try {
-      val mapsFile = File("/proc/self/maps")
-      if (mapsFile.exists()) {
-        mapsFile.useLines { lines ->
-          lines.any { it.contains("frida", ignoreCase = true) || it.contains("gadget", ignoreCase = true) }
-        }
-      } else {
-        false
-      }
-    } catch (e: SecurityException) {
-      // We prefer returning false to allow other signals to complete
-      // unless you strictly require knowing why it failed.
-      false
-    } catch (_: Exception) {
-      false
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Frida detection — ports
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Detects known Frida server ports on localhost.
-   *
-   * CONTRACT:
-   * - Only known, fixed ports are checked
-   *
-   * WARNING:
-   * - MUST NOT be extended to arbitrary port scanning
-   *
-   * @throws IntegrityError.Unavailable
-   *   If socket creation is restricted.
-   */
-  fun checkFridaPorts(): Boolean {
-    val ports = listOf(27042, 27043)
-
-    return ports.any { port ->
-      try {
-        Socket("127.0.0.1", port).use { true }
-      } catch (e: SecurityException) {
-        throw IntegrityError.Unavailable(
-          "Socket access denied while checking Frida ports.",
-        )
-      } catch (_: Exception) {
-        false
-      }
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Signature integrity
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Performs a basic application signature integrity check.
-   *
-   * NOTE:
-   * - This check validates presence, not trust chain correctness.
-   *
-   * LIMITATION:
-   * - Does NOT detect:
-   *   - repackaging with a different valid key
-   *   - runtime code injection
-   *
-   * @throws IntegrityError.InitFailed
-   *   If signing info cannot be accessed.
-   */
-  fun checkAppSignature(): Boolean {
-    try {
-      val packageInfo =
-        context.packageManager.getPackageInfo(
-          context.packageName,
-          PackageManager.GET_SIGNING_CERTIFICATES,
-        )
-
-      return packageInfo.signingInfo?.apkContentsSigners?.isNotEmpty() == true
-    } catch (e: Exception) {
-      throw IntegrityError.InitFailed(
-        "Failed to read application signing information.",
-      )
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Scoring
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Computes a heuristic risk score from collected signals.
-   *
-   * CONTRACT:
-   * - Scoring MUST remain platform-agnostic
-   * - Platform-specific weighting is FORBIDDEN here
-   */
-  private fun computeScore(signals: List<Map<String, Any>>): Int {
-    return signals.sumOf {
-      when (it["confidence"]) {
-        "high" -> 30
-        "medium" -> 15
-        "low" -> 5
-        else -> 0
-      }
-    }
   }
 }

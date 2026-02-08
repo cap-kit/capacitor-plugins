@@ -67,3 +67,78 @@ struct IntegrityUtils {
         return signal
     }
 }
+
+enum IntegrityCorrelationUtils {
+
+    static func jailbreakCorrelation(
+        from signals: [[String: Any]],
+        includeDebug: Bool
+    ) -> [String: Any]? {
+
+        let jailbreakSignals = signals.filter {
+            ($0["category"] as? String) == "jailbreak"
+        }
+
+        guard jailbreakSignals.count >= 2 else {
+            return nil
+        }
+
+        let sources: Set<String> = Set(
+            jailbreakSignals.compactMap {
+                ($0["metadata"] as? [String: Any])?["source"] as? String
+            }
+        )
+
+        guard sources.count >= 2 else {
+            return nil
+        }
+
+        return [
+            "id": "ios_jailbreak_multiple_indicators",
+            "category": "jailbreak",
+            "confidence": "high",
+            "description": includeDebug
+                ? "Multiple independent jailbreak indicators detected simultaneously"
+                : nil,
+            "metadata": [
+                "indicatorCount": jailbreakSignals.count,
+                "sources": Array(sources)
+            ]
+        ].compactMapValues { $0 }
+    }
+
+    static func jailbreakAndHookCorrelation(
+        from signals: [[String: Any]],
+        includeDebug: Bool
+    ) -> [String: Any]? {
+
+        let hasJailbreak = signals.contains {
+            ($0["category"] as? String) == "jailbreak"
+        }
+
+        let hasHook = signals.contains {
+            ($0["category"] as? String) == "hook"
+        }
+
+        guard hasJailbreak && hasHook else {
+            return nil
+        }
+
+        return [
+            "id": "ios_jailbreak_and_hook_detected",
+            "category": "tamper",
+            "confidence": "high",
+            "description": includeDebug
+                ? "Device appears to be jailbroken and actively instrumented at runtime"
+                : nil,
+            "metadata": [
+                "jailbreakIndicators": signals.filter {
+                    ($0["category"] as? String) == "jailbreak"
+                }.count,
+                "hookIndicators": signals.filter {
+                    ($0["category"] as? String) == "hook"
+                }.count
+            ]
+        ].compactMapValues { $0 }
+    }
+}
