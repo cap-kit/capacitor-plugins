@@ -7,6 +7,7 @@ import io.capkit.integrity.hook.IntegrityHookChecks
 import io.capkit.integrity.remote.IntegrityRemoteAttestor
 import io.capkit.integrity.root.IntegrityRootDetector
 import io.capkit.integrity.runtime.IntegrityRuntimeChecks
+import io.capkit.integrity.ui.IntegrityUISignals
 import io.capkit.integrity.utils.IntegrityLogger
 import java.util.Collections
 
@@ -82,6 +83,16 @@ class IntegrityImpl(
     }
   }
 
+  // Negative cache for expensive integrity checks.
+  // Caches only "no-signal" results for a short time window.
+  private data class NegativeCacheEntry(
+    val timestampMs: Long,
+  )
+
+  private val negativeCache = mutableMapOf<String, NegativeCacheEntry>()
+
+  private val negativeCacheTtlMs = 30_000L
+
   // ---------------------------------------------------------------------------
   // Remote Attestation
   // ---------------------------------------------------------------------------
@@ -124,6 +135,20 @@ class IntegrityImpl(
    * Executes the requested integrity checks and aggregates signals.
    */
   fun performCheck(options: IntegrityCheckOptions): Map<String, Any> {
+    // Apply negative cache only for standard / strict levels.
+    // Cached results represent a recent "no-signal" execution.
+    if (options.level != "basic" && isNegativeCacheValid(options.level)) {
+      IntegrityLogger.debug(
+        "Negative cache hit for integrity check:",
+        options.level,
+      )
+
+      return IntegrityReportBuilder.buildReport(
+        emptyList(),
+        isEmulator = false,
+      )
+    }
+
     val signals = mutableListOf<Map<String, Any>>()
 
     // --- BOOT SIGNALS ----------------------------------------------------
@@ -164,6 +189,13 @@ class IntegrityImpl(
           category = "emulator",
           confidence = "high",
           description = "Execution environment matches known emulator characteristics",
+          // Added metadata to identify common emulator properties
+          metadata =
+            mapOf(
+              "model" to android.os.Build.MODEL,
+              "manufacturer" to android.os.Build.MANUFACTURER,
+              "hardware" to android.os.Build.HARDWARE,
+            ),
           options = options,
         ),
       )
@@ -174,6 +206,11 @@ class IntegrityImpl(
     if (options.level != "basic") {
       // checkDebug returns a list of signals
       signals.addAll(IntegrityRuntimeChecks.checkDebugSignals(context, options))
+
+      // UI and Overlay detection (RASP)
+      IntegrityUISignals
+        .checkOverlaySignals(context, options)
+        ?.let { signals.add(it) }
 
       // --- HOOKING DETECTION --------------------------------------------
 
@@ -237,9 +274,21 @@ class IntegrityImpl(
             category = "tamper",
             confidence = "high",
             description = "Application signing information does not match expected format",
+            // Added metadata to specify the source of the signature check failure
+            metadata = mapOf("package" to context.packageName),
             options = options,
           ),
         )
+      }
+    }
+
+    // Update negative cache only when no integrity signals are detected.
+    // Any detected signal invalidates the cached clean state.
+    if (options.level != "basic") {
+      if (signals.isEmpty()) {
+        updateNegativeCache(options.level)
+      } else {
+        clearNegativeCache(options.level)
       }
     }
 
@@ -248,5 +297,23 @@ class IntegrityImpl(
       signals,
       isEmulator,
     )
+  }
+
+  private fun cacheKey(level: String): String {
+    return "android:$level"
+  }
+
+  private fun isNegativeCacheValid(level: String): Boolean {
+    val entry = negativeCache[cacheKey(level)] ?: return false
+    return System.currentTimeMillis() - entry.timestampMs <= negativeCacheTtlMs
+  }
+
+  private fun updateNegativeCache(level: String) {
+    negativeCache[cacheKey(level)] =
+      NegativeCacheEntry(System.currentTimeMillis())
+  }
+
+  private fun clearNegativeCache(level: String) {
+    negativeCache.remove(cacheKey(level))
   }
 }

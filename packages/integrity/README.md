@@ -78,45 +78,9 @@ a stable `v8.0.0` release.
 
 All versions published as `v8.0.0-next.x` are considered:
 
-- **internal development milestones**
-- **non-final**
-- **subject to change without notice**
-- **not intended for production use**
-
-### What `next.x` versions represent
-
-Each `next.x` version corresponds to a **focused implementation step**
-(e.g. internal refactoring, architectural groundwork, or a single new capability),
-not to a user-facing release milestone.
-
-Examples:
-
-- `next.4` introduces **real-time integrity listeners**
-- other planned capabilities (attestation, early boot detection, advanced RASP)
-  are intentionally deferred to later `next.x` stages
-
-These intermediate versions exist to:
-
-- keep development incremental and auditable
-- reduce risk by isolating architectural changes
-- avoid bundling unrelated features into a single step
-
-### Publication policy
-
-Until a stable `v8.0.0` release is published:
-
-- `next.x` versions MAY be published for testing and feedback
-- no backward-compatibility guarantees are provided
-- API details MAY evolve as part of the stabilization process
-
-Consumers should consider `next.x` builds as **pre-release artifacts**
-and plan adoption accordingly.
-
-The `v8.0.0` release will mark:
-
-- API stabilization
-- documented support guarantees
-- readiness for production usage
+They may include fully production-grade code,
+but are published under the `next` tag to allow
+controlled stabilization and incremental validation.
 
 ---
 
@@ -132,6 +96,24 @@ It reports **signals**, not decisions.
 - Consumers MUST combine signals with business logic
 
 > ⚠️ This plugin is **NOT** a replacement for a full RASP or DRM solution.
+
+### Internal performance optimizations
+
+To reduce repeated execution of expensive integrity checks,
+the plugin applies a short-lived **negative cache** internally.
+
+Key characteristics:
+
+- Applies only to `standard` and `strict` levels
+- Caches only **clean executions** (no detected signals)
+- Time-to-live: **~30 seconds**
+- Automatically invalidated as soon as any signal is detected
+- Completely transparent to the JavaScript API
+
+This optimization improves performance and battery usage
+without affecting detection semantics or signal correctness.
+
+> The cache never suppresses or hides detected integrity signals.
 
 ---
 
@@ -203,7 +185,7 @@ In your `AppDelegate.swift`, call `IntegrityImpl.onAppLaunch()` inside the `appl
 
 import UIKit
 import Capacitor
-+ import Integrity // Import the plugin module
++ import IntegrityPlugin // Import the plugin module
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -240,8 +222,9 @@ before the Capacitor bridge is fully initialized.
 
 IMPORTANT NOTES:
 
-- Early boot signals are **best-effort**.
+- Early boot signals are **best-effort** and opportunistic.
 - They are **not guaranteed** to be captured on every app launch.
+- Their absence MUST NOT be interpreted as a clean environment.
 - They may be affected by:
   - process restarts
   - OS-level lifecycle optimizations
@@ -401,6 +384,7 @@ const report = await Integrity.check({
 - **strict**
   - All `standard` checks
   - Additional tamper and integrity heuristics
+  - Explicit reporting of unavailable platform attestation (observational only)
 
 > ⚠️ The returned integrity score remains provisional and
 > must not be used as the sole security decision signal.
@@ -517,11 +501,19 @@ This permission is automatically added to your `AndroidManifest.xml` via the plu
 
 #### Package Visibility (Android 11+)
 
-To perform expanded root detection (scanning for apps like Magisk or SuperUser), the plugin declares a `<queries>` block in its manifest. This allows the plugin to "see" security-related packages even on devices with high API levels (30+).
+To perform expanded root detection (scanning for apps like Magisk or SuperUser), the plugin declares a `<queries>` block in its manifest. This allow-list is required by Google Play policies to "see" security-related packages on devices with API level 30+.
+
+**Note:** If your app is submitted to Google Play, you may need to justify the use of this expanded visibility during the app review process if you are targeting security-sensitive functionality.
 
 ### iOS
 
-No additional permissions are required for iOS.
+No additional runtime permissions are required for iOS.
+
+#### ⚠️ Toolchain Requirement
+
+This plugin is designed exclusively for **Capacitor v8**. In accordance with the global strict rules for this version, **Xcode 26 is the MANDATORY requirement** for building the iOS native implementation.
+
+Any issues or behaviors observed on Xcode 15, 16, or earlier versions are considered environment misconfigurations and are not supported by the plugin.
 
 ---
 
@@ -889,7 +881,9 @@ that the device is not only modified but also actively instrumented.
 - **Package Scanning**: Root detection on Android includes scanning for known management apps (e.g., Magisk). This is subject to OS-level package visibility restrictions.
 - **Emulator Detection**: Detection is heuristic and relies on build properties that may vary between providers.
 - Frida detection uses memory and runtime inspection
-- No cryptographic attestation is performed
+- **No cryptographic or remote attestation is performed**
+- **Apple App Attest and Google Play Integrity are NOT implemented**
+- Attestation-related signals, when present, explicitly report unavailability
 - No device identity is established
 
 These limitations are **intentional** to:

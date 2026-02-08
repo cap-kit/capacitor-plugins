@@ -60,42 +60,17 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
     // MARK: - Properties
 
     /// Native implementation instance.
-    ///
-    /// NOTE:
-    /// - Owned by the Plugin layer
-    /// - Lifetime == plugin lifetime
-    /// - MUST NOT be recreated per call
-    ///
-    /// WARNING:
-    /// - The implementation MUST NOT access:
-    ///   - CAPPluginCall
-    ///   - bridge
-    ///   - view controllers
     private let implementation = IntegrityImpl()
 
     // Configuration instance
-    //
-    // CONTRACT:
-    // - Initialized once during load()
-    // - Treated as immutable afterwards
-    // - NEVER read directly by the Impl layer
     private var config: IntegrityConfig?
 
     // MARK: - Event-related properties
 
     /// Buffer for integrity signals captured before a JS listener is registered.
-    ///
-    /// NOTE:
-    /// - Stored in-memory only
-    /// - Flushed when the first listener becomes available
-    /// - Cleared immediately after delivery
     private var bufferedSignals: [[String: Any]] = []
 
     /// Canonical event name emitted to the JavaScript layer.
-    ///
-    /// CONTRACT:
-    /// - MUST remain stable (breaking change otherwise)
-    /// - MUST match the JS-side event subscription
     private static let integritySignalEvent = "integritySignal"
 
     // MARK: - Lifecycle
@@ -126,6 +101,30 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
         addEventObservers()
     }
 
+    /**
+     Overridden to catch the moment JavaScript starts listening.
+     Ensures boot-time signals are delivered immediately.
+     */
+    override public func addEventListener(_ eventName: String, listener: CAPPluginCall) {
+        // Fix: Added explicit 'listener:' label required by the CAPPlugin base class
+        super.addEventListener(eventName, listener: listener)
+
+        // Ensure we match the canonical event name used in the plugin
+        if eventName == "onIntegritySignal" {
+            // Trigger a flush of early boot signals
+            let options = IntegrityCheckOptions(level: "standard", includeDebugInfo: false)
+            do {
+                // This will internally call mergeBootSignals to clear the volatile queue
+                let report = try implementation.performCheck(options: options)
+                if let signals = report["signals"] as? [[String: Any]], !signals.isEmpty {
+                    emitOrBufferSignal(report)
+                }
+            } catch {
+                IntegrityLogger.error("Failed to flush boot signals on listener registration")
+            }
+        }
+    }
+
     /// Plugin teardown.
     ///
     /// NOTE:
@@ -139,11 +138,6 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
 
     /**
      Emits an integrity signal to JavaScript or buffers it if no listeners exist.
-
-     - If at least one listener is registered, the signal is emitted immediately.
-     - Otherwise, the signal is queued in memory until a listener becomes available.
-
-     - Parameter signal: A fully-formed integrity signal payload.
      */
     private func emitOrBufferSignal(_ signal: [String: Any]) {
         if hasListeners(IntegrityPlugin.integritySignalEvent) {
@@ -155,11 +149,6 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
 
     /**
      Flushes all buffered integrity signals to JavaScript listeners.
-
-     NOTE:
-     - This method is idempotent.
-     - Signals are delivered in FIFO order.
-     - Buffer is cleared immediately after dispatch.
      */
     @objc private func flushBufferedSignals() {
         if hasListeners(IntegrityPlugin.integritySignalEvent) && !bufferedSignals.isEmpty {
@@ -174,10 +163,6 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
 
     /**
      Registers passive system observers required for real-time integrity signals.
-
-     NOTE:
-     - Observers are scoped strictly to the plugin lifecycle.
-     - No polling, timers, or background tasks are introduced.
      */
     private func addEventObservers() {
         NotificationCenter.default.addObserver(
@@ -241,15 +226,6 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
 
     /**
      Executes a baseline integrity check.
-
-     CONTRACT:
-     - Resolves exactly once on success
-     - Rejects exactly once on failure
-     - Never throws outside this scope
-
-     NOTE:
-     - All option normalization happens here.
-     - The Impl layer MUST receive fully normalized options.
      */
     @objc func check(_ call: CAPPluginCall) {
         do {
@@ -282,14 +258,6 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
 
     /**
      Presents the configured integrity block page, if enabled.
-
-     CONTRACT:
-     - UI decisions are delegated to the host app
-     - This method only performs presentation when explicitly requested
-
-     WARNING:
-     - UI work MUST be dispatched to the main thread
-     - Failure to access the root view controller MUST reject the call
      */
     @objc func presentBlockPage(_ call: CAPPluginCall) {
         guard
@@ -350,31 +318,28 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
 
     /**
      Handles application foreground transitions.
-
-     PURPOSE:
-     - Detects runtime integrity changes (e.g. debugger attachment)
-     when the app becomes active.
-
-     NOTE:
-     - Failures are logged but NOT propagated to JS.
-     - This is a background signal, not a direct API invocation.
      */
     @objc private func handleDidBecomeActiveNotification(_ notification: Notification) {
-        // Trigger an integrity check on app foreground (e.g., for debugger attachment)
+        // Targeted options for real-time monitoring.
+        // Using explicit labels to satisfy Swift compiler and struct definition.
         let options = IntegrityCheckOptions(
-            // Use standard level for event-driven checks
             level: "standard",
             includeDebugInfo: false
         )
 
+        // Perform check and notify JS immediately if signals are found
         do {
-            let result = try implementation.performCheck(options: options)
-            emitOrBufferSignal(result)
+            let report = try implementation.performCheck(options: options)
+
+            // Optimization: Only emit if the report contains signals (compromised or score > 0)
+            if let signals = report["signals"] as? [[String: Any]], !signals.isEmpty {
+                emitOrBufferSignal(report)
+
+                // Logging for internal audit
+                IntegrityLogger.debug("Real-time signal detected and emitted to JS")
+            }
         } catch {
-            IntegrityLogger.error(
-                "handleDidBecomeActiveNotification: Error during integrity check:",
-                error.localizedDescription
-            )
+            IntegrityLogger.error("Real-time monitor failed during app activation:", error.localizedDescription)
         }
     }
 }

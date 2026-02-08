@@ -4,16 +4,37 @@ import DeviceCheck
 /**
  Handles remote attestation signals using Apple's DeviceCheck (App Attest) framework.
 
- This component is currently a stub for future implementation.
+ IMPORTANT:
+ - App Attest is NOT implemented yet.
+ - This component explicitly reports unavailability instead of failing silently.
+ - The emitted signal is observational only and LOW confidence.
  */
 struct IntegrityRemoteAttestor {
 
     /**
-     Future integration point for DCAppAttestService.
-     Will handle key generation and attestation object retrieval.
+     Returns a LOW confidence signal indicating that App Attest
+     is currently not available or not implemented.
+
+     This signal is emitted only when strict mode is requested.
      */
     static func getAppAttestSignal(options: IntegrityCheckOptions) -> [String: Any]? {
-        // NOTE: Implement DCAppAttestService availability check and attestation flow
-        return nil
+
+        guard options.level == "strict" else {
+            return nil
+        }
+
+        return [
+            "id": "ios_app_attest_unavailable",
+            "category": "environment",
+            "confidence": "low",
+            "description": options.includeDebugInfo == true
+                ? "Apple App Attest is not implemented or not available on this device"
+                : nil,
+            "metadata": [
+                "attestation": "unsupported",
+                "framework": "DeviceCheck",
+                "reason": "not_implemented"
+            ]
+        ].compactMapValues { $0 }
     }
 }
