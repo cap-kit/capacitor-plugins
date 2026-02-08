@@ -78,11 +78,10 @@ class IntegrityPlugin : Plugin() {
    * In-memory buffer for integrity signals detected before
    * a JavaScript listener is registered.
    *
-   * NOTE:
-   * - Signals are stored temporarily and delivered FIFO.
-   * - Buffer is cleared immediately after dispatch.
+   * Thread-safe implementation to prevent race conditions during
+   * asynchronous event emission.
    */
-  private val bufferedSignals = mutableListOf<JSObject>()
+  private val bufferedSignals = java.util.Collections.synchronizedList(mutableListOf<JSObject>())
 
   /**
    * BroadcastReceiver used to observe passive system events
@@ -130,15 +129,70 @@ class IntegrityPlugin : Plugin() {
   }
 
   /**
+   * Custom addListener implementation to flush early boot signals.
+   *
+   * PURPOSE:
+   * - Ensures that signals captured during the early boot phase or
+   * while the app was in the background are delivered as soon as
+   * the JavaScript side registers a listener.
+   */
+  @PluginMethod
+  override fun addListener(call: PluginCall) {
+    val eventName = call.getString("eventName")
+    super.addListener(call)
+
+    if (eventName == EVENT_INTEGRITY_SIGNAL) {
+      flushBufferedSignals()
+    }
+  }
+
+  /**
    * Called when the host Activity resumes.
    *
    * PURPOSE:
    * - Flush any integrity signals captured while no JS listeners
-   *   were registered.
+   * were registered.
+   * - Perform a targeted check for debugger attachment during resume.
    */
   override fun handleOnResume() {
     super.handleOnResume()
     flushBufferedSignals()
+
+    // Immediate check for debugger attachment upon resume (Real-time monitor)
+    if (android.os.Debug.isDebuggerConnected()) {
+      val options = IntegrityCheckOptions(level = "standard", includeDebugInfo = false)
+      execute {
+        try {
+          val result = implementation.performCheck(options)
+          val jsResult = IntegrityUtils.toJSObject(result)
+          emitOrBufferSignal(jsResult)
+        } catch (e: Exception) {
+          IntegrityLogger.error("Real-time monitor: Debugger check failed: ${e.message}")
+        }
+      }
+    }
+  }
+
+  /**
+   * Flushes all buffered integrity signals to JavaScript listeners.
+   * Ensures FIFO delivery and prevents duplicate emissions.
+   *
+   * NOTE:
+   * - This method is thread-safe and idempotent.
+   * - Buffer is cleared immediately after dispatch.
+   */
+  private fun flushBufferedSignals() {
+    synchronized(bufferedSignals) {
+      if (hasListeners(EVENT_INTEGRITY_SIGNAL) && bufferedSignals.isNotEmpty()) {
+        IntegrityLogger.debug("Flushing ${bufferedSignals.size} buffered signals to JS")
+        val iterator = bufferedSignals.iterator()
+        while (iterator.hasNext()) {
+          val signal = iterator.next()
+          notifyListeners(EVENT_INTEGRITY_SIGNAL, signal, true)
+          iterator.remove()
+        }
+      }
+    }
   }
 
   /**
@@ -164,27 +218,12 @@ class IntegrityPlugin : Plugin() {
    * @param signal Fully-formed integrity signal payload.
    */
   private fun emitOrBufferSignal(signal: JSObject) {
-    if (hasListeners(EVENT_INTEGRITY_SIGNAL)) {
-      notifyListeners(EVENT_INTEGRITY_SIGNAL, signal, true)
-    } else {
-      bufferedSignals.add(signal)
-    }
-  }
-
-  /**
-   * Flushes all buffered integrity signals to JavaScript listeners.
-   *
-   * NOTE:
-   * - This method is idempotent.
-   * - Signals are delivered in FIFO order.
-   * - Buffer is cleared immediately after dispatch.
-   */
-  private fun flushBufferedSignals() {
-    if (hasListeners(EVENT_INTEGRITY_SIGNAL) && bufferedSignals.isNotEmpty()) {
-      for (signal in bufferedSignals) {
+    synchronized(bufferedSignals) {
+      if (hasListeners(EVENT_INTEGRITY_SIGNAL)) {
         notifyListeners(EVENT_INTEGRITY_SIGNAL, signal, true)
+      } else {
+        bufferedSignals.add(signal)
       }
-      bufferedSignals.clear()
     }
   }
 

@@ -26,9 +26,7 @@ export class IntegrityWeb extends WebPlugin implements IntegrityPlugin {
    * On Web, this feature is not available.
    */
   async check(): Promise<IntegrityReport> {
-    // Web platform does not support native integrity checks.
-    // Throw to satisfy TypeScript return flow analysis.
-    throw this.unavailable('Integrity checks are not available on the Web platform.');
+    throw this.unimplemented('Integrity checks are not implemented on web.');
   }
 
   // ---------------------------------------------------------------------------

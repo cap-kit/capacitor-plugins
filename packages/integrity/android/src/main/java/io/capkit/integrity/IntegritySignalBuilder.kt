@@ -45,6 +45,9 @@ object IntegritySignalBuilder {
 }
 
 object IntegritySignalIds {
+  // Remote Attestation
+  const val ANDROID_PLAY_INTEGRITY_VERDICT = "android_play_integrity_verdict"
+
   // Root
   const val ANDROID_ROOT_SU = "android_root_su"
   const val ANDROID_TEST_KEYS = "android_test_keys"
@@ -62,7 +65,8 @@ object IntegritySignalIds {
   const val ANDROID_FRIDA_PORT = "android_frida_port"
   const val ANDROID_FRIDA_CORRELATION = "android_frida_correlation_confirmed"
 
-  // Tamper
+  // Tamper / RASP
   const val ANDROID_SANDBOX_ESCAPED = "android_sandbox_escaped"
   const val ANDROID_SIGNATURE_INVALID = "android_signature_invalid"
+  const val ANDROID_OVERLAY_DETECTED = "android_overlay_detected"
 }

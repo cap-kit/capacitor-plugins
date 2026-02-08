@@ -34,12 +34,26 @@ Each package maintains its own documentation and setup guide.
 Here is the current list of available plugins:
 
 <p>
-  <strong>Total Plugins:</strong> 2 | <strong>Weekly Downloads:</strong> <img src="https://img.shields.io/npm/dw/@cap-kit/test-plugin?style=flat-square&logo=npm&label=&color=orange" alt="Downloads" valign="middle" />
+  <strong>Total Plugins:</strong> 3 | <strong>Weekly Downloads:</strong> <img src="https://img.shields.io/npm/dw/@cap-kit/test-plugin?style=flat-square&logo=npm&label=&color=orange" alt="Downloads" valign="middle" />
 </p>
 <br />
 
 <table>
 <tr>
+
+<td align="center" width="33%">
+  <h3><a href="./packages/integrity">Integrity</a></h3>
+  <p><code>@cap-kit/integrity</code></p>
+  <p>
+    <a href="https://www.npmjs.com/package/@cap-kit/integrity"><img src="https://img.shields.io/npm/v/@cap-kit/integrity?style=flat-square&color=blue&label=npm&logo=npm" alt="npm version"></a>
+    <a href="https://www.npmjs.com/package/@cap-kit/integrity"><img src="https://img.shields.io/npm/dm/@cap-kit/integrity?style=flat-square&color=orange&label=downloads&logo=npm" alt="downloads"></a>
+  </p>
+  <p>Runtime integrity and environment signal detection for Capacitor v8 applications.</p>
+  <p>
+    <a href="./packages/integrity"><strong>Documentation</strong></a> | 
+    <a href="https://www.npmjs.com/package/@cap-kit/integrity"><strong>NPM</strong></a>
+  </p>
+</td>
 
 <td align="center" width="33%">
   <h3><a href="./packages/settings">Settings</a></h3>

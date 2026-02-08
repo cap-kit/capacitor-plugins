@@ -61,7 +61,9 @@ struct IntegrityJailbreakDetector {
                 // Include the matched path for diagnostic purposes only.
                 "metadata": [
                     "path": path,
-                    "source": "filesystem"
+                    "source": "filesystem",
+                    // Added explicit detection method to metadata
+                    "detection_method": "file_exists"
                 ]
             ].compactMapValues { $0 }]
         }

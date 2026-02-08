@@ -3,17 +3,6 @@ import MachO
 
 /**
  Native iOS implementation for the Integrity plugin.
-
- This class acts as a pure orchestration layer responsible for:
- - executing integrity checks in a deterministic order
- - aggregating integrity signals
- - delegating correlation logic to helper utilities
- - assembling the final report payload
-
- It explicitly does NOT:
- - implement low-level detection logic
- - interact with Capacitor or PluginCall APIs
- - perform UI work or asynchronous operations
  */
 @objc
 public final class IntegrityImpl: NSObject {
@@ -21,36 +10,34 @@ public final class IntegrityImpl: NSObject {
     // MARK: - Configuration
 
     /// Immutable plugin configuration injected by the Plugin layer.
-    /// Must be set exactly once during plugin load.
     private var config: IntegrityConfig?
 
     /// Buffer for integrity signals captured during early app boot.
     /// Flushed on the first explicit integrity check.
     private static var bootSignals: [[String: Any]] = []
 
+    // Negative cache for expensive integrity checks.
+    // Caches only "no-signal" results for a short time window.
+    private struct NegativeCacheEntry {
+        let timestampMs: Int
+    }
+
+    private var negativeCache: [String: NegativeCacheEntry] = [:]
+
+    private let negativeCacheTTLms = 30_000
+
     // MARK: - Early Boot Hooks
 
-    /**
-     Entry point invoked from AppDelegate during application launch.
-
-     Captures early, deterministic integrity signals before
-     the Capacitor bridge is initialized.
-     */
+    /// Entry point invoked from AppDelegate during application launch.
     @objc public static func onAppLaunch() {
         // Capture jailbreak-related filesystem signals immediately at boot.
-        // This uses pure, deterministic checks and does not depend on plugin configuration.
         let signals = IntegrityJailbreakDetector.detect(includeDebug: false)
         self.bootSignals.append(contentsOf: signals)
     }
 
     // MARK: - Configuration Injection
 
-    /**
-     Applies static plugin configuration.
-
-     This method must be called exactly once by the Plugin layer.
-     Re-invocation is treated as a programmer error.
-     */
+    /// Applies static plugin configuration.
     func applyConfig(_ config: IntegrityConfig) {
         precondition(
             self.config == nil,
@@ -83,6 +70,24 @@ public final class IntegrityImpl: NSObject {
         options: IntegrityCheckOptions
     ) throws -> [String: Any] {
 
+        // Apply negative cache only for standard / strict levels.
+        // Cached results represent a recent "no-signal" execution.
+        if let level = options.level,
+           level != "basic",
+           isNegativeCacheValid(level: level) {
+
+            IntegrityLogger.debug(
+                "Negative cache hit for integrity check:",
+                level
+            )
+
+            return IntegrityReportBuilder.buildReport(
+                signals: [],
+                isEmulator: false,
+                platform: "ios"
+            )
+        }
+
         var signals: [[String: Any]] = []
         let includeDebug = options.includeDebugInfo ?? false
 
@@ -99,6 +104,16 @@ public final class IntegrityImpl: NSObject {
             includeDebug: includeDebug
         )
 
+        // Update negative cache only when no integrity signals are detected.
+        // Any detected signal invalidates the cached clean state.
+        if let level = options.level, level != "basic" {
+            if signals.isEmpty {
+                updateNegativeCache(level: level)
+            } else {
+                clearNegativeCache(level: level)
+            }
+        }
+
         return IntegrityReportBuilder.buildReport(
             signals: signals,
             isEmulator: isSimulator,
@@ -108,12 +123,7 @@ public final class IntegrityImpl: NSObject {
 
     // MARK: - BASIC Checks
 
-    /**
-     Executes BASIC integrity checks.
-
-     Returns whether the application is running
-     in a simulator environment.
-     */
+    /// Executes BASIC integrity checks.
     private func performBasicChecks(
         signals: inout [[String: Any]],
         includeDebug: Bool
@@ -220,6 +230,36 @@ public final class IntegrityImpl: NSObject {
                 signals: &signals,
                 includeDebug: includeDebug
             )
+
+            // Entitlement & Provisioning Verification (RASP)
+            // Added check to verify if the production app allows debugging via entitlements
+            if let entData = IntegrityEntitlementChecks.checkEntitlements() {
+                if let isDebuggable = entData["debuggable"] as? Bool, isDebuggable, options.level == "strict" {
+                    signals.append(
+                        IntegrityUtils.buildSignal(
+                            id: "ios_entitlement_debuggable",
+                            category: "tamper",
+                            confidence: "high",
+                            description: "Production app has 'get-task-allow' enabled in provisioning profile",
+                            metadata: entData,
+                            includeDebug: includeDebug
+                        )
+                    )
+                }
+
+                if let hasKeychain = entData["has_keychain_access"] as? Bool, !hasKeychain, options.level == "strict" {
+                    signals.append(
+                        IntegrityUtils.buildSignal(
+                            id: "ios_keychain_entitlement_missing",
+                            category: "tamper",
+                            confidence: "medium",
+                            description: "Expected keychain-access-groups are missing from provisioning profile",
+                            metadata: entData,
+                            includeDebug: includeDebug
+                        )
+                    )
+                }
+            }
         }
 
         if options.level == "strict",
@@ -269,9 +309,10 @@ public final class IntegrityImpl: NSObject {
             signals.append(
                 IntegrityUtils.buildSignal(
                     id: "ios_sandbox_escaped",
-                    category: "jailbreak",
+                    category: "tamper",
                     confidence: "high",
-                    description: "Successfully wrote to a protected system directory",
+                    description: "Successfully wrote to a protected system directory (Sandbox violation)",
+                    metadata: ["path": "/private/integrity_test.txt"],
                     includeDebug: includeDebug
                 )
             )
@@ -327,11 +368,30 @@ public final class IntegrityImpl: NSObject {
                     schemes: schemeConfig.schemes,
                     includeDebug: includeDebug
                 )
-        else {
-            return
-        }
+        else { return }
 
         signals.append(schemeSignal)
     }
 
+    private func cacheKey(level: String) -> String {
+        return "ios:\(level)"
+    }
+
+    private func isNegativeCacheValid(level: String) -> Bool {
+        guard let entry = negativeCache[cacheKey(level: level)] else {
+            return false
+        }
+
+        let now = Int(Date().timeIntervalSince1970 * 1000)
+        return now - entry.timestampMs <= negativeCacheTTLms
+    }
+
+    private func updateNegativeCache(level: String) {
+        let now = Int(Date().timeIntervalSince1970 * 1000)
+        negativeCache[cacheKey(level: level)] = NegativeCacheEntry(timestampMs: now)
+    }
+
+    private func clearNegativeCache(level: String) {
+        negativeCache.removeValue(forKey: cacheKey(level: level))
+    }
 }
