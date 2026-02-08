@@ -1,79 +1,57 @@
 import Foundation
 import MachO
-import DeviceCheck // Required for DCAppAttestService stub
 
 /**
  Native iOS implementation for the Integrity plugin.
 
- ROLE:
- This type acts as a pure orchestration layer.
+ This class acts as a pure orchestration layer responsible for:
+ - executing integrity checks in a deterministic order
+ - aggregating integrity signals
+ - delegating correlation logic to helper utilities
+ - assembling the final report payload
 
- It coordinates:
- - execution order of integrity checks
- - aggregation of integrity signals
- - correlation between independent detections
- - final report assembly via helper builders
-
- It does NOT:
- - implement low-level detection logic directly
- - own UI or Capacitor bridge concerns
- - perform configuration reads on demand
-
- Responsibilities:
- - Invoke platform-specific integrity detectors
- (jailbreak, emulator, debug, hooking)
- - Interact with iOS runtime APIs only through
- dedicated helper types
- - Produce structured, JS-bridge-safe payloads
-
- Forbidden:
- - Accessing PluginCall or Capacitor-specific bridge APIs
- - Referencing configuration directly (must be injected)
- - Performing long-running or asynchronous work
+ It explicitly does NOT:
+ - implement low-level detection logic
+ - interact with Capacitor or PluginCall APIs
+ - perform UI work or asynchronous operations
  */
 @objc
 public final class IntegrityImpl: NSObject {
 
     // MARK: - Configuration
 
-    /**
-     Immutable plugin configuration.
-
-     This configuration MUST be injected exactly once
-     from the Plugin layer during load().
-     */
+    /// Immutable plugin configuration injected by the Plugin layer.
+    /// Must be set exactly once during plugin load.
     private var config: IntegrityConfig?
 
-    /**
-     Static buffer for signals captured during early boot.
-     These are merged into the first JavaScript-triggered report.
-     */
+    /// Buffer for integrity signals captured during early app boot.
+    /// Flushed on the first explicit integrity check.
     private static var bootSignals: [[String: Any]] = []
 
+    // MARK: - Early Boot Hooks
+
     /**
-     Native entry point for AppDelegate.didFinishLaunchingWithOptions.
-     Allows capturing security signals before the Capacitor bridge is initialized.
+     Entry point invoked from AppDelegate during application launch.
+
+     Captures early, deterministic integrity signals before
+     the Capacitor bridge is initialized.
      */
     @objc public static func onAppLaunch() {
         // Capture jailbreak-related filesystem signals immediately at boot.
         // This uses pure, deterministic checks and does not depend on plugin configuration.
-        let signals =
-            IntegrityJailbreakDetector.detect(
-                includeDebug: false
-            )
-
+        let signals = IntegrityJailbreakDetector.detect(includeDebug: false)
         self.bootSignals.append(contentsOf: signals)
     }
+
+    // MARK: - Configuration Injection
 
     /**
      Applies static plugin configuration.
 
-     This method MUST be called exactly once.
+     This method must be called exactly once by the Plugin layer.
+     Re-invocation is treated as a programmer error.
      */
     func applyConfig(_ config: IntegrityConfig) {
-        // Defensive programming:
-        // This method MUST be called exactly once by the Plugin layer.
-        // A second invocation indicates a programming error and is caught early in development.
         precondition(
             self.config == nil,
             "IntegrityImpl.applyConfig(_:) must be called exactly once"
@@ -88,67 +66,39 @@ public final class IntegrityImpl: NSObject {
         )
     }
 
-    // MARK: - Remote Attestation Stubs
+    // MARK: - Remote Attestation (Stub)
 
-    /**
-     Stub for Apple App Attest integration.
-     To be implemented in a future evolution step.
-     */
-    func getAppAttestSignal() {
-        // Placeholder for DCAppAttestService logic
+    /// Placeholder for future Apple App Attest integration.
+    func getAppAttestSignal(options: IntegrityCheckOptions) -> [String: Any]? {
+        return IntegrityRemoteAttestor.getAppAttestSignal(options: options)
     }
 
-    // MARK: - Execution Orchestrator
+    // MARK: - Integrity Check Orchestration
 
     /**
-     Executes the requested integrity checks and aggregates signals.
-
-     - IMPORTANT:
-     This method assumes configuration has already been applied.
-     If `applyConfig(_:)` was not called, behavior is undefined.
-
-     - NOTE:
-     This method performs synchronous checks only.
-     It MUST NOT be called on the main thread if future checks
-     introduce blocking I/O.
+     Executes integrity checks according to the requested options
+     and returns a fully assembled integrity report.
      */
     func performCheck(
         options: IntegrityCheckOptions
     ) throws -> [String: Any] {
 
-        // Aggregated list of integrity signals produced during this execution.
-        // Signals are appended in a deterministic order.
         var signals: [[String: Any]] = []
-
-        // Whether diagnostic descriptions should be included in signals.
-        // This flag only affects verbosity, never detection behavior.
         let includeDebug = options.includeDebugInfo ?? false
 
-        // Merge integrity signals captured during early application boot
-        // (before the Capacitor bridge and plugin lifecycle are initialized).
-        signals.append(contentsOf: IntegrityImpl.bootSignals)
-        IntegrityImpl.bootSignals.removeAll()
+        mergeBootSignals(into: &signals)
 
-        // Execute BASIC integrity checks.
-        // These checks are deterministic, low-cost, and always executed.
-        // The return value indicates whether the app is running in a simulator.
-        let isSimulator = performBasicChecks(
+        let isSimulator = runChecks(
+            options: options,
             signals: &signals,
             includeDebug: includeDebug
         )
 
-        // Execute additional checks for STANDARD and STRICT levels.
-        // These checks may include runtime inspection and instrumentation heuristics
-        // and are intentionally skipped for BASIC level.
-        if (options.level ?? "basic") != "basic" {
-            performStandardChecks(
-                signals: &signals,
-                includeDebug: includeDebug
-            )
-        }
+        appendCorrelations(
+            signals: &signals,
+            includeDebug: includeDebug
+        )
 
-        // Assemble the final integrity report.
-        // This step computes the overall score and produces a JS-bridge-safe payload.
         return IntegrityReportBuilder.buildReport(
             signals: signals,
             isEmulator: isSimulator,
@@ -156,17 +106,159 @@ public final class IntegrityImpl: NSObject {
         )
     }
 
-    // MARK: - Basic Checks
+    // MARK: - BASIC Checks
 
     /**
      Executes BASIC integrity checks.
-     Returns whether the app is running in a simulator.
+
+     Returns whether the application is running
+     in a simulator environment.
      */
     private func performBasicChecks(
         signals: inout [[String: Any]],
         includeDebug: Bool
     ) -> Bool {
 
+        appendFilesystemJailbreakSignals(
+            to: &signals,
+            includeDebug: includeDebug
+        )
+
+        let isSimulator = appendSimulatorSignalIfNeeded(
+            to: &signals,
+            includeDebug: includeDebug
+        )
+
+        appendUrlSchemeJailbreakSignalIfNeeded(
+            to: &signals,
+            includeDebug: includeDebug
+        )
+
+        return isSimulator
+    }
+
+    // MARK: - STANDARD / STRICT Checks
+
+    /**
+     Executes STANDARD and STRICT integrity checks,
+     including runtime and instrumentation heuristics.
+     */
+    private func performStandardChecks(
+        signals: inout [[String: Any]],
+        includeDebug: Bool
+    ) {
+
+        signals.append(
+            contentsOf: IntegrityRuntimeChecks.debugSignals(
+                includeDebug: includeDebug
+            )
+        )
+
+        let hookingDetected =
+            IntegrityHookChecks.hookingSignal(
+                includeDebug: includeDebug
+            )
+
+        if let hookingDetected {
+            signals.append(hookingDetected)
+        }
+
+        let portDetected =
+            IntegrityHookChecks.isFridaPortOpen()
+
+        if portDetected {
+            signals.append(
+                IntegrityUtils.buildSignal(
+                    id: "ios_frida_port_detected",
+                    category: "hook",
+                    confidence: "medium",
+                    description: "Known instrumentation service port is reachable on localhost",
+                    metadata: ["port": 27042],
+                    includeDebug: includeDebug
+                )
+            )
+        }
+
+        if hookingDetected != nil && portDetected {
+            signals.append(
+                IntegrityUtils.buildSignal(
+                    id: "ios_frida_correlation_confirmed",
+                    category: "hook",
+                    confidence: "high",
+                    description: "Multiple instrumentation indicators detected simultaneously",
+                    metadata: ["source": "library+port"],
+                    includeDebug: includeDebug
+                )
+            )
+        }
+    }
+
+    // MARK: - Orchestration Helpers
+
+    /// Merges early boot signals into the current execution context.
+    private func mergeBootSignals(
+        into signals: inout [[String: Any]]
+    ) {
+        signals.append(contentsOf: IntegrityImpl.bootSignals)
+        IntegrityImpl.bootSignals.removeAll()
+    }
+
+    /// Runs integrity checks according to the selected strictness level.
+    private func runChecks(
+        options: IntegrityCheckOptions,
+        signals: inout [[String: Any]],
+        includeDebug: Bool
+    ) -> Bool {
+
+        let isSimulator = performBasicChecks(
+            signals: &signals,
+            includeDebug: includeDebug
+        )
+
+        if (options.level ?? "basic") != "basic" {
+            performStandardChecks(
+                signals: &signals,
+                includeDebug: includeDebug
+            )
+        }
+
+        if options.level == "strict",
+           let attest = getAppAttestSignal(options: options) {
+            signals.append(attest)
+        }
+
+        return isSimulator
+    }
+
+    /// Appends derived correlation signals based on collected indicators.
+    private func appendCorrelations(
+        signals: inout [[String: Any]],
+        includeDebug: Bool
+    ) {
+        if let jailbreakCorrelation =
+            IntegrityCorrelationUtils.jailbreakCorrelation(
+                from: signals,
+                includeDebug: includeDebug
+            ) {
+            signals.append(jailbreakCorrelation)
+        }
+
+        if let jailbreakAndHookCorrelation =
+            IntegrityCorrelationUtils.jailbreakAndHookCorrelation(
+                from: signals,
+                includeDebug: includeDebug
+            ) {
+            signals.append(jailbreakAndHookCorrelation)
+        }
+    }
+
+    // MARK: - BASIC Check Helpers
+
+    /// Appends filesystem-based jailbreak indicators.
+    private func appendFilesystemJailbreakSignals(
+        to signals: inout [[String: Any]],
+        includeDebug: Bool
+    ) {
         signals.append(
             contentsOf: IntegrityJailbreakDetector.detect(
                 includeDebug: includeDebug
@@ -196,9 +288,17 @@ public final class IntegrityImpl: NSObject {
                 )
             )
         }
+    }
 
-        let simulator = isSimulator()
-        if simulator {
+    /// Appends simulator signal if the app is running in a simulator.
+    private func appendSimulatorSignalIfNeeded(
+        to signals: inout [[String: Any]],
+        includeDebug: Bool
+    ) -> Bool {
+
+        let isSimulator = IntegritySimulatorChecks.isSimulator()
+
+        if isSimulator {
             signals.append(
                 IntegrityUtils.buildSignal(
                     id: "ios_simulator",
@@ -211,77 +311,27 @@ public final class IntegrityImpl: NSObject {
             )
         }
 
-        return simulator
+        return isSimulator
     }
 
-    // MARK: - Standard & Strict Checks
-
-    /**
-     Executes STANDARD and STRICT integrity checks.
-     */
-    private func performStandardChecks(
-        signals: inout [[String: Any]],
+    /// Appends optional jailbreak URL scheme detection signal.
+    private func appendUrlSchemeJailbreakSignalIfNeeded(
+        to signals: inout [[String: Any]],
         includeDebug: Bool
     ) {
-
-        signals.append(
-            contentsOf: IntegrityRuntimeChecks.debugSignals(
-                includeDebug: includeDebug
-            )
-        )
-
-        let hookingDetected =
-            IntegrityRuntimeChecks.hookingSignal(
-                includeDebug: includeDebug
-            )
-
-        if let hookingDetected {
-            signals.append(hookingDetected)
-        }
-
-        let portDetected =
-            IntegrityRuntimeChecks.isFridaPortOpen()
-
-        if portDetected {
-            signals.append(
-                IntegrityUtils.buildSignal(
-                    id: "ios_frida_port_detected",
-                    category: "hook",
-                    confidence: "medium",
-                    description: "Known instrumentation service port is reachable on localhost",
-                    metadata: ["port": 27042],
+        guard
+            let schemeConfig = config?.jailbreakUrlSchemes,
+            schemeConfig.enabled,
+            let schemeSignal =
+                IntegrityJailbreakUrlSchemeDetector.detect(
+                    schemes: schemeConfig.schemes,
                     includeDebug: includeDebug
                 )
-            )
+        else {
+            return
         }
 
-        if hookingDetected != nil && portDetected {
-            signals.append(
-                IntegrityUtils.buildSignal(
-                    id: "ios_frida_correlation_confirmed",
-                    category: "hook",
-                    confidence: "high",
-                    description: "Multiple instrumentation indicators detected simultaneously",
-                    metadata: ["source": "library+port"],
-                    includeDebug: includeDebug
-                )
-            )
-        }
+        signals.append(schemeSignal)
     }
 
-    // MARK: - Helpers
-
-    /**
-     Determines whether the current process is running under the iOS Simulator.
-
-     - NOTE:
-     This uses compile-time environment checks and is not spoofable at runtime.
-     */
-    func isSimulator() -> Bool {
-        #if targetEnvironment(simulator)
-        return true
-        #else
-        return false
-        #endif
-    }
 }

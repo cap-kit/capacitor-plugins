@@ -271,15 +271,13 @@ These values are:
 - immutable at runtime
 - NOT accessible from JavaScript
 
-<docgen-config>
-<!--Update the source file JSDoc comments and rerun docgen to update the docs below-->
-
 Configuration options for the Integrity plugin.
 
-| Prop                 | Type                                  | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Default            | Since |
-| -------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ----- |
-| **`verboseLogging`** | <code>boolean</code>                  | Enables verbose native logging. When enabled, additional debug information is printed to the native console (Logcat on Android, Xcode on iOS). This option affects native logging behavior only and has no impact on the JavaScript API or runtime behavior.                                                                                                                                                                                                                                             | <code>false</code> | 8.0.0 |
-| **`blockPage`**      | <code>IntegrityBlockPageConfig</code> | Optional configuration for the integrity block page. This configuration controls the availability and source of a developer-provided HTML page that may be presented to the end user when the host application decides to do so. This configuration is: - read only by native code - immutable at runtime - NOT accessible from JavaScript The Integrity plugin will NEVER automatically present the block page. Presentation is always explicitly triggered by the host application via the public API. |                    | 8.0.0 |
+| Prop                      | Type                                   | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Default            | Since |
+| ------------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ----- |
+| **`verboseLogging`**      | <code>boolean</code>                   | Enables verbose native logging. When enabled, additional debug information is printed to the native console (Logcat on Android, Xcode on iOS). This option affects native logging behavior only and has no impact on the JavaScript API or runtime behavior.                                                                                                                                                                                                                                             | <code>false</code> | 8.0.0 |
+| **`blockPage`**           | <code>IntegrityBlockPageConfig</code>  | Optional configuration for the integrity block page. This configuration controls the availability and source of a developer-provided HTML page that may be presented to the end user when the host application decides to do so. This configuration is: - read only by native code - immutable at runtime - NOT accessible from JavaScript The Integrity plugin will NEVER automatically present the block page. Presentation is always explicitly triggered by the host application via the public API. |                    | 8.0.0 |
+| **`jailbreakUrlSchemes`** | <code>JailbreakUrlSchemesConfig</code> | Optional configuration for jailbreak URL scheme probing (iOS only). When enabled, the native iOS implementation may probe for known jailbreak-related applications using URL schemes such as `cydia://`. This configuration: - is read natively at runtime - is immutable - is NOT accessible from JavaScript - does NOT alter the public JavaScript API                                                                                                                                                 |                    | 8.0.0 |
 
 ### Examples
 
@@ -289,7 +287,15 @@ In `capacitor.config.json`:
 {
   "plugins": {
     "Integrity": {
-      "verboseLogging": true
+      "verboseLogging": true,
+      "blockPage": {
+        "enabled": true,
+        "url": "public/integrity-block.html"
+      },
+      "jailbreakUrlSchemes": {
+        "enabled": true,
+        "schemes": ["cydia", "sileo", "zbra"]
+      }
     }
   }
 }
@@ -306,6 +312,14 @@ const config: CapacitorConfig = {
   plugins: {
     Integrity: {
       verboseLogging: true,
+      blockPage: {
+        enabled: true,
+        url: 'public/integrity-block.html',
+      },
+      jailbreakUrlSchemes: {
+        enabled: true,
+        schemes: ['cydia', 'sileo', 'zbra'],
+      },
     },
   },
 };
@@ -313,7 +327,28 @@ const config: CapacitorConfig = {
 export default config;
 ```
 
-</docgen-config>
+---
+
+### iOS Jailbreak URL Scheme Probing (Opt-In)
+
+The Integrity plugin can optionally probe for known jailbreak-related
+applications using URL schemes such as `cydia://`.
+
+This feature is **disabled by default** and must be explicitly enabled
+via native configuration.
+
+#### Requirements
+
+You MUST declare the queried schemes in `Info.plist`:
+
+```xml
+<key>LSApplicationQueriesSchemes</key>
+<array>
+  <string>cydia</string>
+  <string>sileo</string>
+  <string>zbra</string>
+</array>
+```
 
 ---
 
@@ -440,6 +475,23 @@ try {
 
 ---
 
+### Score Explanation Metadata
+
+The Integrity plugin may include an optional `scoreExplanation`
+field in the integrity report.
+
+This field provides transparency about how the integrity score
+was derived from detected signals.
+
+#### Important notes
+
+- This metadata is informational only.
+- It does NOT alter the integrity score.
+- It MUST NOT be treated as a security decision.
+- Individual signals remain the authoritative source of truth.
+
+---
+
 ## Web Platform Notes
 
 The Web platform is supported to preserve API parity.
@@ -457,9 +509,17 @@ The following methods will reject with `IntegrityErrorCode.UNAVAILABLE` on Web:
 
 ## Permissions
 
-On Android, this plugin requires the `android.permission.INTERNET` permission. This permission is necessary for internal integrity checks, specifically for attempting socket connections to `localhost` to detect hooking frameworks like Frida.
+### Android
 
-This permission is automatically added to your AndroidManifest.xml when you install the plugin. However, it's important to be aware of its presence.
+On Android, this plugin requires the `android.permission.INTERNET` permission. This permission is necessary for internal integrity checks, specifically for attempting socket connections to `localhost` with a controlled timeout to detect hooking frameworks like Frida.
+
+This permission is automatically added to your `AndroidManifest.xml` via the plugin's native configuration.
+
+#### Package Visibility (Android 11+)
+
+To perform expanded root detection (scanning for apps like Magisk or SuperUser), the plugin declares a `<queries>` block in its manifest. This allows the plugin to "see" security-related packages even on devices with high API levels (30+).
+
+### iOS
 
 No additional permissions are required for iOS.
 
@@ -628,13 +688,14 @@ Result object returned by `Integrity.check()`.
 This object aggregates all detected signals
 and provides a provisional integrity score.
 
-| Prop              | Type                                                                  | Description                                                                                           |
-| ----------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| **`compromised`** | <code>boolean</code>                                                  | Indicates whether the environment is considered compromised according to the current scoring model.   |
-| **`score`**       | <code>number</code>                                                   | Provisional integrity score. The score ranges from 0 to 100 and is derived from the detected signals. |
-| **`signals`**     | <code>IntegritySignal[]</code>                                        | List of detected integrity signals.                                                                   |
-| **`environment`** | <code><a href="#integrityenvironment">IntegrityEnvironment</a></code> | Execution environment summary.                                                                        |
-| **`timestamp`**   | <code>number</code>                                                   | Unix timestamp (milliseconds) when the check was performed.                                           |
+| Prop                   | Type                                                                            | Description                                                                                                                                                                                                       | Since |
+| ---------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| **`compromised`**      | <code>boolean</code>                                                            | Indicates whether the environment is considered compromised according to the current scoring model.                                                                                                               |       |
+| **`score`**            | <code>number</code>                                                             | Provisional integrity score. The score ranges from 0 to 100 and is derived from the detected signals.                                                                                                             |       |
+| **`signals`**          | <code>IntegritySignal[]</code>                                                  | List of detected integrity signals.                                                                                                                                                                               |       |
+| **`environment`**      | <code><a href="#integrityenvironment">IntegrityEnvironment</a></code>           | Execution environment summary.                                                                                                                                                                                    |       |
+| **`timestamp`**        | <code>number</code>                                                             | Unix timestamp (milliseconds) when the check was performed.                                                                                                                                                       |       |
+| **`scoreExplanation`** | <code><a href="#integrityscoreexplanation">IntegrityScoreExplanation</a></code> | Optional explanation metadata describing how the integrity score was derived from the detected signals. This field is informational only and MUST NOT be treated as a security decision or enforcement mechanism. | 8.0.0 |
 
 #### IntegritySignal
 
@@ -668,6 +729,19 @@ the integrity check was performed.
 | **`platform`**     | <code>'ios' \| 'android' \| 'web'</code> | Current platform.                                                             |
 | **`isEmulator`**   | <code>boolean</code>                     | Indicates whether the app is running in an emulator or simulator environment. |
 | **`isDebugBuild`** | <code>boolean</code>                     | Indicates whether the app was built in debug/development mode.                |
+
+#### IntegrityScoreExplanation
+
+Describes how the integrity score was derived.
+
+This structure provides transparency and auditability
+without exposing internal scoring algorithms.
+
+| Prop               | Type                                                        | Description                                               |
+| ------------------ | ----------------------------------------------------------- | --------------------------------------------------------- |
+| **`totalSignals`** | <code>number</code>                                         | Total number of detected signals.                         |
+| **`byConfidence`** | <code>{ high: number; medium: number; low: number; }</code> | Breakdown of signals by confidence level.                 |
+| **`contributors`** | <code>string[]</code>                                       | List of signal identifiers that contributed to the score. |
 
 #### IntegrityCheckOptions
 
@@ -786,10 +860,34 @@ Implications for applications:
 
 ---
 
+### Cross-correlation: Jailbreak + Hooking (iOS)
+
+The Integrity plugin may emit a derived signal when it detects
+both jailbreak indicators and runtime hooking signals during
+the same execution window.
+
+This signal represents a **cross-category correlation**, indicating
+that the device is not only modified but also actively instrumented.
+
+#### Signal details
+
+- **id**: `ios_jailbreak_and_hook_detected`
+- **category**: `tamper`
+- **confidence**: `high`
+
+#### Important notes
+
+- This signal is observational only.
+- It does not replace or suppress individual signals.
+- It must not be treated as an automatic enforcement trigger.
+
+---
+
 ## Limitations
 
-- Root / jailbreak detection can be bypassed
-- Emulator detection is heuristic
+- **Heuristic Bypass**: Root / jailbreak detection can be bypassed by advanced cloaking tools.
+- **Package Scanning**: Root detection on Android includes scanning for known management apps (e.g., Magisk). This is subject to OS-level package visibility restrictions.
+- **Emulator Detection**: Detection is heuristic and relies on build properties that may vary between providers.
 - Frida detection uses memory and runtime inspection
 - No cryptographic attestation is performed
 - No device identity is established
@@ -802,10 +900,10 @@ These limitations are **intentional** to:
 
 ### Debug environment detection
 
-The plugin may report a `debug` integrity signal when:
+The plugin provides parity between platforms for debug detection. A `debug` integrity signal is reported when:
 
-- a debugger is attached to the process
-- the application is running in a debuggable build
+- **Debugger Attached**: A debugger is currently attached to the running process (detected via `Debug.isDebuggerConnected()` on Android or `sysctl` on iOS).
+- **Debuggable Environment**: The application is running in a debuggable state or signed with a development profile (detected via `FLAG_DEBUGGABLE` on Android or `get-task-allow` entitlement on iOS).
 
 This signal is **informational only** and does not necessarily
 indicate a compromised device.
