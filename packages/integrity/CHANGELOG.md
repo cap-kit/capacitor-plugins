@@ -1,5 +1,11 @@
 # @cap-kit/test-plugin
 
+## 8.0.0-next.5
+
+### Patch Changes
+
+- aecad54: Refactor native architecture to Layered Pattern, introduce Signal Correlation layer, and enhance Frida/Jailbreak detection heuristics with score transparency.
+
 ## 8.0.0-next.4
 
 ### Patch Changes
