@@ -34,7 +34,7 @@ Each package maintains its own documentation and setup guide.
 Here is the current list of available plugins:
 
 <p>
-  <strong>Total Plugins:</strong> 3 | <strong>Weekly Downloads:</strong> <img src="https://img.shields.io/npm/dw/@cap-kit/test-plugin?style=flat-square&logo=npm&label=&color=orange" alt="Downloads" valign="middle" />
+  <strong>Total Plugins:</strong> 4 | <strong>Weekly Downloads:</strong> <img src="https://img.shields.io/npm/dw/@cap-kit/test-plugin?style=flat-square&logo=npm&label=&color=orange" alt="Downloads" valign="middle" />
 </p>
 <br />
 
@@ -56,6 +56,20 @@ Here is the current list of available plugins:
 </td>
 
 <td align="center" width="33%">
+  <h3><a href="./packages/rank">Rank</a></h3>
+  <p><code>@cap-kit/rank</code></p>
+  <p>
+    <a href="https://www.npmjs.com/package/@cap-kit/rank"><img src="https://img.shields.io/npm/v/@cap-kit/rank?style=flat-square&color=blue&label=npm&logo=npm" alt="npm version"></a>
+    <a href="https://www.npmjs.com/package/@cap-kit/rank"><img src="https://img.shields.io/npm/dm/@cap-kit/rank?style=flat-square&color=orange&label=downloads&logo=npm" alt="downloads"></a>
+  </p>
+  <p>Unified Capacitor v8 plugin for native In-App Reviews and cross-platform Store navigation.</p>
+  <p>
+    <a href="./packages/rank"><strong>Documentation</strong></a> | 
+    <a href="https://www.npmjs.com/package/@cap-kit/rank"><strong>NPM</strong></a>
+  </p>
+</td>
+
+<td align="center" width="33%">
   <h3><a href="./packages/settings">Settings</a></h3>
   <p><code>@cap-kit/settings</code></p>
   <p>
@@ -68,6 +82,8 @@ Here is the current list of available plugins:
     <a href="https://www.npmjs.com/package/@cap-kit/settings"><strong>NPM</strong></a>
   </p>
 </td>
+</tr>
+<tr>
 
 <td align="center" width="33%">
   <h3><a href="./packages/ssl-pinning">Ssl Pinning</a></h3>

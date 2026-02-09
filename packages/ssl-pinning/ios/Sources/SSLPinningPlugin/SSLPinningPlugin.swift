@@ -14,6 +14,7 @@ import Capacitor
 public final class SSLPinningPlugin: CAPPlugin, CAPBridgedPlugin {
 
     // MARK: - Plugin metadata
+
     /// The unique identifier for the plugin.
     public let identifier = "SSLPinningPlugin"
 

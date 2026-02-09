@@ -58,7 +58,7 @@ Configuration options for the Settings plugin.
 
 | Prop                 | Type                 | Description                                                                                                                                                                                                                              | Default            | Since |
 | -------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ----- |
-| **`verboseLogging`** | <code>boolean</code> | Enables verbose native logging. When enabled, additional debug information is printed to the native console (Logcat on Android, Xcode on iOS). This option affects native logging behavior only and has no impact on the JavaScript API. | <code>false</code> | 1.0.0 |
+| **`verboseLogging`** | <code>boolean</code> | Enables verbose native logging. When enabled, additional debug information is printed to the native console (Logcat on Android, Xcode on iOS). This option affects native logging behavior only and has no impact on the JavaScript API. | <code>false</code> | 8.0.0 |
 
 ### Examples
 
@@ -133,7 +133,7 @@ On Web, this method is not supported.
 | ------------- | ----------------------------------------------------------- | ----------------------------------- |
 | **`options`** | <code><a href="#platformoptions">PlatformOptions</a></code> | Platform-specific settings options. |
 
-**Since:** 1.0.0
+**Since:** 8.0.0
 
 ---
 
@@ -149,7 +149,7 @@ Opens a specific system settings section. (iOS Only)
 | ------------- | ------------------------------------------------- | --------------------- |
 | **`options`** | <code><a href="#iosoptions">IOSOptions</a></code> | iOS settings options. |
 
-**Since:** 1.0.0
+**Since:** 8.0.0
 
 ---
 
@@ -166,7 +166,7 @@ On Web, this method is not supported.
 | ------------- | --------------------------------------------------------- | ------------------------- |
 | **`options`** | <code><a href="#androidoptions">AndroidOptions</a></code> | Android settings options. |
 
-**Since:** 1.0.0
+**Since:** 8.0.0
 
 ---
 
@@ -183,7 +183,7 @@ bundled with the application.
 
 **Returns:** <code>Promise&lt;<a href="#pluginversionresult">PluginVersionResult</a>&gt;</code>
 
-**Since:** 1.0.0
+**Since:** 8.0.0
 
 #### Example
 

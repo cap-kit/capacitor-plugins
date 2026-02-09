@@ -43,7 +43,7 @@ export interface SettingsConfig {
    *
    * @default false
    * @example true
-   * @since 1.0.0
+   * @since 8.0.0
    */
   verboseLogging?: boolean;
 }
@@ -58,7 +58,7 @@ export interface SettingsConfig {
  * On iOS (Swift Package Manager), errors are returned as data
  * objects rather than rejected Promises.
  *
- * @since 1.0.0
+ * @since 8.0.0
  */
 export enum SettingsErrorCode {
   /** The device does not have the requested hardware. */
@@ -224,7 +224,7 @@ export interface IOSOptions {
  * resolves with:
  * `{ success: false, code: SettingsErrorCode.UNAVAILABLE }`
  *
- * @since 1.0.0
+ * @since 8.0.0
  */
 export enum AndroidSettings {
   /**
@@ -502,7 +502,7 @@ export enum AndroidSettings {
  *
  * Availability is best-effort and not guaranteed.
  *
- * @since 1.0.0
+ * @since 8.0.0
  */
 export enum IOSSettings {
   /**
@@ -700,7 +700,7 @@ export interface SettingsPlugin {
    * @param options Platform-specific settings options.
    * @returns A promise resolving to the operation result.
    *
-   * @since 1.0.0
+   * @since 8.0.0
    */
   open(options: PlatformOptions): Promise<void>;
 
@@ -722,7 +722,7 @@ export interface SettingsPlugin {
    * @param options iOS settings options.
    * @returns A promise resolving to the operation result.
    *
-   * @since 1.0.0
+   * @since 8.0.0
    */
   openIOS(options: IOSOptions): Promise<void>;
 
@@ -735,7 +735,7 @@ export interface SettingsPlugin {
    * @param options Android settings options.
    * @returns A promise resolving to the operation result.
    *
-   * @since 1.0.0
+   * @since 8.0.0
    */
   openAndroid(options: AndroidOptions): Promise<void>;
 
@@ -752,7 +752,7 @@ export interface SettingsPlugin {
    * const { version } = await Settings.getPluginVersion();
    * ```
    *
-   * @since 1.0.0
+   * @since 8.0.0
    */
   getPluginVersion(): Promise<PluginVersionResult>;
 }
