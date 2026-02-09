@@ -32,9 +32,17 @@ import UIKit
      during plugin initialization.
      */
     func applyConfig(_ config: SettingsConfig) {
+        precondition(
+            self.config == nil,
+            "SettingsImpl.applyConfig(_:) must be called exactly once"
+        )
         self.config = config
         SettingsLogger.verbose = config.verboseLogging
-        SettingsLogger.debug("Configuration applied. Verbose logging:", "\(config.verboseLogging)")
+
+        SettingsLogger.debug(
+            "Configuration applied. Verbose logging:",
+            config.verboseLogging
+        )
     }
 
     // MARK: - Settings

@@ -19,10 +19,7 @@ public final class SSLPinningImpl: NSObject {
 
     // MARK: - Properties
 
-    /**
-     Immutable plugin configuration.
-     Injected once during plugin initialization.
-     */
+    // Properties
     private var config: SSLPinningConfig?
 
     // MARK: - Configuration
@@ -34,9 +31,18 @@ public final class SSLPinningImpl: NSObject {
      from the Plugin layer during `load()`.
      */
     func applyConfig(_ config: SSLPinningConfig) {
+        precondition(
+            self.config == nil,
+            "SSLPinningImpl.applyConfig(_:) must be called exactly once"
+        )
+
         self.config = config
         SSLPinningLogger.verbose = config.verboseLogging
-        SSLPinningLogger.debug("Configuration applied. Verbose logging:", config.verboseLogging)
+
+        SSLPinningLogger.debug(
+            "Configuration applied. Verbose logging:",
+            config.verboseLogging
+        )
     }
 
     // MARK: - Single fingerprint
