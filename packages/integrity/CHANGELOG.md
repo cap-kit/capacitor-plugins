@@ -1,5 +1,22 @@
 # @cap-kit/test-plugin
 
+## 8.0.0
+
+### Major Changes
+
+- 99248b1: Final stable release of Integrity v8. Adds real-time RASP monitoring, overlay detection for Android, and entitlement validation for iOS. Includes a synchronized boot buffer to ensure no early security signals are lost during app startup.
+
+### Minor Changes
+
+- 89b40cf: feat(integrity): Initial release of the Integrity plugin for Capacitor v8
+
+### Patch Changes
+
+- 080cffe: feat(integrity): Add diagnostic metadata and enhanced runtime heuristics for Android and iOS.
+- 47342a6: feat(integrity): Implement configurable integrity checks and debug environment detection
+- aecad54: Refactor native architecture to Layered Pattern, introduce Signal Correlation layer, and enhance Frida/Jailbreak detection heuristics with score transparency.
+- a7dd019: feat(integrity): Add real-time integrity signal listeners.
+
 ## 8.0.0-next.6
 
 ### Major Changes
