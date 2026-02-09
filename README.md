@@ -1,9 +1,13 @@
 <div align="center">
-  <img src="./assets/logo.png" alt="CapKit Logo" width="200" />
+  <br />
+  <img src="./assets/logo.png" alt="CapKit Logo" width="180" />
+  <br />
+  <br />
+
   <h1>CapKit Monorepo</h1>
 
   <p>
-    <strong>High-quality, production-ready Capacitor plugins crafted with architectural precision.</strong>
+    <strong>Enterprise-grade Capacitor plugins built for performance, security, and architectural consistency.</strong>
   </p>
 
   <p>
@@ -15,112 +19,147 @@
     <a href="https://turbo.build/"><img src="https://img.shields.io/badge/maintained%20with-turborepo-EF4444?style=flat-square&logo=turborepo&logoColor=white" alt="Turborepo" /></a>
     <a href="https://github.com/renovatebot/renovate"><img src="https://img.shields.io/badge/renovate-enabled-brightgreen.svg?style=flat-square&logo=renovatebot&logoColor=white" alt="Renovate" /></a>
   </p>
+
+  <h4>
+    <a href="#-plugins-collection">Plugins</a> •
+    <a href="#-key-features">Key Features</a> •
+    <a href="#-architecture">Architecture</a> •
+    <a href="#-getting-started">Getting Started</a>
+  </h4>
 </div>
+
+---
+
+## ✨ Key Features
+
+- ⚡ **Capacitor 8+ Optimized**: Built specifically for the latest Capacitor ecosystem.
+- 🏗️ **Native Parity**: True cross-platform support (iOS/Swift, Android/Kotlin, Web/TS).
+- 🔒 **Security First**: Specialized in runtime integrity, SSL pinning, and secure environments.
+- 🚀 **Turbo Toolchain**: Ultra-fast developer experience with pnpm 10 and Turborepo.
+- 🤖 **Automated Releases**: Fully managed via Changesets and GitHub Actions.
 
 ---
 
 ## 📦 Plugins Collection
 
-The **CapKit** suite ensures parity between iOS, Android, and Web, strictly following the Capacitor v8+ architecture.
+The **CapKit** suite ensures a seamless experience across platforms. Each package maintains its own documentation and setup guide.
 
-> **ℹ️ Note:** Individual plugins do not include standalone example apps.
-> A centralized **CapKit Playground App** is currently in development to demonstrate the entire suite (Coming Soon).
+---
+
+## 🏗️ Architecture & Standards
+
+This repository is a **strict pnpm monorepo**. We enforce high standards to ensure that every plugin is production-ready.
+
+| Component             | Technology                      |
+| :-------------------- | :------------------------------ |
+| **Package Manager**   | `pnpm` 10+                      |
+| **Orchestrator**      | `Turborepo` 2.x                 |
+| **Minimum Capacitor** | `v8.0.0`                        |
+| **Versioning**        | `Changesets`                    |
+| **CI/CD**             | `GitHub Actions` (macOS-latest) |
+
+---
 
 <!-- PLUGINS_TABLE_START -->
 
-Each package maintains its own documentation and setup guide.
-**Click on the plugin Name** below to navigate to the specific installation instructions.
+**Information:** All plugins are optimized for **Capacitor v8+** and tested for native parity.
 
-Here is the current list of available plugins:
-
-<p>
-  <strong>Total Plugins:</strong> 4 | <strong>Weekly Downloads:</strong> <img src="https://img.shields.io/npm/dw/@cap-kit/test-plugin?style=flat-square&logo=npm&label=&color=orange" alt="Downloads" valign="middle" />
+<p align="center">
+  📦 <strong>Total Plugins:</strong> 4 &nbsp;&bull;&nbsp; 📈 <strong>Weekly Downloads:</strong> <img src="https://img.shields.io/npm/dw/@cap-kit/test-plugin?style=flat-square&logo=npm&label=&color=orange" alt="Downloads" valign="middle" />
 </p>
 <br />
-
-<table>
+<table width="100%">
 <tr>
 
-<td align="center" width="33%">
-  <h3><a href="./packages/integrity">Integrity</a></h3>
-  <p><code>@cap-kit/integrity</code></p>
+<td align="center" width="33%" valign="top" height="280">
+  <br />
+  <h3><a href="./packages/integrity">🛡️ Integrity</a></h3>
+  <p><a href="https://www.npmjs.com/package/@cap-kit/integrity"><code>@cap-kit/integrity</code></a></p>
   <p>
     <a href="https://www.npmjs.com/package/@cap-kit/integrity"><img src="https://img.shields.io/npm/v/@cap-kit/integrity?style=flat-square&color=blue&label=npm&logo=npm" alt="npm version"></a>
     <a href="https://www.npmjs.com/package/@cap-kit/integrity"><img src="https://img.shields.io/npm/dm/@cap-kit/integrity?style=flat-square&color=orange&label=downloads&logo=npm" alt="downloads"></a>
   </p>
-  <p>Runtime integrity and environment signal detection for Capacitor v8 applications.</p>
+  <div style="height: 60px; overflow: hidden;">
+    <p><font size="2">Runtime integrity and environment signal detection for Capacitor v8 applications.</font></p>
+  </div>
+  <hr size="1" color="#eeeeee" />
   <p>
-    <a href="./packages/integrity"><strong>Documentation</strong></a> | 
+    <a href="./packages/integrity"><strong>Docs</strong></a> • 
     <a href="https://www.npmjs.com/package/@cap-kit/integrity"><strong>NPM</strong></a>
   </p>
 </td>
 
-<td align="center" width="33%">
-  <h3><a href="./packages/rank">Rank</a></h3>
-  <p><code>@cap-kit/rank</code></p>
+<td align="center" width="33%" valign="top" height="280">
+  <br />
+  <h3><a href="./packages/rank">⭐ Rank</a></h3>
+  <p><a href="https://www.npmjs.com/package/@cap-kit/rank"><code>@cap-kit/rank</code></a></p>
   <p>
     <a href="https://www.npmjs.com/package/@cap-kit/rank"><img src="https://img.shields.io/npm/v/@cap-kit/rank?style=flat-square&color=blue&label=npm&logo=npm" alt="npm version"></a>
     <a href="https://www.npmjs.com/package/@cap-kit/rank"><img src="https://img.shields.io/npm/dm/@cap-kit/rank?style=flat-square&color=orange&label=downloads&logo=npm" alt="downloads"></a>
   </p>
-  <p>Unified Capacitor v8 plugin for native In-App Reviews and cross-platform Store navigation.</p>
+  <div style="height: 60px; overflow: hidden;">
+    <p><font size="2">Unified Capacitor v8 plugin for native In-App Reviews and cross-platform Store navigation.</font></p>
+  </div>
+  <hr size="1" color="#eeeeee" />
   <p>
-    <a href="./packages/rank"><strong>Documentation</strong></a> | 
+    <a href="./packages/rank"><strong>Docs</strong></a> • 
     <a href="https://www.npmjs.com/package/@cap-kit/rank"><strong>NPM</strong></a>
   </p>
 </td>
 
-<td align="center" width="33%">
-  <h3><a href="./packages/settings">Settings</a></h3>
-  <p><code>@cap-kit/settings</code></p>
+<td align="center" width="33%" valign="top" height="280">
+  <br />
+  <h3><a href="./packages/settings">⚙️ Settings</a></h3>
+  <p><a href="https://www.npmjs.com/package/@cap-kit/settings"><code>@cap-kit/settings</code></a></p>
   <p>
     <a href="https://www.npmjs.com/package/@cap-kit/settings"><img src="https://img.shields.io/npm/v/@cap-kit/settings?style=flat-square&color=blue&label=npm&logo=npm" alt="npm version"></a>
     <a href="https://www.npmjs.com/package/@cap-kit/settings"><img src="https://img.shields.io/npm/dm/@cap-kit/settings?style=flat-square&color=orange&label=downloads&logo=npm" alt="downloads"></a>
   </p>
-  <p>Capacitor plugin to open app and system settings on iOS and Android.</p>
+  <div style="height: 60px; overflow: hidden;">
+    <p><font size="2">Capacitor plugin to open app and system settings on iOS and Android.</font></p>
+  </div>
+  <hr size="1" color="#eeeeee" />
   <p>
-    <a href="./packages/settings"><strong>Documentation</strong></a> | 
+    <a href="./packages/settings"><strong>Docs</strong></a> • 
     <a href="https://www.npmjs.com/package/@cap-kit/settings"><strong>NPM</strong></a>
   </p>
 </td>
 </tr>
 <tr>
 
-<td align="center" width="33%">
-  <h3><a href="./packages/ssl-pinning">Ssl Pinning</a></h3>
-  <p><code>@cap-kit/ssl-pinning</code></p>
+<td align="center" width="33%" valign="top" height="280">
+  <br />
+  <h3><a href="./packages/ssl-pinning">🔒 Ssl Pinning</a></h3>
+  <p><a href="https://www.npmjs.com/package/@cap-kit/ssl-pinning"><code>@cap-kit/ssl-pinning</code></a></p>
   <p>
     <a href="https://www.npmjs.com/package/@cap-kit/ssl-pinning"><img src="https://img.shields.io/npm/v/@cap-kit/ssl-pinning?style=flat-square&color=blue&label=npm&logo=npm" alt="npm version"></a>
     <a href="https://www.npmjs.com/package/@cap-kit/ssl-pinning"><img src="https://img.shields.io/npm/dm/@cap-kit/ssl-pinning?style=flat-square&color=orange&label=downloads&logo=npm" alt="downloads"></a>
   </p>
-  <p>Capacitor plugin for runtime SSL certificate fingerprint pinning on iOS and Android</p>
+  <div style="height: 60px; overflow: hidden;">
+    <p><font size="2">Capacitor plugin for runtime SSL certificate fingerprint pinning on iOS and Android</font></p>
+  </div>
+  <hr size="1" color="#eeeeee" />
   <p>
-    <a href="./packages/ssl-pinning"><strong>Documentation</strong></a> | 
+    <a href="./packages/ssl-pinning"><strong>Docs</strong></a> • 
     <a href="https://www.npmjs.com/package/@cap-kit/ssl-pinning"><strong>NPM</strong></a>
   </p>
 </td>
+<td width="33%"></td>
+<td width="33%"></td>
 </tr>
 </table>
 <!-- PLUGINS_TABLE_END -->
-
-## 🛠️ Architecture
-
-This repository operates as a strict **pnpm monorepo**.
-
-- **Core:** Capacitor v8+
-- **Languages:** TypeScript, Swift, Kotlin
-- **Package Manager:** `pnpm`
-- **CI/CD:** GitHub Actions (macOS-latest runners)
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- Node.js 24+
-- pnpm 10+ (`npm install -g pnpm`)
+- **Node.js**: v24+
+- **pnpm**: v10+
 
-### Installation
+### Usage
 
-To install a specific plugin into your Capacitor app:
+To add a plugin to your project:
 
 ```bash
 pnpm add @cap-kit/test-plugin
@@ -129,13 +168,10 @@ npx cap sync
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [CONTRIBUTING.md](./CONTRIBUTING.md) for details on how to set up the local environment and submit PRs.
+Contributions are welcome! Please follow our [CONTRIBUTING.md](./CONTRIBUTING.md) guidelines:
 
-1. Fork the repo
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'feat(scope): Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+- Format: `type(scope): Subject` (es. `feat(integrity): Add root detection`)
+- Titles and descriptions must be in **English**.
 
 ## 📄 License
 

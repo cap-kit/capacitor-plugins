@@ -35,11 +35,37 @@ const END_MARKER = "<!-- PLUGINS_TABLE_END -->";
 function formatPluginName(packageName: string): string {
   // Remove scope (@cap-kit/)
   const cleanName = packageName.replace(/^@[\w-]+\//, "");
+
+  // Icons map based on keywords in the plugin name.
+  const iconMap: Record<string, string> = {
+    integrity: "🛡️",
+    rank: "⭐",
+    settings: "⚙️",
+    "ssl-pinning": "🔒",
+    camera: "📸",
+    device: "📱",
+    people: "👥",
+    sensors: "🌡️",
+    geocoder: "📍",
+    redsys: "💳",
+    auto: "🚗",
+    storage: "💾",
+    network: "📡",
+    push: "🔔",
+    auth: "🔑",
+    analytics: "📊",
+    payment: "💰",
+  };
+
+  const emoji = iconMap[cleanName] || "🔌";
+
   // Split by hyphen, capitalize first letter of each word, join with space
-  return cleanName
+  const displayName = cleanName
     .split("-")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
+
+  return `${emoji} ${displayName}`;
 }
 
 /**
@@ -55,16 +81,20 @@ function generatePluginCard(pkgData: any, folderName: string): string {
   const badgeDownloads = `<a href="https://www.npmjs.com/package/${name}"><img src="https://img.shields.io/npm/dm/${name}?style=flat-square&color=orange&label=downloads&logo=npm" alt="downloads"></a>`;
 
   return `
-<td align="center" width="33%">
+<td align="center" width="33%" valign="top" height="280">
+  <br />
   <h3><a href="./packages/${folderName}">${displayName}</a></h3>
-  <p><code>${name}</code></p>
+  <p><a href="https://www.npmjs.com/package/${name}"><code>${name}</code></a></p>
   <p>
     ${badgeVersion}
     ${badgeDownloads}
   </p>
-  <p>${description}</p>
+  <div style="height: 60px; overflow: hidden;">
+    <p><font size="2">${description}</font></p>
+  </div>
+  <hr size="1" color="#eeeeee" />
   <p>
-    <a href="./packages/${folderName}"><strong>Documentation</strong></a> | 
+    <a href="./packages/${folderName}"><strong>Docs</strong></a> • 
     <a href="https://www.npmjs.com/package/${name}"><strong>NPM</strong></a>
   </p>
 </td>`;
@@ -87,9 +117,7 @@ async function main(): Promise<void> {
       const pkgPath = path.join(PACKAGES_DIR, folder, "package.json");
       if (!fs.existsSync(pkgPath)) return null;
       const data = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
-
       if (data.private !== false) return null;
-
       return { folder, data };
     })
     .filter((p): p is { folder: string; data: any } => p !== null)
@@ -114,25 +142,21 @@ async function main(): Promise<void> {
 
   // Add active elements to this array.
   const activeStatsElements = [
-    `<strong>Total Plugins:</strong> ${totalPlugins}`,
-    `<strong>Weekly Downloads:</strong> ${downloadsBadge}`,
-    // `<strong>Contributors:</strong> ${contributorsBadge}`,
-    // `<strong>Core:</strong> ${capVersionBadge}`,
-    // `<strong>Quality:</strong> ${sizeBadge}`,
+    `📦 <strong>Total Plugins:</strong> ${totalPlugins}`,
+    `📈 <strong>Weekly Downloads:</strong> ${downloadsBadge}`,
+    // `👥 <strong>Contributors:</strong> ${contributorsBadge}`,
+    // `⚡ <strong>Core:</strong> ${capVersionBadge}`,
+    // `💎 <strong>Quality:</strong> ${sizeBadge}`,
   ];
 
   // Join elements with a pipe separator. This avoids trailing pipes automatically.
   const statsLine = `
-Each package maintains its own documentation and setup guide.
-**Click on the plugin Name** below to navigate to the specific installation instructions.
+ **Information:** All plugins are optimized for **Capacitor v8+** and tested for native parity.
 
-Here is the current list of available plugins:
-
-<p>
-  ${activeStatsElements.join(" | ")}
+<p align="center">
+  ${activeStatsElements.join(" &nbsp;&bull;&nbsp; ")}
 </p>
-<br />
-`;
+<br />`;
 
   // 3. Build Grid Rows (Chunks of 3)
   const rows: string[] = [];
@@ -143,12 +167,13 @@ Here is the current list of available plugins:
 
     // If row is full (3 items) or it's the last item
     if (currentRow.length === 3 || index === plugins.length - 1) {
+      while (currentRow.length < 3) currentRow.push('<td width="33%"></td>');
       rows.push(`<tr>\n${currentRow.join("\n")}\n</tr>`);
       currentRow = [];
     }
   });
 
-  const gridContent = `<table>\n${rows.join("\n")}\n</table>`;
+  const gridContent = `<table width="100%">\n${rows.join("\n")}\n</table>`;
 
   // 4. Inject into README.md
   const readmeContent = fs.readFileSync(ROOT_README, "utf-8");

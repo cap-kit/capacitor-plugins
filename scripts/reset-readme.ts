@@ -79,49 +79,74 @@ const activeHeaderBadges = [
 
 // Base README content (clean state)
 const content = `<div align="center">
-  <img src="./assets/logo.png" alt="CapKit Logo" width="200" />
+  <br />
+  <img src="./assets/logo.png" alt="CapKit Logo" width="180" />
+  <br />
+  <br />
+
   <h1>CapKit Monorepo</h1>
 
   <p>
-    <strong>High-quality, production-ready Capacitor plugins crafted with architectural precision.</strong>
+    <strong>Enterprise-grade Capacitor plugins built for performance, security, and architectural consistency.</strong>
   </p>
 
   <p>
     ${activeHeaderBadges.join("\n    ")}
   </p>
+
+  <h4>
+    <a href="#-plugins-collection">Plugins</a> •
+    <a href="#-key-features">Key Features</a> •
+    <a href="#-architecture">Architecture</a> •
+    <a href="#-getting-started">Getting Started</a>
+  </h4>
 </div>
+
+---
+
+## ✨ Key Features
+
+- ⚡ **Capacitor 8+ Optimized**: Built specifically for the latest Capacitor ecosystem.
+- 🏗️ **Native Parity**: True cross-platform support (iOS/Swift, Android/Kotlin, Web/TS).
+- 🔒 **Security First**: Specialized in runtime integrity, SSL pinning, and secure environments.
+- 🚀 **Turbo Toolchain**: Ultra-fast developer experience with pnpm 10 and Turborepo.
+- 🤖 **Automated Releases**: Fully managed via Changesets and GitHub Actions.
 
 ---
 
 ## 📦 Plugins Collection
 
-The **CapKit** suite ensures parity between iOS, Android, and Web, strictly following the Capacitor v8+ architecture.
+The **CapKit** suite ensures a seamless experience across platforms. Each package maintains its own documentation and setup guide.
 
-> **ℹ️ Note:** Individual plugins do not include standalone example apps.
-> A centralized **CapKit Playground App** is currently in development to demonstrate the entire suite (Coming Soon).
+---
+
+## 🏗️ Architecture & Standards
+
+This repository is a **strict pnpm monorepo**. We enforce high standards to ensure that every plugin is production-ready.
+
+| Component | Technology |
+| :--- | :--- |
+| **Package Manager** | \`pnpm\` 10+ |
+| **Orchestrator** | \`Turborepo\` 2.x |
+| **Minimum Capacitor** | \`v8.0.0\` |
+| **Versioning** | \`Changesets\` |
+| **CI/CD** | \`GitHub Actions\` (macOS-latest) |
+
+---
 
 ${START_MARKER}
 ${END_MARKER}
-
-## 🛠️ Architecture
-
-This repository operates as a strict **pnpm monorepo**.
-
-- **Core:** Capacitor v8+
-- **Languages:** TypeScript, Swift, Kotlin
-- **Package Manager:** \`pnpm\`
-- **CI/CD:** GitHub Actions (macOS-latest runners)
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- Node.js 24+
-- pnpm 10+ (\`npm install -g pnpm\`)
+- **Node.js**: v24+
+- **pnpm**: v10+
 
-### Installation
+### Usage
 
-To install a specific plugin into your Capacitor app:
+To add a plugin to your project:
 
 \`\`\`bash
 pnpm add @cap-kit/test-plugin
@@ -130,13 +155,10 @@ npx cap sync
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [CONTRIBUTING.md](./CONTRIBUTING.md) for details on how to set up the local environment and submit PRs.
+Contributions are welcome! Please follow our [CONTRIBUTING.md](./CONTRIBUTING.md) guidelines:
 
-1. Fork the repo
-2. Create your feature branch (\`git checkout -b feature/amazing-feature\`)
-3. Commit your changes (\`git commit -m 'feat(scope): Add some amazing feature'\`)
-4. Push to the branch (\`git push origin feature/amazing-feature\`)
-5. Open a Pull Request
+* Format: \`type(scope): Subject\` (es. \`feat(integrity): Add root detection\`)
+* Titles and descriptions must be in **English**.
 
 ## 📄 License
 
