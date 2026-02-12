@@ -4,6 +4,7 @@
   "description": "Capacitor plugin for runtime SSL certificate fingerprint pinning on iOS and Android",
   "type": "module",
   "private": false,
+  "sideEffects": false,
   "engines": {
     "node": ">=24.0.0",
     "pnpm": ">=10.0.0"
@@ -24,7 +25,18 @@
     "bin/",
     "scripts/"
   ],
+  "exports": {
+    ".": {
+      "types": "./dist/esm/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/plugin.cjs.js"
+    }
+  },
   "author": "CapKit Team",
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/cap-kit"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -82,16 +94,16 @@
     "yargs": "^18.0.0"
   },
   "devDependencies": {
-    "@capacitor/android": "^8.0.2",
-    "@capacitor/cli": "^8.0.2",
-    "@capacitor/core": "^8.0.2",
+    "@capacitor/android": "^8.1.0",
+    "@capacitor/cli": "^8.1.0",
+    "@capacitor/core": "^8.1.0",
     "@capacitor/docgen": "^0.3.1",
-    "@capacitor/ios": "^8.0.2",
+    "@capacitor/ios": "^8.1.0",
     "@eslint/eslintrc": "^3.3.3",
     "@eslint/js": "^9.39.2",
     "eslint": "^9.39.2",
     "eslint-plugin-import": "^2.32.0",
-    "@types/node": "^25.2.0",
+    "@types/node": "^25.2.3",
     "@types/yargs": "^17.0.35",
     "globals": "^17.3.0",
     "prettier": "^3.8.1",
@@ -100,10 +112,10 @@
     "rollup": "^4.57.1",
     "swiftlint": "^2.0.0",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.54.0"
+    "typescript-eslint": "^8.55.0"
   },
   "peerDependencies": {
-    "@capacitor/core": "^8.0.2"
+    "@capacitor/core": "^8.1.0"
   },
   "capacitor": {
     "ios": {
