@@ -18,6 +18,8 @@ const scopes = [
   "gh-actions",
   "repo",
   "docs",
+  "feat",
+  "readme",
   "scripts",
   "style",
   "infra",
