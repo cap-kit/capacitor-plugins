@@ -16,6 +16,7 @@ const scopes = [
   "release",
   "ci",
   "gh-actions",
+  "repo",
   "docs",
   "scripts",
   "style",

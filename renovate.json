@@ -1,25 +1,25 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-
   "extends": [
     "config:recommended",
     "schedule:earlyMondays",
     ":preserveSemverRanges"
   ],
-
   "dependencyDashboard": true,
-
   "labels": ["dependencies"],
-
   "lockFileMaintenance": {
     "enabled": true,
     "schedule": ["before 6am on monday"],
     "automerge": true
   },
-
   "packageRules": [
     {
-      "description": "Never update internal workspace packages",
+      "description": "Temporarily block ESLint v10 due to peer dependency conflicts",
+      "matchPackageNames": ["eslint", "@eslint/js"],
+      "allowedVersions": "<10.0.0"
+    },
+    {
+      "description": "Disable internal workspace package updates",
       "matchPackageNames": ["@cap-kit/*"],
       "enabled": false
     },
