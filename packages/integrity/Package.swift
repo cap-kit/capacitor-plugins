@@ -11,7 +11,7 @@ let package = Package(
        )
     ],
     dependencies: [
-        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", from: "8.0.2")
+        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", from: "8.1.0")
     ],
     targets: [
         .target(

@@ -62,7 +62,7 @@ This repository is a **strict pnpm monorepo**. We enforce high standards to ensu
 
 <!-- PLUGINS_TABLE_START -->
 
-**Information:** All plugins are optimized for **Capacitor v8+** and tested for native parity.
+ **Information:** All plugins are optimized for **Capacitor v8+** and tested for native parity.
 
 <p align="center">
   📦 <strong>Total Plugins:</strong> 4 &nbsp;&bull;&nbsp; 📈 <strong>Weekly Downloads:</strong> <img src="https://img.shields.io/npm/dw/@cap-kit/test-plugin?style=flat-square&logo=npm&label=&color=orange" alt="Downloads" valign="middle" />

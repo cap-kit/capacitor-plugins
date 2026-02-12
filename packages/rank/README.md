@@ -42,8 +42,12 @@ A high-performance Capacitor v8 plugin for unified <strong>In-App Reviews</stron
 
 ```bash
 pnpm add @cap-kit/rank
+# or
+npm install @cap-kit/rank
+# or
+yarn add @cap-kit/rank
+# then run:
 npx cap sync
-
 ```
 
 ## Configuration
