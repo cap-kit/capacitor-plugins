@@ -1,4 +1,4 @@
-# @cap-kit/ssl-pinning
+# @cap-kit/rank
 
 ## 8.0.1
 
@@ -9,9 +9,3 @@
   - Add `funding` information for project sustainability.
   - Define explicit `exports` for ESM and CJS compatibility.
   - Update Capacitor minor dependencies to ensure alignment with v8+ standards.
-
-## 8.0.0
-
-### Patch Changes
-
-- a50024d: Official 8.0.0 release. Implement centralized SSLError class, refine certificate pinning configuration logic, and stabilize public APIs for production use.
