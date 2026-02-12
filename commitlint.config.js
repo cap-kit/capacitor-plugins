@@ -17,6 +17,8 @@ const scopes = [
   "ci",
   "gh-actions",
   "docs",
+  "feat",
+  "readme",
   "scripts",
   "style",
   "infra",

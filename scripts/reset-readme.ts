@@ -79,90 +79,119 @@ const activeHeaderBadges = [
 
 // Base README content (clean state)
 const content = `<div align="center">
-  <br />
-  <img src="./assets/logo.png" alt="CapKit Logo" width="180" />
-  <br />
-  <br />
+  <img src="./assets/logo.png" alt="CapKit Logo" width="160" />
 
-  <h1>CapKit Monorepo</h1>
+  # CapKit Monorepo
 
-  <p>
-    <strong>Enterprise-grade Capacitor plugins built for performance, security, and architectural consistency.</strong>
-  </p>
+  **Enterprise-grade Capacitor 8 plugins focused on performance, security and architectural determinism.**
 
-  <p>
-    ${activeHeaderBadges.join("\n    ")}
-  </p>
+  <br/>
 
-  <h4>
-    <a href="#-plugins-collection">Plugins</a> •
-    <a href="#-key-features">Key Features</a> •
-    <a href="#-architecture">Architecture</a> •
-    <a href="#-getting-started">Getting Started</a>
-  </h4>
+  ${activeHeaderBadges.join("\n  ")}
+
+  <br/>
+
+  [Plugins](#-plugins-collection) •
+  [Architecture](#-architecture--standards) •
+  [Getting Started](#-getting-started) •
+  [Contributing](#-contributing)
 </div>
 
 ---
 
-## ✨ Key Features
+## ✨ Why CapKit
 
-- ⚡ **Capacitor 8+ Optimized**: Built specifically for the latest Capacitor ecosystem.
-- 🏗️ **Native Parity**: True cross-platform support (iOS/Swift, Android/Kotlin, Web/TS).
-- 🔒 **Security First**: Specialized in runtime integrity, SSL pinning, and secure environments.
-- 🚀 **Turbo Toolchain**: Ultra-fast developer experience with pnpm 10 and Turborepo.
-- 🤖 **Automated Releases**: Fully managed via Changesets and GitHub Actions.
+| | |
+|--|--|
+| ⚡ **Capacitor 8 Native-First** | Built specifically for the latest Capacitor runtime |
+| 🏗 **Strict Monorepo Architecture** | Deterministic pnpm workspace + Turborepo orchestration |
+| 🔒 **Security-Oriented** | Integrity signals, SSL pinning, runtime hardening |
+| 🚀 **Automated Releases** | Changesets + CI-driven publishing |
+| 🤖 **Dependency Safety** | Renovate with controlled production updates |
 
 ---
 
 ## 📦 Plugins Collection
 
-The **CapKit** suite ensures a seamless experience across platforms. Each package maintains its own documentation and setup guide.
+Each plugin is fully cross-platform:
 
----
-
-## 🏗️ Architecture & Standards
-
-This repository is a **strict pnpm monorepo**. We enforce high standards to ensure that every plugin is production-ready.
-
-| Component | Technology |
-| :--- | :--- |
-| **Package Manager** | \`pnpm\` 10+ |
-| **Orchestrator** | \`Turborepo\` 2.x |
-| **Minimum Capacitor** | \`v8.0.0\` |
-| **Versioning** | \`Changesets\` |
-| **CI/CD** | \`GitHub Actions\` (macOS-latest) |
+- Web (TypeScript)
+- iOS (Swift)
+- Android (Kotlin)
 
 ---
 
 ${START_MARKER}
+
 ${END_MARKER}
+
+---
+
+## 🧱 Architecture & Standards
+
+This repository follows a **strict pnpm monorepo model**.
+
+| Layer | Stack |
+|-------|-------|
+| Package Manager | \`pnpm 10+\` |
+| Task Orchestration | \`Turborepo 2.x\` |
+| CI/CD | GitHub Actions (\`macos-latest\`) |
+| Versioning | Changesets |
+| Minimum Capacitor | \`v8.0.0\` |
+
+### Architectural Guarantees
+
+- No isolated packages
+- Centralized TypeScript configuration
+- Deterministic CI (path-aware execution)
+- Native parity enforced (Web / iOS / Android)
+- No manual publishing
+
+---
 
 ## 🚀 Getting Started
 
-### Prerequisites
+### Requirements
 
-- **Node.js**: v24+
-- **pnpm**: v10+
+- Node.js ≥ 24
+- pnpm ≥ 10
 
-### Usage
-
-To add a plugin to your project:
+### Install a plugin
 
 \`\`\`bash
-pnpm add @cap-kit/test-plugin
+pnpm add @cap-kit/<plugin-name>
 npx cap sync
 \`\`\`
 
+---
+
 ## 🤝 Contributing
 
-Contributions are welcome! Please follow our [CONTRIBUTING.md](./CONTRIBUTING.md) guidelines:
+Please follow Conventional Commits:
 
-* Format: \`type(scope): Subject\` (es. \`feat(integrity): Add root detection\`)
-* Titles and descriptions must be in **English**.
+\`\`\`
+type(scope): Subject
+\`\`\`
+
+Example:
+
+\`\`\`
+feat(integrity): Add emulator detection
+\`\`\`
+
+Rules:
+
+- Scope is mandatory
+- Subject must be Sentence-case
+- Pull Requests must be written in English
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+---
 
 ## 📄 License
 
-CapKit is [MIT licensed](./LICENSE).
+MIT — see [LICENSE](./LICENSE).
 `;
 
 function main(): void {

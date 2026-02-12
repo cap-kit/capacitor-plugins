@@ -77,27 +77,50 @@ function generatePluginCard(pkgData: any, folderName: string): string {
   const description = pkgData.description || "No description provided.";
 
   // Badges (Flat Square + NPM Logo)
-  const badgeVersion = `<a href="https://www.npmjs.com/package/${name}"><img src="https://img.shields.io/npm/v/${name}?style=flat-square&color=blue&label=npm&logo=npm" alt="npm version"></a>`;
-  const badgeDownloads = `<a href="https://www.npmjs.com/package/${name}"><img src="https://img.shields.io/npm/dm/${name}?style=flat-square&color=orange&label=downloads&logo=npm" alt="downloads"></a>`;
+  const badgeVersion = `<a href="https://www.npmjs.com/package/${name}"><img src="https://img.shields.io/npm/v/${name}?style=flat-square&label=npm&logo=npm" alt="npm version" /></a>`;
+  const badgeDownloads = `<a href="https://www.npmjs.com/package/${name}"><img src="https://img.shields.io/npm/dm/${name}?style=flat-square&label=downloads&logo=npm&color=orange" alt="downloads" /></a>`;
 
   return `
-<td align="center" width="33%" valign="top" height="280">
-  <br />
-  <h3><a href="./packages/${folderName}">${displayName}</a></h3>
-  <p><a href="https://www.npmjs.com/package/${name}"><code>${name}</code></a></p>
-  <p>
-    ${badgeVersion}
-    ${badgeDownloads}
-  </p>
-  <div style="height: 60px; overflow: hidden;">
-    <p><font size="2">${description}</font></p>
-  </div>
-  <hr size="1" color="#eeeeee" />
-  <p>
-    <a href="./packages/${folderName}"><strong>Docs</strong></a> • 
-    <a href="https://www.npmjs.com/package/${name}"><strong>NPM</strong></a>
-  </p>
+<td align="center" width="33%" valign="top">
+
+### <a href="./packages/${folderName}">${displayName}</a>
+
+<a href="https://www.npmjs.com/package/${name}"><code>${name}</code></a>
+
+${badgeVersion}
+${badgeDownloads}
+
+${description}
+
+<a href="./packages/${folderName}"><strong>Docs</strong></a> • 
+<a href="https://www.npmjs.com/package/${name}"><strong>NPM</strong></a>
+
 </td>`;
+}
+
+/**
+ *
+ */
+function generatePluginStacked(pkgData: any, folderName: string): string {
+  const name = pkgData.name;
+  const displayName = formatPluginName(name);
+  const description = pkgData.description || "No description provided.";
+
+  const badgeVersion = `![npm](https://img.shields.io/npm/v/${name}?style=flat-square&label=npm&logo=npm)`;
+  const badgeDownloads = `![downloads](https://img.shields.io/npm/dm/${name}?style=flat-square&label=downloads&logo=npm&color=orange)`;
+
+  return `
+### ${displayName}
+
+\`${name}\`
+
+${badgeVersion} ${badgeDownloads}
+
+${description}
+
+[Docs](./packages/${folderName}) • [NPM](https://www.npmjs.com/package/${name})
+
+---`;
 }
 
 async function main(): Promise<void> {
@@ -150,13 +173,11 @@ async function main(): Promise<void> {
   ];
 
   // Join elements with a pipe separator. This avoids trailing pipes automatically.
-  const statsLine = `
- **Information:** All plugins are optimized for **Capacitor v8+** and tested for native parity.
+  const statsLine = `> **Information:** All plugins are optimized for **Capacitor v8+** and tested for native parity.
 
 <p align="center">
   ${activeStatsElements.join(" &nbsp;&bull;&nbsp; ")}
-</p>
-<br />`;
+</p>`;
 
   // 3. Build Grid Rows (Chunks of 3)
   const rows: string[] = [];
@@ -173,7 +194,15 @@ async function main(): Promise<void> {
     }
   });
 
-  const gridContent = `<table width="100%">\n${rows.join("\n")}\n</table>`;
+  const gridContent =
+    plugins.length > 0
+      ? `<table width="100%">\n${rows.join("\n")}\n</table>`
+      : `<p align="center"><em>No public plugins available.</em></p>`;
+
+  // --- STACKED VERSION (Mobile Friendly) ---
+  const stackedContent = plugins
+    .map((plugin) => generatePluginStacked(plugin.data, plugin.folder))
+    .join("\n");
 
   // 4. Inject into README.md
   const readmeContent = fs.readFileSync(ROOT_README, "utf-8");
@@ -190,7 +219,23 @@ async function main(): Promise<void> {
   }
 
   // Inject Stats Line BEFORE the Grid
-  const newContent = `${START_MARKER}\n${statsLine}\n${gridContent}\n${END_MARKER}`;
+  const newContent = [
+    START_MARKER,
+    "",
+    statsLine,
+    "",
+    gridContent,
+    "",
+    "<details>",
+    "<summary><strong>📱 Compact View (Mobile Friendly)</strong></summary>",
+    "",
+    stackedContent,
+    "",
+    "</details>",
+    "",
+    END_MARKER,
+  ].join("\n");
+
   fs.writeFileSync(ROOT_README, readmeContent.replace(regex, newContent));
 
   console.log(`✅ README.md updated with ${totalPlugins} plugins.`);
