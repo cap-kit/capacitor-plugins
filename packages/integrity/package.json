@@ -1,6 +1,6 @@
 {
   "name": "@cap-kit/integrity",
-  "version": "8.0.0",
+  "version": "8.0.1",
   "description": "Runtime integrity and environment signal detection for Capacitor v8 applications.",
   "type": "module",
   "private": false,
