@@ -71,8 +71,8 @@ jobs:
       - name: Static Analysis (Infra only)
         if: github.ref != 'refs/heads/main' && steps.changes.outputs.packages_changed == 'false'
         run: |
-          echo "No packages changed. Skipping linting for package code."
-          echo "Infrastructure and documentation changes verified."
+          echo "No packages changed. Unblocking Required Check."
+          exit 0
 
   build-test:
     name: Build and Test
@@ -162,5 +162,5 @@ jobs:
       - name: Build Verification (Infra only)
         if: github.ref != 'refs/heads/main' && steps.changes.outputs.packages_changed == 'false'
         run: |
-          echo "No native or package changes detected."
-          echo "Skipping heavy macOS build and reporting success to unblock PR."
+          echo "No native changes. Unblocking Required Check."
+          exit 0
