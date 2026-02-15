@@ -439,7 +439,9 @@ class IntegrityPlugin : Plugin() {
    * - Failures are logged but NOT propagated to JavaScript.
    * - This receiver is observational and non-blocking.
    */
-  private inner class IntegrityEventReceiver(private val onSignalDetected: (JSObject) -> Unit) : BroadcastReceiver() {
+  private inner class IntegrityEventReceiver(
+    private val onSignalDetected: (JSObject) -> Unit,
+  ) : BroadcastReceiver() {
     override fun onReceive(
       context: Context?,
       intent: Intent?,

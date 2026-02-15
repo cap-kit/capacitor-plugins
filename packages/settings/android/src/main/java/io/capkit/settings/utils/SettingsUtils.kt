@@ -25,8 +25,8 @@ object SettingsUtils {
   fun resolveIntent(
     option: String,
     packageName: String,
-  ): Intent? {
-    return when (option) {
+  ): Intent? =
+    when (option) {
       // --- App-specific ---
       "application_details" ->
         Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
@@ -71,5 +71,4 @@ object SettingsUtils {
 
       else -> null
     }
-  }
 }

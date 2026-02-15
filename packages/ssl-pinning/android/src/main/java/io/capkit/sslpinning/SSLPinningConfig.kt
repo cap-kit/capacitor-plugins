@@ -15,7 +15,9 @@ import com.getcapacitor.Plugin
  * - Treated as immutable runtime input
  * - Accessible only from native code
  */
-class SSLPinningConfig(plugin: Plugin) {
+class SSLPinningConfig(
+  plugin: Plugin,
+) {
   /**
    * Android application context.
    * Exposed for native components that may require it.
@@ -58,7 +60,8 @@ class SSLPinningConfig(plugin: Plugin) {
 
     // Multiple fingerprints (optional)
     fingerprints =
-      config.getArray("fingerprints")
+      config
+        .getArray("fingerprints")
         ?.toList()
         ?.mapNotNull { it as? String }
         ?.filter { it.isNotBlank() }

@@ -76,8 +76,8 @@ object IntegrityReportBuilder {
    * - medium -> 15 points
    * - low    -> 5 points
    */
-  private fun computeScore(signals: List<Map<String, Any>>): Int {
-    return signals.sumOf {
+  private fun computeScore(signals: List<Map<String, Any>>): Int =
+    signals.sumOf {
       when (it["confidence"]) {
         "high" -> 30
         "medium" -> 15
@@ -85,7 +85,6 @@ object IntegrityReportBuilder {
         else -> 0
       }
     }
-  }
 
   // ---------------------------------------------------------------------------
   // Score explanation

@@ -16,25 +16,29 @@ sealed class RankError(
    * Feature or capability is not available
    * due to device or configuration limitations.
    */
-  class Unavailable(message: String) :
-    RankError(message)
+  class Unavailable(
+    message: String,
+  ) : RankError(message)
 
   /**
    * Required permission was denied or not granted.
    */
-  class PermissionDenied(message: String) :
-    RankError(message)
+  class PermissionDenied(
+    message: String,
+  ) : RankError(message)
 
   /**
    * Plugin failed to initialize or perform
    * a required operation.
    */
-  class InitFailed(message: String) :
-    RankError(message)
+  class InitFailed(
+    message: String,
+  ) : RankError(message)
 
   /**
    * Invalid or unsupported input was provided.
    */
-  class UnknownType(message: String) :
-    RankError(message)
+  class UnknownType(
+    message: String,
+  ) : RankError(message)
 }

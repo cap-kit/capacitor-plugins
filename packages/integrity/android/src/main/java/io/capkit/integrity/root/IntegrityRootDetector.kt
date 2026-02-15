@@ -14,11 +14,20 @@ import java.io.File
 object IntegrityRootDetector {
   private val suPaths =
     listOf(
-      "/system/bin/su", "/system/xbin/su", "/sbin/su",
-      "/system/app/Superuser.apk", "/system/app/Superuser/Superuser.apk",
-      "/data/local/xbin/su", "/data/local/bin/su", "/system/sd/xbin/su",
-      "/su/bin/su", "/magisk/.core/bin/su", "/system/usr/we-need-root/su-backup/su",
-      "/system/bin/.ext/.su/su", "/system/bin/failsafe/su", "/data/local/su",
+      "/system/bin/su",
+      "/system/xbin/su",
+      "/sbin/su",
+      "/system/app/Superuser.apk",
+      "/system/app/Superuser/Superuser.apk",
+      "/data/local/xbin/su",
+      "/data/local/bin/su",
+      "/system/sd/xbin/su",
+      "/su/bin/su",
+      "/magisk/.core/bin/su",
+      "/system/usr/we-need-root/su-backup/su",
+      "/system/bin/.ext/.su/su",
+      "/system/bin/failsafe/su",
+      "/data/local/su",
     )
 
   private val rootPackages =

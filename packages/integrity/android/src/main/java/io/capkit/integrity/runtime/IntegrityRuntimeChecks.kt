@@ -55,8 +55,8 @@ object IntegrityRuntimeChecks {
   /**
    * Performs a basic application signature integrity check.
    */
-  fun checkAppSignature(context: Context): Boolean {
-    return try {
+  fun checkAppSignature(context: Context): Boolean =
+    try {
       val packageInfo =
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
           context.packageManager.getPackageInfo(
@@ -83,5 +83,4 @@ object IntegrityRuntimeChecks {
     } catch (e: Exception) {
       throw IntegrityError.InitFailed("Failed to read application signing information.")
     }
-  }
 }

@@ -12,8 +12,8 @@ object IntegrityEmulatorChecks {
    * NOTE: This is a best-effort heuristic approach where no single signal is
    * authoritative on its own.
    */
-  fun isEmulator(): Boolean {
-    return try {
+  fun isEmulator(): Boolean =
+    try {
       val fingerprint = Build.FINGERPRINT
       val model = Build.MODEL
       val manufacturer = Build.MANUFACTURER
@@ -34,5 +34,4 @@ object IntegrityEmulatorChecks {
     } catch (_: Exception) {
       false
     }
-  }
 }

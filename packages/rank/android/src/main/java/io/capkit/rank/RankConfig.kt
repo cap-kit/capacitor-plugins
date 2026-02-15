@@ -14,7 +14,9 @@ import com.getcapacitor.Plugin
  * - Configuration values are read-only at runtime.
  * - Consumed only by native code.
  */
-class RankConfig(plugin: Plugin) {
+class RankConfig(
+  plugin: Plugin,
+) {
   // ---------------------------------------------------------------------------
   // Properties
   // ---------------------------------------------------------------------------
