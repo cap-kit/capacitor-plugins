@@ -1,0 +1,125 @@
+{
+  "name": "@cap-kit/redsys",
+  "version": "8.0.0-next.0",
+  "description": "Redsys InApp SDK bridge for Capacitor v8. Supports native Direct Payment and secure 3D Secure (3DS) WebView flows with unified cross-platform API and HMAC signature utilities.",
+  "type": "module",
+  "private": true,
+  "sideEffects": false,
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "main": "dist/plugin.cjs.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/esm/index.d.ts",
+  "unpkg": "dist/plugin.js",
+  "exports": {
+    ".": {
+      "types": "./dist/esm/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/plugin.cjs.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "android/src/main/",
+    "android/build.gradle",
+    "dist/",
+    "ios/Sources",
+    "ios/Tests",
+    "scripts/",
+    "Package.swift",
+    "CapKitRedsys.podspec",
+    "LICENSE",
+    "README.md"
+  ],
+  "author": "CapKit Team",
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/cap-kit"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cap-kit/capacitor-plugins.git",
+    "directory": "packages/redsys"
+  },
+  "bugs": {
+    "url": "https://github.com/cap-kit/capacitor-plugins/issues"
+  },
+  "homepage": "https://github.com/cap-kit/capacitor-plugins/tree/main/packages/redsys#readme",
+  "keywords": [
+    "capacitor",
+    "capacitor-plugin",
+    "cap-kit",
+    "redsys",
+    "redsys-sdk",
+    "redsys-inapp",
+    "3ds",
+    "3d-secure",
+    "payment",
+    "payment-gateway",
+    "card-payment",
+    "mobile-payments",
+    "ios",
+    "android",
+    "in-app-payments",
+    "hmac"
+  ],
+  "scripts": {
+    "setup-sdk": "node ./scripts/setup-redsys-sdk.mjs",
+    "verify": "pnpm run verify:ios && pnpm run verify:android && pnpm run verify:web",
+    "verify:ios": "node ./scripts/sync-version.mjs && echo 'iOS Native build skipped (Manual SDK required)'",
+    "verify:android": "echo 'Android Native build skipped (Manual SDK required)'",
+    "verify:web": "pnpm run build",
+    "lint:android": "cd android && ./gradlew ktlintCheck",
+    "fmt:android": "cd android && ./gradlew ktlintFormat",
+    "lint": "pnpm run eslint . && pnpm run swiftlint lint --strict || true && pnpm run lint:android || true",
+    "format:check": "prettier --check \"**/*.{css,html,ts,js,java}\" --plugin=prettier-plugin-java",
+    "format": "eslint --fix . && prettier --write \"**/*.{css,html,ts,js,java}\" --plugin=prettier-plugin-java && pnpm run swiftlint --fix --format && pnpm run fmt:android",
+    "eslint": "eslint",
+    "prettier": "prettier \"**/*.{css,html,ts,js,java}\" --plugin=prettier-plugin-java",
+    "swiftlint": "node-swiftlint lint ios/Sources",
+    "docgen": "docgen --api RedsysPlugin --output-readme README.md --output-json dist/docs.json",
+    "build": "node ./scripts/sync-version.mjs && pnpm run clean && pnpm run docgen && tsc && rollup -c rollup.config.mjs",
+    "clean": "rimraf ./dist",
+    "watch": "tsc --watch",
+    "test": "pnpm run verify",
+    "removePacked": "rimraf -g cap-kit-redsys-*.tgz",
+    "publish:locally": "pnpm run removePacked && pnpm run build && pnpm pack",
+    "prepublishOnly": "pnpm run build"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.1.0",
+    "@capacitor/android": "^8.1.0",
+    "@capacitor/core": "^8.1.0",
+    "@capacitor/docgen": "^0.3.1",
+    "@capacitor/ios": "^8.1.0",
+    "@eslint/eslintrc": "^3.3.3",
+    "@eslint/js": "^9.39.2",
+    "eslint": "^9.39.2",
+    "eslint-plugin-import": "^2.32.0",
+    "globals": "^17.3.0",
+    "prettier": "^3.8.1",
+    "prettier-plugin-java": "^2.8.1",
+    "rimraf": "^6.1.2",
+    "rollup": "^4.57.1",
+    "swiftlint": "^2.0.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.55.0"
+  },
+  "peerDependencies": {
+    "@capacitor/core": ">=8.1.0"
+  },
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    },
+    "android": {
+      "src": "android"
+    }
+  }
+}

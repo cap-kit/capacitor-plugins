@@ -70,7 +70,7 @@ Each plugin is fully cross-platform:
 
 Runtime integrity and environment signal detection for Capacitor v8 applications.
 
-<a href="./packages/integrity"><strong>Docs</strong></a> •
+<a href="./packages/integrity"><strong>Docs</strong></a> • 
 <a href="https://www.npmjs.com/package/@cap-kit/integrity"><strong>NPM</strong></a>
 
 </td>
@@ -86,7 +86,7 @@ Runtime integrity and environment signal detection for Capacitor v8 applications
 
 Unified Capacitor v8 plugin for native In-App Reviews and cross-platform Store navigation.
 
-<a href="./packages/rank"><strong>Docs</strong></a> •
+<a href="./packages/rank"><strong>Docs</strong></a> • 
 <a href="https://www.npmjs.com/package/@cap-kit/rank"><strong>NPM</strong></a>
 
 </td>
@@ -102,7 +102,7 @@ Unified Capacitor v8 plugin for native In-App Reviews and cross-platform Store n
 
 Capacitor plugin to open app and system settings on iOS and Android.
 
-<a href="./packages/settings"><strong>Docs</strong></a> •
+<a href="./packages/settings"><strong>Docs</strong></a> • 
 <a href="https://www.npmjs.com/package/@cap-kit/settings"><strong>NPM</strong></a>
 
 </td>
@@ -120,7 +120,7 @@ Capacitor plugin to open app and system settings on iOS and Android.
 
 Capacitor plugin for runtime SSL certificate fingerprint pinning on iOS and Android
 
-<a href="./packages/ssl-pinning"><strong>Docs</strong></a> •
+<a href="./packages/ssl-pinning"><strong>Docs</strong></a> • 
 <a href="https://www.npmjs.com/package/@cap-kit/ssl-pinning"><strong>NPM</strong></a>
 
 </td>
@@ -131,6 +131,7 @@ Capacitor plugin for runtime SSL certificate fingerprint pinning on iOS and Andr
 
 <details>
 <summary><strong>📱 Compact View (Mobile Friendly)</strong></summary>
+
 
 ### 🛡️ Integrity
 
