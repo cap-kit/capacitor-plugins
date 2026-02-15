@@ -110,7 +110,7 @@ dependencies {
         compileOnly "com.redsys.tpvvinapplibrary:redsys-sdk-inApp:2.4.5"
     } else {
         // CI Safety: Prevents build failure in monorepo if SDK is missing
-        logger.warn("⚠️ [CapKit] Redsys SDK not found. Native compilation for Redsys will be limited.")
+        logger.warn("⚠️ [CapKit] Redsys SDK not found. Skipping native compilation to allow CI to pass.")
     }
 
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
