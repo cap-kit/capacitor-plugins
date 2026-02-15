@@ -13,6 +13,12 @@ const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
 // 3. Automatically find the iOS source directory
 // Capacitor standard structure: ios/Sources/<PluginName>
 const sourcesDir = path.join(__dirname, '../ios/Sources');
+
+if (!fs.existsSync(sourcesDir)) {
+  console.warn('⚠️  [CapKit] ios/Sources directory not found. Skipping Version.swift generation.');
+  process.exit(0);
+}
+
 const pluginFolderName = fs.readdirSync(sourcesDir).find((f) => fs.statSync(path.join(sourcesDir, f)).isDirectory());
 
 if (!pluginFolderName) {

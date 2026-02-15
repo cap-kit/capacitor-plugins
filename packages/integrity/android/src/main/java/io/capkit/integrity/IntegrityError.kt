@@ -16,25 +16,29 @@ sealed class IntegrityError(
    * Feature or capability is not available
    * due to device or configuration limitations.
    */
-  class Unavailable(message: String) :
-    IntegrityError(message)
+  class Unavailable(
+    message: String,
+  ) : IntegrityError(message)
 
   /**
    * Required permission was denied or not granted.
    */
-  class PermissionDenied(message: String) :
-    IntegrityError(message)
+  class PermissionDenied(
+    message: String,
+  ) : IntegrityError(message)
 
   /**
    * Plugin failed to initialize or perform
    * a required operation.
    */
-  class InitFailed(message: String) :
-    IntegrityError(message)
+  class InitFailed(
+    message: String,
+  ) : IntegrityError(message)
 
   /**
    * Invalid or unsupported input was provided.
    */
-  class UnknownType(message: String) :
-    IntegrityError(message)
+  class UnknownType(
+    message: String,
+  ) : IntegrityError(message)
 }

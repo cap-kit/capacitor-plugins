@@ -15,7 +15,9 @@ import com.getcapacitor.Plugin
  * - Treated as immutable runtime input
  * - Accessible only from native code
  */
-class IntegrityConfig(plugin: Plugin) {
+class IntegrityConfig(
+  plugin: Plugin,
+) {
   /**
    * Android application context.
    * Exposed for native components that may require it.

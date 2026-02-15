@@ -12,14 +12,22 @@ sealed class SettingsError(
   message: String,
 ) : Throwable(message) {
   /** Feature or capability is not available on this device */
-  class Unavailable(message: String) : SettingsError(message)
+  class Unavailable(
+    message: String,
+  ) : SettingsError(message)
 
   /** Permission was denied by the user or system */
-  class PermissionDenied(message: String) : SettingsError(message)
+  class PermissionDenied(
+    message: String,
+  ) : SettingsError(message)
 
   /** Plugin failed to initialize correctly */
-  class InitFailed(message: String) : SettingsError(message)
+  class InitFailed(
+    message: String,
+  ) : SettingsError(message)
 
   /** Unsupported or unknown type/value was provided */
-  class UnknownType(message: String) : SettingsError(message)
+  class UnknownType(
+    message: String,
+  ) : SettingsError(message)
 }

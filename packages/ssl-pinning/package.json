@@ -13,6 +13,14 @@
   "module": "dist/esm/index.js",
   "types": "dist/esm/index.d.ts",
   "unpkg": "dist/plugin.js",
+  "exports": {
+    ".": {
+      "types": "./dist/esm/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/plugin.cjs.js"
+    },
+    "./package.json": "./package.json"
+  },
   "files": [
     "android/src/main/",
     "android/build.gradle",
@@ -22,16 +30,10 @@
     "Package.swift",
     "CapKitSSLPinning.podspec",
     "LICENSE",
+    "README.md",
     "bin/",
     "scripts/"
   ],
-  "exports": {
-    ".": {
-      "types": "./dist/esm/index.d.ts",
-      "import": "./dist/esm/index.js",
-      "require": "./dist/plugin.cjs.js"
-    }
-  },
   "author": "CapKit Team",
   "funding": {
     "type": "github",
@@ -65,7 +67,7 @@
   ],
   "scripts": {
     "verify": "pnpm run verify:ios && pnpm run verify:android && pnpm run verify:web",
-    "verify:ios": "node ./scripts/sync-version.js && xcodebuild -scheme CapKitSslPinning -destination generic/platform=iOS",
+    "verify:ios": "node ./scripts/sync-version.mjs && xcodebuild -scheme CapKitSslPinning -destination generic/platform=iOS",
     "verify:android": "cd android && ./gradlew clean build && cd ..",
     "verify:web": "pnpm run build",
     "lint:android": "cd android && ./gradlew ktlintCheck",
@@ -77,7 +79,7 @@
     "prettier": "prettier \"**/*.{css,html,ts,js,java}\" --plugin=prettier-plugin-java",
     "swiftlint": "node-swiftlint lint ios/Sources",
     "docgen": "docgen --api SSLPinningPlugin --output-readme README.md --output-json dist/docs.json",
-    "build": "node ./scripts/sync-version.js && pnpm run clean && pnpm run docgen && tsc && rollup -c rollup.config.mjs && node scripts/chmod.js",
+    "build": "node ./scripts/sync-version.mjs && pnpm run clean && pnpm run docgen && tsc && rollup -c rollup.config.mjs && node scripts/chmod.mjs",
     "clean": "rimraf ./dist",
     "watch": "tsc --watch",
     "test": "pnpm run verify",

@@ -14,8 +14,8 @@ object IntegrityHookChecks {
    * Frida detection via process memory map inspection.
    * Looks for known library artifacts in /proc/self/maps.
    */
-  fun checkFridaMemory(): Boolean {
-    return try {
+  fun checkFridaMemory(): Boolean =
+    try {
       val mapsFile = File("/proc/self/maps")
       if (mapsFile.exists()) {
         mapsFile.useLines { lines ->
@@ -30,7 +30,6 @@ object IntegrityHookChecks {
     } catch (_: Exception) {
       false
     }
-  }
 
   /**
    * Detects known Frida server ports on localhost.

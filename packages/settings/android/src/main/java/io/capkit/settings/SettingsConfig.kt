@@ -12,7 +12,9 @@ import com.getcapacitor.Plugin
  * Configuration is read once during plugin initialization and treated as
  * immutable runtime input.
  */
-class SettingsConfig(plugin: Plugin) {
+class SettingsConfig(
+  plugin: Plugin,
+) {
   /**
    * Android application context.
    * Exposed for native components that may require it.

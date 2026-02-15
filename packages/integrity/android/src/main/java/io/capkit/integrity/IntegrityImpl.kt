@@ -101,9 +101,8 @@ class IntegrityImpl(
    * Stub for Google Play Integrity integration.
    * To be implemented in a future evolution step.
    */
-  fun getPlayIntegritySignal(options: IntegrityCheckOptions): Map<String, Any>? {
-    return IntegrityRemoteAttestor.getPlayIntegritySignal(context, options)
-  }
+  fun getPlayIntegritySignal(options: IntegrityCheckOptions): Map<String, Any>? =
+    IntegrityRemoteAttestor.getPlayIntegritySignal(context, options)
 
   // ---------------------------------------------------------------------------
   // Configuration
@@ -299,9 +298,7 @@ class IntegrityImpl(
     )
   }
 
-  private fun cacheKey(level: String): String {
-    return "android:$level"
-  }
+  private fun cacheKey(level: String): String = "android:$level"
 
   private fun isNegativeCacheValid(level: String): Boolean {
     val entry = negativeCache[cacheKey(level)] ?: return false
