@@ -15,7 +15,7 @@
   "packageRules": [
     {
       "description": "Ignore local Redsys SDK dependencies that are not in public repositories",
-      "matchPackageNames": ["redsys-sdk-inApp-2.4.5"],
+      "matchPackageNames": ["com.redsys.tpvvinapplibrary:redsys-sdk-inApp"],
       "enabled": false
     },
     {
