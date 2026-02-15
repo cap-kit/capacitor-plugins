@@ -68,12 +68,6 @@ jobs:
         if: github.ref != 'refs/heads/main' && steps.changes.outputs.packages_changed == 'true'
         run: pnpm --filter "[origin/main]..." run lint
 
-      - name: Static Analysis (Infra only)
-        if: github.ref != 'refs/heads/main' && steps.changes.outputs.packages_changed == 'false'
-        run: |
-          echo "No packages changed. Unblocking Required Check."
-          exit 0
-
   build-test:
     name: Build and Test
     runs-on: macos-latest # Required for xcodebuild and iOS tooling
@@ -158,9 +152,3 @@ jobs:
       # - name: Test (PR - impacted only, serial)
       #   if: github.ref != 'refs/heads/main' && steps.changes.outputs.packages_changed == 'true'
       #   run: pnpm --filter "[origin/main]..." --workspace-concurrency=1 run test
-
-      - name: Build Verification (Infra only)
-        if: github.ref != 'refs/heads/main' && steps.changes.outputs.packages_changed == 'false'
-        run: |
-          echo "No native changes. Unblocking Required Check."
-          exit 0
