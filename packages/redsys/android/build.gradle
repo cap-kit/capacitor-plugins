@@ -87,6 +87,9 @@ android {
 repositories {
     google()
     mavenCentral()
+    flatDir {
+        dirs 'libs'
+    }
     // This tells the plugin to look for the Maven structure in its own libs folder
     maven {
         url "${rootProject.projectDir}/app/libs"
@@ -97,8 +100,18 @@ dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation project(':capacitor-android')
 
-    // Compiles against the local maven structure
-    compileOnly "com.redsys.tpvvinapplibrary:redsys-sdk-inApp:2.4.5"
+    // Dynamically determine the presence of the SDK
+    def sdkMavenPath = "${rootProject.projectDir}/app/libs/com/redsys/tpvvinapplibrary/redsys-sdk-inApp/2.4.5"
+    def sdkLibFile = file('libs/redsys-sdk-inApp-2.4.5.aar')
+    def sdkExists = file(sdkMavenPath).exists() || sdkLibFile.exists()
+
+    if (sdkExists) {
+        // If the SDK exists (Local or Host App), compile normally
+        compileOnly "com.redsys.tpvvinapplibrary:redsys-sdk-inApp:2.4.5"
+    } else {
+        // CI Safety: Prevents build failure in monorepo if SDK is missing
+        logger.warn("⚠️ [CapKit] Redsys SDK not found. Native compilation for Redsys will be limited.")
+    }
 
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
