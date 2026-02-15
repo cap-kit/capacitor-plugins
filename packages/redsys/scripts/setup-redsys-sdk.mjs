@@ -1,5 +1,5 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
 
 // SDK Metadata
 const ANDROID_VERSION = '2.4.5';

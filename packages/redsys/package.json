@@ -3,7 +3,7 @@
   "version": "8.0.0-next.0",
   "description": "Redsys InApp SDK bridge for Capacitor v8. Supports native Direct Payment and secure 3D Secure (3DS) WebView flows with unified cross-platform API and HMAC signature utilities.",
   "type": "module",
-  "private": true,
+  "private": false,
   "sideEffects": false,
   "engines": {
     "node": ">=24.0.0",

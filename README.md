@@ -53,7 +53,7 @@ Each plugin is fully cross-platform:
 > **Information:** All plugins are optimized for **Capacitor v8+** and tested for native parity.
 
 <p align="center">
-  📦 <strong>Total Plugins:</strong> 4 &nbsp;&bull;&nbsp; 📈 <strong>Weekly Downloads:</strong> <img src="https://img.shields.io/npm/dw/@cap-kit/test-plugin?style=flat-square&logo=npm&label=&color=orange" alt="Downloads" valign="middle" />
+  📦 <strong>Total Plugins:</strong> 5 &nbsp;&bull;&nbsp; 📈 <strong>Weekly Downloads:</strong> <img src="https://img.shields.io/npm/dw/@cap-kit/test-plugin?style=flat-square&logo=npm&label=&color=orange" alt="Downloads" valign="middle" />
 </p>
 
 <table width="100%">
@@ -93,6 +93,24 @@ Unified Capacitor v8 plugin for native In-App Reviews and cross-platform Store n
 
 <td align="center" width="33%" valign="top">
 
+### <a href="./packages/redsys">💳 Redsys</a>
+
+<a href="https://www.npmjs.com/package/@cap-kit/redsys"><code>@cap-kit/redsys</code></a>
+
+<a href="https://www.npmjs.com/package/@cap-kit/redsys"><img src="https://img.shields.io/npm/v/@cap-kit/redsys?style=flat-square&label=npm&logo=npm" alt="npm version" /></a>
+<a href="https://www.npmjs.com/package/@cap-kit/redsys"><img src="https://img.shields.io/npm/dm/@cap-kit/redsys?style=flat-square&label=downloads&logo=npm&color=orange" alt="downloads" /></a>
+
+Redsys InApp SDK bridge for Capacitor v8. Supports native Direct Payment and secure 3D Secure (3DS) WebView flows with unified cross-platform API and HMAC signature utilities.
+
+<a href="./packages/redsys"><strong>Docs</strong></a> • 
+<a href="https://www.npmjs.com/package/@cap-kit/redsys"><strong>NPM</strong></a>
+
+</td>
+</tr>
+<tr>
+
+<td align="center" width="33%" valign="top">
+
 ### <a href="./packages/settings">⚙️ Settings</a>
 
 <a href="https://www.npmjs.com/package/@cap-kit/settings"><code>@cap-kit/settings</code></a>
@@ -106,8 +124,6 @@ Capacitor plugin to open app and system settings on iOS and Android.
 <a href="https://www.npmjs.com/package/@cap-kit/settings"><strong>NPM</strong></a>
 
 </td>
-</tr>
-<tr>
 
 <td align="center" width="33%" valign="top">
 
@@ -124,7 +140,6 @@ Capacitor plugin for runtime SSL certificate fingerprint pinning on iOS and Andr
 <a href="https://www.npmjs.com/package/@cap-kit/ssl-pinning"><strong>NPM</strong></a>
 
 </td>
-<td width="33%"></td>
 <td width="33%"></td>
 </tr>
 </table>
@@ -154,6 +169,18 @@ Runtime integrity and environment signal detection for Capacitor v8 applications
 Unified Capacitor v8 plugin for native In-App Reviews and cross-platform Store navigation.
 
 [Docs](./packages/rank) • [NPM](https://www.npmjs.com/package/@cap-kit/rank)
+
+---
+
+### 💳 Redsys
+
+`@cap-kit/redsys`
+
+![npm](https://img.shields.io/npm/v/@cap-kit/redsys?style=flat-square&label=npm&logo=npm) ![downloads](https://img.shields.io/npm/dm/@cap-kit/redsys?style=flat-square&label=downloads&logo=npm&color=orange)
+
+Redsys InApp SDK bridge for Capacitor v8. Supports native Direct Payment and secure 3D Secure (3DS) WebView flows with unified cross-platform API and HMAC signature utilities.
+
+[Docs](./packages/redsys) • [NPM](https://www.npmjs.com/package/@cap-kit/redsys)
 
 ---
 
