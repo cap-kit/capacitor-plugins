@@ -14,6 +14,11 @@
   },
   "packageRules": [
     {
+      "description": "Ignore local Redsys SDK dependencies that are not in public repositories",
+      "matchPackageNames": ["redsys-sdk-inApp-2.4.5"],
+      "enabled": false
+    },
+    {
       "description": "Temporarily block ESLint v10 due to peer dependency conflicts",
       "matchPackageNames": ["eslint", "@eslint/js"],
       "allowedVersions": "<10.0.0"
