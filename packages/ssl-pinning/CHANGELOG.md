@@ -1,5 +1,11 @@
 # @cap-kit/ssl-pinning
 
+## 8.0.2
+
+### Patch Changes
+
+- 873768a: Refactor package exports for better ESM compatibility and remove deprecated kotlinOptions in build.gradle.
+
 ## 8.0.1
 
 ### Patch Changes
