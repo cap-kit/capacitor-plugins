@@ -56,7 +56,7 @@ public final class SettingsPlugin: CAPPlugin, CAPBridgedPlugin {
         implementation.applyConfig(cfg)
 
         // Log if verbose logging is enabled
-        SettingsLogger.debug("Settings plugin loaded")
+        SettingsLogger.debug("Plugin loaded")
     }
 
     // MARK: - Error Mapping

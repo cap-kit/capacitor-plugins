@@ -119,7 +119,6 @@ class IntegrityImpl(
   fun updateConfig(newConfig: IntegrityConfig) {
     this.config = newConfig
     IntegrityLogger.verbose = newConfig.verboseLogging
-
     IntegrityLogger.debug(
       "Integrity configuration applied. Verbose logging:",
       newConfig.verboseLogging.toString(),

@@ -9,6 +9,7 @@ import com.getcapacitor.annotation.Permission
 import com.redsys.tpvvinapplibrary.ErrorResponse
 import com.redsys.tpvvinapplibrary.IPaymentResult
 import com.redsys.tpvvinapplibrary.ResultResponse
+import io.capkit.redsys.utils.RedsysLogger
 import io.capkit.redsys.utils.RedsysUtils
 
 /**
@@ -70,6 +71,9 @@ class RedsysPlugin : Plugin() {
     config = RedsysConfig(this)
     implementation = RedsysImpl(activity)
     implementation.updateConfig(config)
+
+    RedsysLogger.verbose = config.verboseLogging
+    RedsysLogger.debug("Plugin loaded")
   }
 
   // ---------------------------------------------------------------------------

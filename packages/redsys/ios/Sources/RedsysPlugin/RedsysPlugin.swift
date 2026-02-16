@@ -59,7 +59,7 @@ public final class RedsysPlugin: CAPPlugin, CAPBridgedPlugin, DirectPaymentRespo
         implementation.applyConfig(cfg)
 
         // Log if verbose logging is enabled
-        RedsysLogger.debug("Redsys plugin loaded.")
+        RedsysLogger.debug("Plugin loaded.")
     }
 
     // MARK: - Error Handling
