@@ -56,7 +56,7 @@ public final class RankPlugin: CAPPlugin, CAPBridgedPlugin {
         implementation.applyConfig(cfg)
 
         // Log if verbose logging is enabled
-        RankLogger.debug("Rank plugin loaded.")
+        RankLogger.debug("Plugin loaded.")
     }
 
     // MARK: - Error Mapping

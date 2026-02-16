@@ -18,7 +18,7 @@ export default [
       },
       // CJS Bundle for older bundlers and backward compatibility
       {
-        file: 'dist/plugin.cjs.js',
+        file: 'dist/plugin.cjs',
         format: 'cjs',
         sourcemap: true,
         inlineDynamicImports: true,

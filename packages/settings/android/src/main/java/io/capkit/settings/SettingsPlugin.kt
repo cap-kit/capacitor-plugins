@@ -5,6 +5,7 @@ import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
+import io.capkit.settings.utils.SettingsLogger
 
 /**
  * Capacitor bridge for the Settings plugin (Android).
@@ -57,6 +58,9 @@ class SettingsPlugin : Plugin() {
     config = SettingsConfig(this)
     implementation = SettingsImpl(context)
     implementation.updateConfig(config)
+
+    SettingsLogger.verbose = config.verboseLogging
+    SettingsLogger.debug("Plugin loaded")
   }
 
   // ---------------------------------------------------------------------------

@@ -79,6 +79,9 @@ class RankPlugin : Plugin() {
     implementation = RankImpl(context)
     implementation.updateConfig(config)
 
+    RankLogger.verbose = config.verboseLogging
+    RankLogger.debug("Plugin loaded")
+
     // RULE: Perform pre-warm of native resources to improve UX
     implementation.preloadReviewInfo()
   }

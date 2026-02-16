@@ -95,7 +95,9 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
         let cfg = IntegrityConfig(plugin: self)
         self.config = cfg
         implementation.applyConfig(cfg)
-        IntegrityLogger.debug("Integrity plugin loaded")
+
+        // Log if verbose logging is enabled
+        IntegrityLogger.debug("Plugin loaded")
 
         // Register passive system observers
         addEventObservers()

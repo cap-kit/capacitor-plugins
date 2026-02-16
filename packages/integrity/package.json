@@ -9,7 +9,7 @@
     "node": ">=24.0.0",
     "pnpm": ">=10.0.0"
   },
-  "main": "dist/plugin.cjs.js",
+  "main": "dist/plugin.cjs",
   "module": "dist/esm/index.js",
   "types": "dist/esm/index.d.ts",
   "unpkg": "dist/plugin.js",
@@ -17,7 +17,7 @@
     ".": {
       "types": "./dist/esm/index.d.ts",
       "import": "./dist/esm/index.js",
-      "require": "./dist/plugin.cjs.js"
+      "require": "./dist/plugin.cjs"
     },
     "./package.json": "./package.json"
   },

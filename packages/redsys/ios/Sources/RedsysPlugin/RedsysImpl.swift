@@ -42,11 +42,16 @@ import TPVVInLibrary
             self.config == nil,
             "RedsysImpl.applyConfig(_:) must be called exactly once"
         )
+
         self.config = config
 
         // Synchronize logger state
         RedsysLogger.verbose = config.verboseLogging
-        RedsysLogger.debug("Configuration applied. Verbose logging:", config.verboseLogging)
+
+        RedsysLogger.debug(
+            "Configuration applied. Verbose logging:",
+            config.verboseLogging
+        )
 
         // MARK: - SDK Global Configuration
 
