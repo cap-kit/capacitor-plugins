@@ -59,7 +59,7 @@ public final class SSLPinningPlugin: CAPPlugin, CAPBridgedPlugin {
         implementation.applyConfig(cfg)
 
         // Log if verbose logging is enabled
-        SSLPinningLogger.debug("SSLPinning plugin loaded")
+        SSLPinningLogger.debug("Plugin loaded")
     }
 
     // MARK: - Error Mapping
@@ -83,6 +83,12 @@ public final class SSLPinningPlugin: CAPPlugin, CAPBridgedPlugin {
             code = "INIT_FAILED"
         case .unknownType:
             code = "UNKNOWN_TYPE"
+        case .noPinningConfig:
+            code = "NO_PINNING_CONFIG"
+        case .certNotFound:
+            code = "CERT_NOT_FOUND"
+        case .trustEvaluationFailed:
+            code = "TRUST_EVALUATION_FAILED"
         }
 
         call.reject(error.message, code)
@@ -118,6 +124,7 @@ public final class SSLPinningPlugin: CAPPlugin, CAPBridgedPlugin {
                         fingerprintFromArgs: fingerprint
                     )
 
+                // Converting Swift Dictionary to JSObject
                 call.resolve(result)
             } catch let error as SSLPinningError {
                 self.reject(call, error: error)
@@ -139,6 +146,7 @@ public final class SSLPinningPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func checkCertificates(_ call: CAPPluginCall) {
         let url = call.getString("url", "")
 
+        // Extraction and filtering of optional fingerprints
         let fingerprints =
             call.getArray("fingerprints")?
             .compactMap { $0 as? String }

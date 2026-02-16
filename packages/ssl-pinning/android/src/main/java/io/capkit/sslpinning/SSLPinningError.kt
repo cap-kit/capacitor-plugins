@@ -41,4 +41,29 @@ sealed class SSLPinningError(
   class UnknownType(
     message: String,
   ) : SSLPinningError(message)
+
+  /**
+   * No runtime fingerprints, no config fingerprints,
+   * and no certificates were configured.
+   */
+  class NoPinningConfig(
+    message: String,
+  ) : SSLPinningError(message)
+
+  /**
+   * Certificate-based pinning was selected, but no valid
+   * certificate files were found or loaded.
+   */
+  class CertNotFound(
+    message: String,
+  ) : SSLPinningError(message)
+
+  /**
+   * Certificate-based trust evaluation failed.
+   * The server certificate chain could not be validated
+   * against the pinned certificates.
+   */
+  class TrustEvaluationFailed(
+    message: String,
+  ) : SSLPinningError(message)
 }

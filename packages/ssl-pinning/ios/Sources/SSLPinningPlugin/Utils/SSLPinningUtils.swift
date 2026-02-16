@@ -81,4 +81,40 @@ struct SSLPinningUtils {
             return SecTrustGetCertificateAtIndex(trust, 0)
         }
     }
+
+    /**
+     Loads pinned certificates from app bundle.
+
+     Certificates are expected to be in a 'certs' subdirectory.
+     */
+    static func loadPinnedCertificates(
+        certFileNames: [String],
+        subdirectory: String = "certs"
+    ) -> [SecCertificate] {
+        var certificates: [SecCertificate] = []
+
+        for fileName in certFileNames {
+            let parts = fileName.split(separator: ".")
+            guard parts.count >= 2 else { continue }
+
+            let name = String(parts.dropLast().joined(separator: "."))
+            let ext = String(parts.last!)
+
+            guard
+                let url = Bundle.main.url(
+                    forResource: name,
+                    withExtension: ext,
+                    subdirectory: subdirectory
+                ),
+                let data = try? Data(contentsOf: url),
+                let cert = SecCertificateCreateWithData(nil, data as CFData)
+            else {
+                // Log error if file exists but certificate creation fails
+                SSLPinningLogger.error("Failed to create certificate from file: \(fileName). Ensure it is a valid DER-encoded X.509 certificate.")
+                continue
+            }
+            certificates.append(cert)
+        }
+        return certificates
+    }
 }

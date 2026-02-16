@@ -25,6 +25,8 @@ public struct SSLPinningConfig {
         static let verboseLogging = "verboseLogging"
         static let fingerprint = "fingerprint"
         static let fingerprints = "fingerprints"
+        static let certs = "certs"
+        static let excludedDomains = "excludedDomains"
     }
 
     // MARK: - Public Configuration Values
@@ -51,11 +53,29 @@ public struct SSLPinningConfig {
      */
     public let fingerprints: [String]
 
+    /**
+     Certificate filenames used for SSL pinning.
+
+     Files are expected to be copied into the app bundle
+     subdirectory 'certs'.
+     */
+    public let certs: [String]
+
+    /**
+     Domains or URL prefixes excluded from SSL pinning.
+
+     Any request whose host matches one of these values
+     MUST bypass SSL pinning checks.
+     */
+    public let excludedDomains: [String]
+
     // MARK: - Defaults
 
     private static let defaultVerboseLogging: Bool = false
     private static let defaultFingerprint: String? = nil
     private static let defaultFingerprints: [String] = []
+    private static let defaultCerts: [String] = []
+    private static let defaultExcludedDomains: [String] = []
 
     // MARK: - Initialization
 
@@ -90,5 +110,19 @@ public struct SSLPinningConfig {
             .compactMap { $0 as? String }
             .filter { !$0.isEmpty }
             ?? Self.defaultFingerprints
+
+        // Certificate files (optional)
+        self.certs =
+            config.getArray(Keys.certs)?
+            .compactMap { $0 as? String }
+            .filter { !$0.isEmpty }
+            ?? Self.defaultCerts
+
+        // Excluded domains (optional)
+        self.excludedDomains =
+            config.getArray(Keys.excludedDomains)?
+            .compactMap { $0 as? String }
+            .filter { !$0.isEmpty }
+            ?? Self.defaultExcludedDomains
     }
 }

@@ -6,6 +6,8 @@ import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
+import com.getcapacitor.annotation.Permission
+import io.capkit.sslpinning.utils.SSLPinningLogger
 
 /**
  * Capacitor bridge for the SSLPinning plugin (Android).
@@ -16,23 +18,52 @@ import com.getcapacitor.annotation.CapacitorPlugin
  * - Resolve or reject PluginCall
  * - Map native errors to JS-facing error codes
  */
-@CapacitorPlugin(name = "SSLPinning")
+@CapacitorPlugin(
+  name = "SSLPinning",
+  permissions = [
+    Permission(
+      alias = "network",
+      strings = [android.Manifest.permission.INTERNET],
+    ),
+  ],
+)
 class SSLPinningPlugin : Plugin() {
   // ---------------------------------------------------------------------------
   // Properties
   // ---------------------------------------------------------------------------
 
   /**
-   * Immutable plugin configuration.
-   * Parsed once during plugin initialization.
+   * Immutable plugin configuration read from capacitor.config.ts.
+   * * CONTRACT:
+   * - Initialized exactly once in `load()`.
+   * - Treated as read-only afterwards.
    */
   private lateinit var config: SSLPinningConfig
 
   /**
-   * Native implementation containing
-   * platform-specific logic only.
+   * Native implementation layer containing core Android logic.
+   *
+   * CONTRACT:
+   * - Owned by the Plugin layer.
+   * - MUST NOT access PluginCall or Capacitor bridge APIs directly.
    */
   private lateinit var implementation: SSLPinningImpl
+
+  // ---------------------------------------------------------------------------
+  // Companion Object
+  // ---------------------------------------------------------------------------
+
+  private companion object {
+    /**
+     * Account type identifier for internal plugin identification.
+     */
+    const val ACCOUNT_TYPE = "io.capkit.sslpinning"
+
+    /**
+     * Human-readable account name for the plugin.
+     */
+    const val ACCOUNT_NAME = "SSLPinning"
+  }
 
   // ---------------------------------------------------------------------------
   // Lifecycle
@@ -41,10 +72,8 @@ class SSLPinningPlugin : Plugin() {
   /**
    * Called once when the plugin is loaded by the Capacitor bridge.
    *
-   * This is the correct place to:
-   * - read static configuration
-   * - initialize native resources
-   * - inject configuration into the implementation
+   * This method initializes the configuration container and the native
+   * implementation layer, ensuring all dependencies are injected.
    */
   override fun load() {
     super.load()
@@ -52,6 +81,9 @@ class SSLPinningPlugin : Plugin() {
     config = SSLPinningConfig(this)
     implementation = SSLPinningImpl(context)
     implementation.updateConfig(config)
+
+    SSLPinningLogger.verbose = config.verboseLogging
+    SSLPinningLogger.debug("Plugin loaded")
   }
 
   // ---------------------------------------------------------------------------
@@ -72,6 +104,9 @@ class SSLPinningPlugin : Plugin() {
         is SSLPinningError.PermissionDenied -> "PERMISSION_DENIED"
         is SSLPinningError.InitFailed -> "INIT_FAILED"
         is SSLPinningError.UnknownType -> "UNKNOWN_TYPE"
+        is SSLPinningError.NoPinningConfig -> "NO_PINNING_CONFIG"
+        is SSLPinningError.CertNotFound -> "CERT_NOT_FOUND"
+        is SSLPinningError.TrustEvaluationFailed -> "TRUST_EVALUATION_FAILED"
       }
 
     call.reject(error.message, code)
@@ -97,6 +132,7 @@ class SSLPinningPlugin : Plugin() {
 
     execute {
       try {
+        // Calling the implementation layer
         val result: Map<String, Any> =
           implementation.checkCertificate(
             urlString = url,
@@ -134,6 +170,7 @@ class SSLPinningPlugin : Plugin() {
 
     val jsArray: JSArray? = call.getArray("fingerprints")
 
+    // Parsing JSArray to a clean Kotlin List
     val fingerprints: List<String>? =
       if (jsArray != null && jsArray.length() > 0) {
         val list = ArrayList<String>()

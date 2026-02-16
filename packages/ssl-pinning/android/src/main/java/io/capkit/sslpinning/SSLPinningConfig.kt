@@ -18,6 +18,10 @@ import com.getcapacitor.Plugin
 class SSLPinningConfig(
   plugin: Plugin,
 ) {
+  // ---------------------------------------------------------------------------
+  // Properties
+  // ---------------------------------------------------------------------------
+
   /**
    * Android application context.
    * Exposed for native components that may require it.
@@ -46,6 +50,26 @@ class SSLPinningConfig(
    */
   val fingerprints: List<String>
 
+  /**
+   * Certificate filenames used for SSL pinning.
+   *
+   * Files are expected to be located under:
+   * assets/certs/
+   */
+  val certs: List<String>
+
+  /**
+   * Domains or URL prefixes excluded from SSL pinning.
+   *
+   * Any request whose host matches one of these values
+   * MUST bypass SSL pinning checks.
+   */
+  val excludedDomains: List<String>
+
+  // ---------------------------------------------------------------------------
+  // Initialization
+  // ---------------------------------------------------------------------------
+
   init {
     val config = plugin.getConfig()
 
@@ -62,6 +86,24 @@ class SSLPinningConfig(
     fingerprints =
       config
         .getArray("fingerprints")
+        ?.toList()
+        ?.mapNotNull { it as? String }
+        ?.filter { it.isNotBlank() }
+        ?: emptyList()
+
+    // Certificate files (optional)
+    certs =
+      config
+        .getArray("certs")
+        ?.toList()
+        ?.mapNotNull { it as? String }
+        ?.filter { it.isNotBlank() }
+        ?: emptyList()
+
+    // Excluded domains (optional)
+    excludedDomains =
+      config
+        .getArray("excludedDomains")
         ?.toList()
         ?.mapNotNull { it as? String }
         ?.filter { it.isNotBlank() }

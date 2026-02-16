@@ -46,6 +46,15 @@ export enum SSLPinningErrorCode {
 
   /** Invalid or unsupported input was provided. */
   UNKNOWN_TYPE = 'UNKNOWN_TYPE',
+
+  /** No runtime fingerprints, no config fingerprints, and no certificates were configured. */
+  NO_PINNING_CONFIG = 'NO_PINNING_CONFIG',
+
+  /** Certificate-based pinning was selected, but no valid certificate files were found. */
+  CERT_NOT_FOUND = 'CERT_NOT_FOUND',
+
+  /** Certificate-based trust evaluation failed at the handshake level. */
+  TRUST_EVALUATION_FAILED = 'TRUST_EVALUATION_FAILED',
 }
 
 // -----------------------------------------------------------------------------
@@ -84,6 +93,22 @@ export interface SSLPinningConfig {
    * @since 0.0.15
    */
   fingerprints?: string[];
+
+  /**
+   * Local certificate filenames (e.g., ["mycert.cer"]).
+   * Files must be in 'assets/certs' (Android) or main bundle 'certs' (iOS).
+   *
+   * @since 8.0.3
+   */
+  certs?: string[];
+
+  /**
+   * Domains to bypass. Matches exact domain or subdomains.
+   * Do not include schemes or paths.
+   *
+   * @since 8.0.3
+   */
+  excludedDomains?: string[];
 }
 
 // -----------------------------------------------------------------------------
@@ -147,19 +172,29 @@ export interface SSLPinningMultiOptions {
 // -----------------------------------------------------------------------------
 
 /**
- * Result returned by a successful SSL certificate check.
+ * Result returned by an SSL pinning operation.
  *
  * This object is returned ONLY on success.
- * Failures are delivered via Promise rejection.
+ * Failures are delivered via Promise rejection when
+ * using strict Promise semantics.
+ *
+ * However, the native layer may return structured
+ * error information inside this object when the
+ * pinning strategy explicitly reports failure.
  */
 export interface SSLPinningResult {
   /**
-   * Actual SHA-256 fingerprint of the server certificate.
+   * The actual SHA-256 fingerprint of the server certificate.
+   *
+   * Present in fingerprint mode.
    */
-  actualFingerprint: string;
+  actualFingerprint?: string;
 
   /**
-   * Indicates whether the certificate fingerprint matched.
+   * Indicates whether the certificate validation succeeded.
+   *
+   * - true  → Pinning passed
+   * - false → Pinning failed
    */
   fingerprintMatched: boolean;
 
@@ -167,6 +202,31 @@ export interface SSLPinningResult {
    * The fingerprint that successfully matched, if any.
    */
   matchedFingerprint?: string;
+
+  /**
+   * Indicates that SSL pinning was skipped because
+   * the request host matched an excluded domain.
+   */
+  excludedDomain?: boolean;
+
+  /**
+   * Indicates which pinning mode was used.
+   *
+   * - "fingerprint"
+   * - "cert"
+   * - "excluded"
+   */
+  mode?: 'fingerprint' | 'cert' | 'excluded';
+
+  /**
+   * Human-readable error message when pinning fails.
+   */
+  error?: string;
+
+  /**
+   * Standardized error code aligned with SSLPinningErrorCode.
+   */
+  errorCode?: SSLPinningErrorCode;
 }
 
 /**

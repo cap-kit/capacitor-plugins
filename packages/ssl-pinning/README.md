@@ -299,11 +299,13 @@ These values are:
 
 Configuration options for the SSLPinning plugin.
 
-| Prop                 | Type                  | Description                                                                                                | Default            | Since  |
-| -------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------ | ------ |
-| **`verboseLogging`** | <code>boolean</code>  | Enables verbose native logging (Logcat / Xcode console).                                                   | <code>false</code> | 0.0.15 |
-| **`fingerprint`**    | <code>string</code>   | Default fingerprint used by `checkCertificate()` when `options.fingerprint` is not provided at runtime.    |                    | 0.0.14 |
-| **`fingerprints`**   | <code>string[]</code> | Default fingerprints used by `checkCertificates()` when `options.fingerprints` is not provided at runtime. |                    | 0.0.15 |
+| Prop                  | Type                  | Description                                                                                                                 | Default            | Since  |
+| --------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------ | ------ |
+| **`verboseLogging`**  | <code>boolean</code>  | Enables verbose native logging (Logcat / Xcode console).                                                                    | <code>false</code> | 0.0.15 |
+| **`fingerprint`**     | <code>string</code>   | Default fingerprint used by `checkCertificate()` when `options.fingerprint` is not provided at runtime.                     |                    | 0.0.14 |
+| **`fingerprints`**    | <code>string[]</code> | Default fingerprints used by `checkCertificates()` when `options.fingerprints` is not provided at runtime.                  |                    | 0.0.15 |
+| **`certs`**           | <code>string[]</code> | Local certificate filenames (e.g., ["mycert.cer"]). Files must be in 'assets/certs' (Android) or main bundle 'certs' (iOS). |                    | 8.0.3  |
+| **`excludedDomains`** | <code>string[]</code> | Domains to bypass. Matches exact domain or subdomains. Do not include schemes or paths.                                     |                    | 8.0.3  |
 
 ### Examples
 
@@ -364,6 +366,7 @@ If no fingerprint is available from either source, the call will fail.
 - [`checkCertificates(...)`](#checkcertificates)
 - [`getPluginVersion()`](#getpluginversion)
 - [Interfaces](#interfaces)
+- [Enums](#enums)
 
 </docgen-index>
 
@@ -435,16 +438,25 @@ const { version } = await SSLPinning.getPluginVersion();
 
 #### SSLPinningResult
 
-Result returned by a successful SSL certificate check.
+Result returned by an SSL pinning operation.
 
 This object is returned ONLY on success.
-Failures are delivered via Promise rejection.
+Failures are delivered via Promise rejection when
+using strict Promise semantics.
 
-| Prop                     | Type                 | Description                                            |
-| ------------------------ | -------------------- | ------------------------------------------------------ |
-| **`actualFingerprint`**  | <code>string</code>  | Actual SHA-256 fingerprint of the server certificate.  |
-| **`fingerprintMatched`** | <code>boolean</code> | Indicates whether the certificate fingerprint matched. |
-| **`matchedFingerprint`** | <code>string</code>  | The fingerprint that successfully matched, if any.     |
+However, the native layer may return structured
+error information inside this object when the
+pinning strategy explicitly reports failure.
+
+| Prop                     | Type                                                                | Description                                                                                              |
+| ------------------------ | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **`actualFingerprint`**  | <code>string</code>                                                 | The actual SHA-256 fingerprint of the server certificate. Present in fingerprint mode.                   |
+| **`fingerprintMatched`** | <code>boolean</code>                                                | Indicates whether the certificate validation succeeded. - true → Pinning passed - false → Pinning failed |
+| **`matchedFingerprint`** | <code>string</code>                                                 | The fingerprint that successfully matched, if any.                                                       |
+| **`excludedDomain`**     | <code>boolean</code>                                                | Indicates that SSL pinning was skipped because the request host matched an excluded domain.              |
+| **`mode`**               | <code>'fingerprint' \| 'cert' \| 'excluded'</code>                  | Indicates which pinning mode was used. - "fingerprint" - "cert" - "excluded"                             |
+| **`error`**              | <code>string</code>                                                 | Human-readable error message when pinning fails.                                                         |
+| **`errorCode`**          | <code><a href="#sslpinningerrorcode">SSLPinningErrorCode</a></code> | Standardized error code aligned with <a href="#sslpinningerrorcode">SSLPinningErrorCode</a>.             |
 
 #### SSLPinningOptions
 
@@ -471,6 +483,20 @@ Result returned by the getPluginVersion method.
 | Prop          | Type                | Description                              |
 | ------------- | ------------------- | ---------------------------------------- |
 | **`version`** | <code>string</code> | The native version string of the plugin. |
+
+### Enums
+
+#### SSLPinningErrorCode
+
+| Members                       | Value                                  | Description                                                                           |
+| ----------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------- |
+| **`UNAVAILABLE`**             | <code>'UNAVAILABLE'</code>             | Required data is missing or the feature is not available.                             |
+| **`PERMISSION_DENIED`**       | <code>'PERMISSION_DENIED'</code>       | The user denied a required permission or the feature is disabled.                     |
+| **`INIT_FAILED`**             | <code>'INIT_FAILED'</code>             | The SSL pinning operation failed due to a runtime or initialization error.            |
+| **`UNKNOWN_TYPE`**            | <code>'UNKNOWN_TYPE'</code>            | Invalid or unsupported input was provided.                                            |
+| **`NO_PINNING_CONFIG`**       | <code>'NO_PINNING_CONFIG'</code>       | No runtime fingerprints, no config fingerprints, and no certificates were configured. |
+| **`CERT_NOT_FOUND`**          | <code>'CERT_NOT_FOUND'</code>          | Certificate-based pinning was selected, but no valid certificate files were found.    |
+| **`TRUST_EVALUATION_FAILED`** | <code>'TRUST_EVALUATION_FAILED'</code> | Certificate-based trust evaluation failed at the handshake level.                     |
 
 </docgen-api>
 

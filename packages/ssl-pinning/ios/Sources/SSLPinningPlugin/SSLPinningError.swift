@@ -26,6 +26,15 @@ enum SSLPinningError: Error {
     /// Invalid or unsupported input was provided
     case unknownType(String)
 
+    /// No runtime fingerprints, no config fingerprints, and no certificates were configured
+    case noPinningConfig(String)
+
+    /// Certificate-based pinning was selected, but no valid certificate files were found
+    case certNotFound(String)
+
+    /// Certificate-based trust evaluation failed
+    case trustEvaluationFailed(String)
+
     // MARK: - Human-readable message
 
     /**
@@ -43,6 +52,12 @@ enum SSLPinningError: Error {
         case .initFailed(let message):
             return message
         case .unknownType(let message):
+            return message
+        case .noPinningConfig(let message):
+            return message
+        case .certNotFound(let message):
+            return message
+        case .trustEvaluationFailed(let message):
             return message
         }
     }

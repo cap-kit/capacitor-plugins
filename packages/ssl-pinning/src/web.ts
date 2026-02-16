@@ -6,7 +6,7 @@
  * because browsers do not allow direct inspection of SSL certificate details.
  */
 
-import { CapacitorException, ExceptionCode, WebPlugin } from '@capacitor/core';
+import { WebPlugin } from '@capacitor/core';
 
 import { PluginVersionResult, SSLPinningPlugin, SSLPinningResult } from './definitions';
 
@@ -17,13 +17,17 @@ import { PluginVersionResult, SSLPinningPlugin, SSLPinningResult } from './defin
  * therefore all SSL pinning methods are unimplemented.
  */
 export class SSLPinningWeb extends WebPlugin implements SSLPinningPlugin {
+  constructor() {
+    super();
+  }
+
   /**
    * Checks a single SSL certificate against the expected fingerprint.
    * @return A promise that resolves to the result of the certificate check.
    * @throws CapacitorException indicating unimplemented functionality.
    */
   async checkCertificate(): Promise<SSLPinningResult> {
-    throw this.createUnimplementedError();
+    throw this.unimplemented();
   }
 
   /**
@@ -32,7 +36,7 @@ export class SSLPinningWeb extends WebPlugin implements SSLPinningPlugin {
    * @throws CapacitorException indicating unimplemented functionality.
    */
   async checkCertificates(): Promise<SSLPinningResult> {
-    throw this.createUnimplementedError();
+    throw this.unimplemented();
   }
 
   // --- Plugin Info ---
@@ -45,20 +49,5 @@ export class SSLPinningWeb extends WebPlugin implements SSLPinningPlugin {
    */
   async getPluginVersion(): Promise<PluginVersionResult> {
     return { version: 'web' };
-  }
-
-  /**
-   * Creates a standardized exception for unimplemented methods.
-   *
-   * This utility method centralizes the creation of exceptions for functionality that is not supported
-   * on the current platform, ensuring consistency in error reporting.
-   *
-   * @returns {CapacitorException} An exception with the code `Unimplemented` and a descriptive message.
-   */
-  private createUnimplementedError(): CapacitorException {
-    return new CapacitorException(
-      'This plugin method is not implemented on this platform.',
-      ExceptionCode.Unimplemented,
-    );
   }
 }

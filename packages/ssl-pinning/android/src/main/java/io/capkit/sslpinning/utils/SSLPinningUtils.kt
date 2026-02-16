@@ -1,8 +1,11 @@
 package io.capkit.sslpinning.utils
 
+import android.content.Context
 import java.net.URL
 import java.security.MessageDigest
 import java.security.cert.Certificate
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
 
 /**
  * Utility helpers for SSL pinning logic (Android).
@@ -55,5 +58,37 @@ object SSLPinningUtils {
     return digest.joinToString(separator = ":") {
       "%02x".format(it)
     }
+  }
+
+  /**
+   * Loads X.509 certificates from the app assets.
+   *
+   * Certificates must be placed under:
+   * assets/certs/
+   *
+   * Invalid or unreadable certificates are silently ignored.
+   */
+  fun loadPinnedCertificates(
+    context: Context,
+    certFileNames: List<String>,
+  ): List<X509Certificate> {
+    val certificates = mutableListOf<X509Certificate>()
+    val assetManager = context.assets
+    val certFactory = CertificateFactory.getInstance("X.509")
+
+    for (fileName in certFileNames) {
+      val assetPath = "certs/$fileName"
+      try {
+        assetManager.open(assetPath).use { inputStream ->
+          val cert = certFactory.generateCertificate(inputStream)
+          if (cert is X509Certificate) {
+            certificates.add(cert)
+          }
+        }
+      } catch (e: Exception) {
+        // Errors are handled by the caller (SSLPinningImpl)
+      }
+    }
+    return certificates
   }
 }
