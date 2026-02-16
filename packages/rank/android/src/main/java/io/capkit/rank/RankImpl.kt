@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import com.google.android.play.core.review.ReviewManagerFactory
 import io.capkit.rank.utils.RankLogger
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Platform-specific native implementation for the Rank plugin.
@@ -30,6 +31,11 @@ class RankImpl(
    * Provided once during initialization via [updateConfig].
    */
   private lateinit var config: RankConfig
+
+  /**
+   * Prevents concurrent review flow executions.
+   */
+  private val isReviewInProgress = AtomicBoolean(false)
 
   // ---------------------------------------------------------------------------
   // Configuration
@@ -126,6 +132,11 @@ class RankImpl(
     activity: Activity,
     onComplete: (Exception?) -> Unit,
   ) {
+    if (!isReviewInProgress.compareAndSet(false, true)) {
+      onComplete(IllegalStateException("Review flow already in progress"))
+      return
+    }
+
     val manager = ReviewManagerFactory.create(context)
 
     // Use cache if available, otherwise fetch new info on the fly
@@ -133,6 +144,7 @@ class RankImpl(
       val flow = manager.launchReviewFlow(activity, cachedReviewInfo!!)
       flow.addOnCompleteListener { _ ->
         cachedReviewInfo = null // Clear cache after use to prevent reuse of expired info
+        isReviewInProgress.set(false)
         onComplete(null)
       }
     } else {
@@ -141,8 +153,12 @@ class RankImpl(
         if (task.isSuccessful) {
           val reviewInfo = task.result
           val flow = manager.launchReviewFlow(activity, reviewInfo)
-          flow.addOnCompleteListener { _ -> onComplete(null) }
+          flow.addOnCompleteListener { _ ->
+            isReviewInProgress.set(false)
+            onComplete(null)
+          }
         } else {
+          isReviewInProgress.set(false)
           onComplete(task.exception)
         }
       }

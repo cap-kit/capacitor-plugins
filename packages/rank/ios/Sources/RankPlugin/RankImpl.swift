@@ -57,10 +57,8 @@ import StoreKit
      * Since the plugin target is iOS 15+, this generally returns true.
      */
     @objc public func isAvailable() -> Bool {
-        if #available(iOS 10.3, *) {
-            return true
-        }
-        return false
+        // In-App Review is supported on iOS 15+ (minimum deployment target).
+        return true
     }
 
     // MARK: - Product Page
@@ -78,13 +76,21 @@ import StoreKit
         DispatchQueue.main.async {
             storeViewController.loadProduct(withParameters: parameters) { success, error in
                 if success {
-                    // Attempt to find the top-most view controller to present the sheet
-                    if let rootVC = UIApplication.shared.windows.first?.rootViewController {
-                        rootVC.present(storeViewController, animated: true) {
-                            completion(true, nil)
-                        }
-                    } else {
+                    // Locate the active key window in a multi-scene environment.
+                    let rootViewController = UIApplication.shared.connectedScenes
+                        .compactMap { $0 as? UIWindowScene }
+                        .flatMap { $0.windows }
+                        .first { $0.isKeyWindow }?
+                        .rootViewController
+
+                    guard let rootVC = rootViewController else {
+                        // No active root view controller available for presentation.
                         completion(false, nil)
+                        return
+                    }
+
+                    rootVC.present(storeViewController, animated: true) {
+                        completion(true, nil)
                     }
                 } else {
                     completion(false, error)
@@ -104,23 +110,21 @@ import StoreKit
      * NOTE: The OS manages the frequency of this prompt; calling this does not guarantee a UI will appear.
      */
     @objc public func requestReview() {
-        if #available(iOS 14.0, *) {
+        // All UI-related operations must be executed on the main thread.
+        DispatchQueue.main.async {
+            // In-App Review is available on iOS 15+ (minimum deployment target).
             let activeScene = UIApplication.shared.connectedScenes
                 .compactMap { $0 as? UIWindowScene }
                 .first { $0.activationState == .foregroundActive }
 
             guard let windowScene = activeScene else {
-                // Diagnostic logging only: review prompt cannot be requested without an active scene
+                // Review prompt cannot be requested without an active foreground scene.
                 RankLogger.error("Cannot request review: no active UIWindowScene found")
                 return
             }
 
             RankLogger.debug("Requesting in-app review for active UIWindowScene")
             SKStoreReviewController.requestReview(in: windowScene)
-        } else {
-            // Legacy fallback (not expected to be used due to iOS 15+ minimum target)
-            RankLogger.debug("Requesting in-app review using legacy API")
-            SKStoreReviewController.requestReview()
         }
     }
 

@@ -7,6 +7,7 @@ import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 import com.getcapacitor.annotation.Permission
 import io.capkit.rank.utils.RankLogger
+import io.capkit.rank.utils.RankValidators
 
 /**
  * Capacitor bridge for the Rank plugin.
@@ -198,7 +199,10 @@ class RankPlugin : Plugin() {
       // Edge case: plugin invoked while Activity is not available
       RankLogger.error("Cannot request review: Activity is null")
       if (!fireAndForget) {
-        call.reject("Activity not available", "INIT_FAILED")
+        call.reject(
+          "Activity not available",
+          "INIT_FAILED",
+        )
       }
       return
     }
@@ -210,7 +214,18 @@ class RankPlugin : Plugin() {
         if (!fireAndForget) {
           if (error != null) {
             RankLogger.error("Review flow failed", error)
-            call.reject(error.message, "INIT_FAILED")
+
+            val message =
+              if (error is IllegalStateException) {
+                error.message ?: "Review flow already in progress."
+              } else {
+                error.message ?: "Native operation failed."
+              }
+
+            call.reject(
+              message,
+              "INIT_FAILED",
+            )
           } else {
             call.resolve()
           }
@@ -227,14 +242,23 @@ class RankPlugin : Plugin() {
    */
   @PluginMethod
   fun openStore(call: PluginCall) {
-    val packageName = call.getString("packageName") ?: config.androidPackageName
+    val rawPackageName = call.getString("packageName") ?: config.androidPackageName
+    val packageName = RankValidators.validatePackageName(rawPackageName)
+
+    if (packageName == null) {
+      call.reject(
+        "Invalid or missing Android package name.",
+        "INIT_FAILED",
+      )
+      return
+    }
 
     try {
       implementation.openStore(packageName)
       call.resolve()
     } catch (e: Exception) {
       call.reject(
-        e.message,
+        e.message ?: "Native operation failed.",
         "INIT_FAILED",
       )
     }
@@ -248,13 +272,27 @@ class RankPlugin : Plugin() {
    */
   @PluginMethod
   fun openStoreListing(call: PluginCall) {
-    val appId = call.getString("appId") ?: call.getString("packageName") ?: config.androidPackageName
+    val rawPackageName =
+      call.getString("appId")
+        ?: call.getString("packageName")
+        ?: config.androidPackageName
+
+    val packageName = RankValidators.validatePackageName(rawPackageName)
+
+    if (packageName == null) {
+      call.reject("Invalid or missing Android package name.", "INIT_FAILED")
+      return
+    }
+
     activity.runOnUiThread {
       try {
-        implementation.openStoreListing(appId ?: context.packageName)
+        implementation.openStoreListing(packageName)
         call.resolve()
       } catch (e: Exception) {
-        call.reject(e.message, "INIT_FAILED")
+        call.reject(
+          e.message ?: "Native operation failed.",
+          "INIT_FAILED",
+        )
       }
     }
   }
@@ -265,7 +303,17 @@ class RankPlugin : Plugin() {
    */
   @PluginMethod
   fun openCollection(call: PluginCall) {
-    val name = call.getString("name") ?: return call.reject("Collection name is missing")
+    val rawName = call.getString("name")
+    val name = RankValidators.validateCollectionName(rawName)
+
+    if (name == null) {
+      call.reject(
+        "Invalid or missing collection name.",
+        "INIT_FAILED",
+      )
+      return
+    }
+
     activity.runOnUiThread {
       implementation.openCollection(name)
       call.resolve()
@@ -278,7 +326,17 @@ class RankPlugin : Plugin() {
    */
   @PluginMethod
   fun search(call: PluginCall) {
-    val terms = call.getString("terms") ?: return call.reject("Terms are missing")
+    val rawTerms = call.getString("terms")
+    val terms = RankValidators.validateSearchTerms(rawTerms)
+
+    if (terms == null) {
+      call.reject(
+        "Invalid or missing search terms.",
+        "INIT_FAILED",
+      )
+      return
+    }
+
     implementation.search(terms)
     call.resolve()
   }
@@ -289,7 +347,17 @@ class RankPlugin : Plugin() {
    */
   @PluginMethod
   fun openDevPage(call: PluginCall) {
-    val devId = call.getString("devId") ?: return call.reject("devId is missing")
+    val rawDevId = call.getString("devId")
+    val devId = RankValidators.validateDevId(rawDevId)
+
+    if (devId == null) {
+      call.reject(
+        "Invalid or missing developer ID.",
+        "INIT_FAILED",
+      )
+      return
+    }
+
     implementation.openDevPage(devId)
     call.resolve()
   }
