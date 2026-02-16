@@ -118,16 +118,23 @@ public final class RankPlugin: CAPPlugin, CAPBridgedPlugin {
      * - appId (String, optional): The Apple App ID. Fallbacks to global config.
      */
     @objc func presentProductPage(_ call: CAPPluginCall) {
-        guard let appId = call.getString("appId") ?? config?.appleAppId else {
-            call.reject("Apple App ID is missing.", "INIT_FAILED")
+        let rawAppId = call.getString("appId") ?? config?.appleAppId
+        guard let appId = RankValidators.validateAppId(rawAppId) else {
+            call.reject("Invalid or missing Apple App ID.", "INIT_FAILED")
             return
         }
 
         implementation.presentProductPage(appId: appId) { success, error in
-            if success {
-                call.resolve()
-            } else {
-                call.reject(error?.localizedDescription ?? "Failed to load product page.", "INIT_FAILED")
+            // Ensure bridge resolution occurs on the main thread.
+            DispatchQueue.main.async {
+                if success {
+                    call.resolve()
+                } else {
+                    call.reject(
+                        error?.localizedDescription ?? "Failed to load product page.",
+                        "INIT_FAILED"
+                    )
+                }
             }
         }
     }
@@ -162,8 +169,9 @@ public final class RankPlugin: CAPPlugin, CAPBridgedPlugin {
      * - appId (String, optional): The Apple App ID. Fallbacks to global config.
      */
     @objc func openStore(_ call: CAPPluginCall) {
+        let rawAppId = call.getString("appId") ?? config?.appleAppId
         // Attempt to retrieve the App ID from call parameters or static configuration
-        guard let appId = call.getString("appId") ?? config?.appleAppId else {
+        guard let appId = RankValidators.validateAppId(rawAppId) else {
             call.reject(
                 "Apple App ID is missing. Provide it in config or as a parameter.",
                 "INIT_FAILED"
@@ -196,7 +204,8 @@ public final class RankPlugin: CAPPlugin, CAPBridgedPlugin {
      * - Parameter appId: The numeric Apple App ID (e.g., "123456789").
      */
     @objc func openStoreListing(_ call: CAPPluginCall) {
-        guard let appId = call.getString("appId") ?? config?.appleAppId else {
+        let rawAppId = call.getString("appId") ?? config?.appleAppId
+        guard let appId = RankValidators.validateAppId(rawAppId) else {
             call.reject("Apple App ID is missing.", "INIT_FAILED")
             return
         }
