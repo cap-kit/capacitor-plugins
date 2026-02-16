@@ -1,5 +1,11 @@
 # @cap-kit/redsys
 
+## 8.0.1
+
+### Patch Changes
+
+- 04c071c: Fix CJS packaging conflict by renaming the CommonJS bundle to .cjs. This prevents ReferenceError: require is not defined during capacitor sync in ESM environments.
+
 ## 8.0.0
 
 ### Patch Changes

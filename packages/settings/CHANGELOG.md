@@ -1,5 +1,11 @@
 # @cap-kit/settings
 
+## 8.1.3
+
+### Patch Changes
+
+- 04c071c: Fix CJS packaging conflict by renaming the CommonJS bundle to .cjs. This prevents ReferenceError: require is not defined during capacitor sync in ESM environments.
+
 ## 8.1.2
 
 ### Patch Changes

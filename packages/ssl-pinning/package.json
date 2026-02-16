@@ -1,6 +1,6 @@
 {
   "name": "@cap-kit/ssl-pinning",
-  "version": "8.0.2",
+  "version": "8.0.3",
   "description": "Capacitor plugin for runtime SSL certificate fingerprint pinning on iOS and Android",
   "type": "module",
   "private": false,
