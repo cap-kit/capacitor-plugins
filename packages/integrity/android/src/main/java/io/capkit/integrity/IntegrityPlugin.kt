@@ -13,6 +13,9 @@ import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 import com.getcapacitor.annotation.Permission
+import io.capkit.integrity.config.IntegrityConfig
+import io.capkit.integrity.error.IntegrityError
+import io.capkit.integrity.models.IntegrityCheckOptions
 import io.capkit.integrity.utils.IntegrityLogger
 import io.capkit.integrity.utils.IntegrityUtils
 

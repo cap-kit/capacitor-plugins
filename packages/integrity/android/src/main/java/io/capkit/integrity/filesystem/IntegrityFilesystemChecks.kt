@@ -1,7 +1,7 @@
 package io.capkit.integrity.filesystem
 
-import io.capkit.integrity.IntegrityCheckOptions
 import io.capkit.integrity.IntegritySignalBuilder
+import io.capkit.integrity.models.IntegrityCheckOptions
 import java.io.File
 
 /**

@@ -2,9 +2,9 @@ package io.capkit.integrity.ui
 
 import android.content.Context
 import android.view.accessibility.AccessibilityManager
-import io.capkit.integrity.IntegrityCheckOptions
 import io.capkit.integrity.IntegritySignalBuilder
 import io.capkit.integrity.IntegritySignalIds
+import io.capkit.integrity.models.IntegrityCheckOptions
 
 /**
  * Detects UI-level attacks such as screen overlays and

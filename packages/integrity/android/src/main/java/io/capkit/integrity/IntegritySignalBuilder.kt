@@ -1,5 +1,7 @@
 package io.capkit.integrity
 
+import io.capkit.integrity.models.IntegrityCheckOptions
+
 /**
  * Helper responsible for constructing standardized integrity signal maps.
  *
