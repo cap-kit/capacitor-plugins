@@ -3,9 +3,9 @@ package io.capkit.integrity.root
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
-import io.capkit.integrity.IntegrityCheckOptions
-import io.capkit.integrity.IntegrityError
 import io.capkit.integrity.IntegritySignalBuilder
+import io.capkit.integrity.error.IntegrityError
+import io.capkit.integrity.models.IntegrityCheckOptions
 import java.io.File
 
 /**

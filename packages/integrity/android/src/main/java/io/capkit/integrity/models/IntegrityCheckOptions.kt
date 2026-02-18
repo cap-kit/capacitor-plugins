@@ -1,4 +1,4 @@
-package io.capkit.integrity
+package io.capkit.integrity.models
 
 /**
  * Native representation of `Integrity.check()` options.

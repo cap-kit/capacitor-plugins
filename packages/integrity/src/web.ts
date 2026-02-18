@@ -16,9 +16,9 @@ export class IntegrityWeb extends WebPlugin implements IntegrityPlugin {
     super();
   }
 
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
   // Check
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
 
   /**
    * Executes a runtime integrity check.
@@ -29,9 +29,9 @@ export class IntegrityWeb extends WebPlugin implements IntegrityPlugin {
     throw this.unimplemented('Integrity checks are not implemented on web.');
   }
 
-  // ---------------------------------------------------------------------------
-  // PresentBlockPage
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
+  // Present Block Page
+  // -----------------------------------------------------------------------------
 
   /**
    * Presents the integrity block page.
@@ -44,9 +44,9 @@ export class IntegrityWeb extends WebPlugin implements IntegrityPlugin {
     throw this.unavailable('Integrity block page is not available on the Web platform.');
   }
 
-  // ---------------------------------------------------------------------------
-  // Plugin info
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
+  // Plugin Info
+  // -----------------------------------------------------------------------------
 
   /**
    * Returns the plugin version.

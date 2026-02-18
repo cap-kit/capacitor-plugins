@@ -1,4 +1,4 @@
-package io.capkit.integrity
+package io.capkit.integrity.error
 
 /**
  * Native error model for the Integrity plugin (Android).

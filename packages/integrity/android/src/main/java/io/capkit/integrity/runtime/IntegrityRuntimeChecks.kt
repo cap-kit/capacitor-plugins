@@ -3,9 +3,9 @@ package io.capkit.integrity.runtime
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Debug
-import io.capkit.integrity.IntegrityCheckOptions
-import io.capkit.integrity.IntegrityError
 import io.capkit.integrity.IntegritySignalBuilder
+import io.capkit.integrity.error.IntegrityError
+import io.capkit.integrity.models.IntegrityCheckOptions
 
 /**
  * Runtime integrity checks related to debugging conditions
