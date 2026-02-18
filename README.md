@@ -53,7 +53,7 @@ Each plugin is fully cross-platform:
 > **Information:** All plugins are optimized for **Capacitor v8+** and tested for native parity.
 
 <p align="center">
-  📦 <strong>Total Plugins:</strong> 5 &nbsp;&bull;&nbsp; 📈 <strong>Weekly Downloads:</strong> <img src="https://img.shields.io/npm/dw/@cap-kit/test-plugin?style=flat-square&logo=npm&label=&color=orange" alt="Downloads" valign="middle" />
+  📦 <strong>Total Plugins:</strong> 6 &nbsp;&bull;&nbsp; 📈 <strong>Weekly Downloads:</strong> <img src="https://img.shields.io/npm/dw/@cap-kit/test-plugin?style=flat-square&logo=npm&label=&color=orange" alt="Downloads" valign="middle" />
 </p>
 
 <table width="100%">
@@ -77,6 +77,22 @@ Runtime integrity and environment signal detection for Capacitor v8 applications
 
 <td align="center" width="33%" valign="top">
 
+### <a href="./packages/people">👥 People</a>
+
+<a href="https://www.npmjs.com/package/@cap-kit/people"><code>@cap-kit/people</code></a>
+
+<a href="https://www.npmjs.com/package/@cap-kit/people"><img src="https://img.shields.io/npm/v/@cap-kit/people?style=flat-square&label=npm&logo=npm" alt="npm version" /></a>
+<a href="https://www.npmjs.com/package/@cap-kit/people"><img src="https://img.shields.io/npm/dm/@cap-kit/people?style=flat-square&label=downloads&logo=npm&color=orange" alt="downloads" /></a>
+
+Unified, high-performance contact management for Capacitor with zero-permission picking and capability-based access.
+
+<a href="./packages/people"><strong>Docs</strong></a> • 
+<a href="https://www.npmjs.com/package/@cap-kit/people"><strong>NPM</strong></a>
+
+</td>
+
+<td align="center" width="33%" valign="top">
+
 ### <a href="./packages/rank">⭐ Rank</a>
 
 <a href="https://www.npmjs.com/package/@cap-kit/rank"><code>@cap-kit/rank</code></a>
@@ -90,6 +106,8 @@ Unified Capacitor v8 plugin for native In-App Reviews and cross-platform Store n
 <a href="https://www.npmjs.com/package/@cap-kit/rank"><strong>NPM</strong></a>
 
 </td>
+</tr>
+<tr>
 
 <td align="center" width="33%" valign="top">
 
@@ -106,8 +124,6 @@ Redsys InApp SDK bridge for Capacitor v8. Supports native Direct Payment and sec
 <a href="https://www.npmjs.com/package/@cap-kit/redsys"><strong>NPM</strong></a>
 
 </td>
-</tr>
-<tr>
 
 <td align="center" width="33%" valign="top">
 
@@ -140,7 +156,6 @@ Capacitor plugin for runtime SSL certificate fingerprint pinning on iOS and Andr
 <a href="https://www.npmjs.com/package/@cap-kit/ssl-pinning"><strong>NPM</strong></a>
 
 </td>
-<td width="33%"></td>
 </tr>
 </table>
 
@@ -157,6 +172,18 @@ Capacitor plugin for runtime SSL certificate fingerprint pinning on iOS and Andr
 Runtime integrity and environment signal detection for Capacitor v8 applications.
 
 [Docs](./packages/integrity) • [NPM](https://www.npmjs.com/package/@cap-kit/integrity)
+
+---
+
+### 👥 People
+
+`@cap-kit/people`
+
+![npm](https://img.shields.io/npm/v/@cap-kit/people?style=flat-square&label=npm&logo=npm) ![downloads](https://img.shields.io/npm/dm/@cap-kit/people?style=flat-square&label=downloads&logo=npm&color=orange)
+
+Unified, high-performance contact management for Capacitor with zero-permission picking and capability-based access.
+
+[Docs](./packages/people) • [NPM](https://www.npmjs.com/package/@cap-kit/people)
 
 ---
 
