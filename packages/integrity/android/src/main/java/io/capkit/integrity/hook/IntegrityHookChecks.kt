@@ -1,6 +1,6 @@
 package io.capkit.integrity.hook
 
-import io.capkit.integrity.IntegrityError
+import io.capkit.integrity.error.IntegrityError
 import java.io.File
 import java.net.InetSocketAddress
 import java.net.Socket

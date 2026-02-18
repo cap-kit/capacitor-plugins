@@ -1,7 +1,7 @@
 package io.capkit.integrity.remote
 
 import android.content.Context
-import io.capkit.integrity.IntegrityCheckOptions
+import io.capkit.integrity.models.IntegrityCheckOptions
 
 /**
  * Handles remote attestation signals (Play Integrity API).

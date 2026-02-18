@@ -1,6 +1,5 @@
-package io.capkit.integrity
+package io.capkit.integrity.config
 
-import android.content.Context
 import com.getcapacitor.Plugin
 
 /**
@@ -18,11 +17,9 @@ import com.getcapacitor.Plugin
 class IntegrityConfig(
   plugin: Plugin,
 ) {
-  /**
-   * Android application context.
-   * Exposed for native components that may require it.
-   */
-  val context: Context = plugin.context
+  // -----------------------------------------------------------------------------
+  // Public Configuration Values
+  // -----------------------------------------------------------------------------
 
   /**
    * Enables verbose native logging.
@@ -35,13 +32,14 @@ class IntegrityConfig(
   val verboseLogging: Boolean
 
   /**
+   * Enables the native integrity block page.
    *
    * Default: false
    */
   val blockPageEnabled: Boolean
 
   /**
-   *
+   * URL used by the native block page when enabled.
    */
   val blockPageUrl: String?
 
