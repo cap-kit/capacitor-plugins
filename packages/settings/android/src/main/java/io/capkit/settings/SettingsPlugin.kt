@@ -5,7 +5,9 @@ import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
-import io.capkit.settings.utils.SettingsLogger
+import io.capkit.settings.config.SettingsConfig
+import io.capkit.settings.error.SettingsError
+import io.capkit.settings.logger.SettingsLogger
 
 /**
  * Capacitor bridge for the Settings plugin (Android).
@@ -59,8 +61,7 @@ class SettingsPlugin : Plugin() {
     implementation = SettingsImpl(context)
     implementation.updateConfig(config)
 
-    SettingsLogger.verbose = config.verboseLogging
-    SettingsLogger.debug("Plugin loaded")
+    SettingsLogger.debug("Plugin loaded. Version: ", BuildConfig.PLUGIN_VERSION)
   }
 
   // ---------------------------------------------------------------------------
@@ -68,11 +69,8 @@ class SettingsPlugin : Plugin() {
   // ---------------------------------------------------------------------------
 
   /**
-   * Maps native SettingsError instances to JS-facing SettingsErrorCode values.
-   *
-   * IMPORTANT:
-   * - This is the ONLY place where native errors are translated
-   * - SettingsImpl must NEVER know about JS or Capacitor error codes
+   * Rejects the call with a message and a standardized error code.
+   * Ensure consistency with the JS SettingsErrorCode enum.
    */
   private fun reject(
     call: PluginCall,
@@ -81,12 +79,19 @@ class SettingsPlugin : Plugin() {
     val code =
       when (error) {
         is SettingsError.Unavailable -> "UNAVAILABLE"
+        is SettingsError.Cancelled -> "CANCELLED"
         is SettingsError.PermissionDenied -> "PERMISSION_DENIED"
         is SettingsError.InitFailed -> "INIT_FAILED"
+        is SettingsError.InvalidInput -> "INVALID_INPUT"
         is SettingsError.UnknownType -> "UNKNOWN_TYPE"
+        is SettingsError.NotFound -> "NOT_FOUND"
+        is SettingsError.Conflict -> "CONFLICT"
+        is SettingsError.Timeout -> "TIMEOUT"
       }
 
-    call.reject(error.message, code)
+    // Always use the message from the SettingsError instance
+    val message = error.message ?: "Unknown native error"
+    call.reject(message, code)
   }
 
   // ---------------------------------------------------------------------------
@@ -98,7 +103,11 @@ class SettingsPlugin : Plugin() {
    */
   @PluginMethod
   fun open(call: PluginCall) {
-    val option = call.getString("optionAndroid") ?: ""
+    val option = call.getString("optionAndroid")
+    if (option.isNullOrBlank()) {
+      reject(call, SettingsError.InvalidInput("`optionAndroid` must be provided and not empty."))
+      return
+    }
     handleOpen(call, option)
   }
 
@@ -111,7 +120,11 @@ class SettingsPlugin : Plugin() {
    */
   @PluginMethod
   fun openAndroid(call: PluginCall) {
-    val option = call.getString("option") ?: ""
+    val option = call.getString("option")
+    if (option.isNullOrBlank()) {
+      reject(call, SettingsError.InvalidInput("`option` must be provided and not empty."))
+      return
+    }
     handleOpen(call, option)
   }
 
@@ -120,7 +133,10 @@ class SettingsPlugin : Plugin() {
     option: String,
   ) {
     try {
-      implementation.open(option)
+      val intent = implementation.open(option)
+      bridge.activity.runOnUiThread {
+        bridge.activity.startActivity(intent)
+      }
       call.resolve()
     } catch (error: SettingsError) {
       reject(call, error)

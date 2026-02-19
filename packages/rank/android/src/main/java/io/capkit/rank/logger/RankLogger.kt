@@ -1,4 +1,4 @@
-package io.capkit.rank.utils
+package io.capkit.rank.logger
 
 import android.util.Log
 

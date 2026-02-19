@@ -1,6 +1,7 @@
 import { WebPlugin } from '@capacitor/core';
 
 import { SettingsPlugin, PluginVersionResult } from './definitions';
+import { PLUGIN_VERSION } from './version';
 
 /**
  * Web implementation of the Settings plugin.
@@ -8,11 +9,9 @@ import { SettingsPlugin, PluginVersionResult } from './definitions';
  * This implementation exists to satisfy Capacitor's multi-platform contract.
  * Opening native system settings is not supported in web browsers.
  *
- * All methods follow the same state-based result model used on
- * Android and iOS:
- * - operations never throw
- * - Promise rejection is not used
- * - failures are reported via structured result objects
+ * All methods follow the standard Promise rejection model:
+ * - successful operations resolve
+ * - unsupported features reject with UNAVAILABLE
  */
 export class SettingsWeb extends WebPlugin implements SettingsPlugin {
   constructor() {
@@ -58,6 +57,6 @@ export class SettingsWeb extends WebPlugin implements SettingsPlugin {
    * rather than a native implementation.
    */
   async getPluginVersion(): Promise<PluginVersionResult> {
-    return { version: 'web' };
+    return { version: PLUGIN_VERSION };
   }
 }
