@@ -1,11 +1,3 @@
-/**
- * This module provides a web implementation of the SSLPinningPlugin.
- * The functionality is limited in a web context due to the lack of SSL certificate inspection capabilities in browsers.
- *
- * The implementation adheres to the SSLPinningPlugin interface but provides fallback behavior
- * because browsers do not allow direct inspection of SSL certificate details.
- */
-
 import { WebPlugin } from '@capacitor/core';
 
 import { PluginVersionResult, SSLPinningPlugin, SSLPinningResult } from './definitions';
@@ -39,7 +31,9 @@ export class SSLPinningWeb extends WebPlugin implements SSLPinningPlugin {
     throw this.unimplemented();
   }
 
-  // --- Plugin Info ---
+  // -----------------------------------------------------------------------------
+  // Plugin Info
+  // -----------------------------------------------------------------------------
 
   /**
    * Returns the plugin version.

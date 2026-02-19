@@ -1,120 +1,56 @@
 import Foundation
-import CryptoKit
 import Security
+import CommonCrypto
 
-/**
- Utility helpers for SSL pinning logic.
-
- Pure Swift utilities:
- - No Capacitor dependency
- - No side effects
- - Fully testable
- */
 struct SSLPinningUtils {
+    // MARK: - URL Helpers
 
-    /**
-     Validates and returns a HTTPS URL.
-
-     Non-HTTPS URLs are explicitly rejected
-     to prevent insecure usage.
-     */
-    static func httpsURL(from value: String) -> URL? {
-        guard
-            let url = URL(string: value),
-            url.scheme?.lowercased() == "https"
-        else {
+    static func httpsURL(from urlString: String) -> URL? {
+        guard let url = URL(string: urlString), url.scheme?.lowercased() == "https" else {
             return nil
         }
         return url
     }
 
-    /**
-     Normalizes a fingerprint string by:
-     - Removing colon separators
-     - Converting to lowercase
-
-     Example:
-     "AA:BB:CC" → "aabbcc"
-     */
-    static func normalizeFingerprint(_ value: String) -> String {
-        value
+    static func normalizeFingerprint(_ fingerprint: String) -> String {
+        fingerprint
             .replacingOccurrences(of: ":", with: "")
-            .lowercased()
+            .replacingOccurrences(of: " ", with: "")
+            .uppercased()
     }
 
-    /**
-     Computes the SHA-256 fingerprint of a certificate.
+    // MARK: - Certificate Helpers
 
-     Output format:
-     "aa:bb:cc:dd:..."
-     */
-    static func sha256Fingerprint(
-        from certificate: SecCertificate
-    ) -> String {
-        let data =
-            SecCertificateCopyData(certificate) as Data
-
-        let hash =
-            SHA256.hash(data: data)
-
-        return hash
-            .map { String(format: "%02x", $0) }
-            .joined(separator: ":")
-    }
-
-    /**
-     Extracts the leaf certificate from a SecTrust object.
-
-     Handles both:
-     - iOS 15+
-     - Older fallback APIs (still safe on iOS 15 target)
-     */
-    static func leafCertificate(
-        from trust: SecTrust
-    ) -> SecCertificate? {
-        if #available(iOS 15.0, *) {
-            return
-                (SecTrustCopyCertificateChain(trust)
-                    as? [SecCertificate])?
-                .first
-        } else {
-            return SecTrustGetCertificateAtIndex(trust, 0)
+    static func sha256Fingerprint(from certificate: SecCertificate) -> String {
+        let certData = SecCertificateCopyData(certificate) as Data
+        var hash = [UInt8](repeating: 0, count: Int(CC_SHA256_DIGEST_LENGTH))
+        certData.withUnsafeBytes { bytes in
+            _ = CC_SHA256(bytes.baseAddress, CC_LONG(certData.count), &hash)
         }
+        return hash.map { String(format: "%02X", $0) }.joined()
     }
 
-    /**
-     Loads pinned certificates from app bundle.
+    static func leafCertificate(from trust: SecTrust) -> SecCertificate? {
+        guard SecTrustGetCertificateCount(trust) > 0 else { return nil }
+        return SecTrustGetCertificateAtIndex(trust, 0)
+    }
 
-     Certificates are expected to be in a 'certs' subdirectory.
-     */
-    static func loadPinnedCertificates(
-        certFileNames: [String],
-        subdirectory: String = "certs"
-    ) -> [SecCertificate] {
-        var certificates: [SecCertificate] = []
+    // MARK: - Bundle Certificate Loading
 
-        for fileName in certFileNames {
-            let parts = fileName.split(separator: ".")
-            guard parts.count >= 2 else { continue }
+    static func loadPinnedCertificates(certFileNames: [String]) -> [SecCertificate] {
+        certFileNames.compactMap { fileName in
+            let fileURL = URL(fileURLWithPath: fileName)
+            let name = fileURL.deletingPathExtension().lastPathComponent
+            let ext = fileURL.pathExtension.isEmpty ? "cer" : fileURL.pathExtension
 
-            let name = String(parts.dropLast().joined(separator: "."))
-            let ext = String(parts.last!)
-
-            guard
-                let url = Bundle.main.url(
-                    forResource: name,
-                    withExtension: ext,
-                    subdirectory: subdirectory
-                ),
-                let data = try? Data(contentsOf: url),
-                let cert = SecCertificateCreateWithData(nil, data as CFData)
-            else {
-                // Log error if file exists but certificate creation fails
+            guard let path = Bundle.main.path(forResource: name, ofType: ext),
+                  let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
+                  let cert = SecCertificateCreateWithData(nil, data as CFData) else {
                 SSLPinningLogger.error("Failed to create certificate from file: \(fileName). Ensure it is a valid DER-encoded X.509 certificate.")
-                continue
+                return nil
             }
-            certificates.append(cert)
+
+            return cert
         }
-        return certificates
     }
 }

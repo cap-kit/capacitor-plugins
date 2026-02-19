@@ -26,7 +26,7 @@ public final class SSLPinningImpl: NSObject {
 
     /**
      Static plugin configuration.
-     
+
      Injected once during plugin initialization.
      Must not be mutated after being set.
      */
@@ -34,7 +34,7 @@ public final class SSLPinningImpl: NSObject {
 
     /**
      Cached pinned certificates loaded from the app bundle.
-     
+
      This avoids repeated disk access when certificate-based
      pinning is used multiple times.
      */
@@ -80,7 +80,7 @@ public final class SSLPinningImpl: NSObject {
      2. Static configuration fingerprint
 
      - Throws: `SSLPinningError.unavailable`
-       if no fingerprint is available.
+     if no fingerprint is available.
      */
     func checkCertificate(
         urlString: String,
@@ -113,7 +113,7 @@ public final class SSLPinningImpl: NSObject {
      fingerprint matches the server certificate.
 
      - Throws: `SSLPinningError.unavailable`
-       if no fingerprints are available.
+     if no fingerprints are available.
      */
     func checkCertificates(
         urlString: String,
@@ -156,8 +156,8 @@ public final class SSLPinningImpl: NSObject {
      delegate flow inside a continuation.
 
      - Throws:
-       - `SSLPinningError.unknownType`
-       - `SSLPinningError.initFailed`
+     - `SSLPinningError.unknownType`
+     - `SSLPinningError.initFailed`
      */
     private func performCheck(
         urlString: String,

@@ -1,4 +1,4 @@
-package io.capkit.sslpinning
+package io.capkit.sslpinning.error
 
 /**
  * Native error model for the SSLPinning plugin (Android).

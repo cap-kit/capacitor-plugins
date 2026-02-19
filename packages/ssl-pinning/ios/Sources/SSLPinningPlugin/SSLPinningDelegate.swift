@@ -33,7 +33,7 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate {
 
     /**
      Normalized expected fingerprints.
-     
+
      All fingerprints are normalized at initialization time
      to guarantee deterministic comparison.
      */
@@ -41,7 +41,7 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate {
 
     /**
      Optional pinned certificates used for certificate-based pinning.
-     
+
      When present, the delegate switches to "cert" mode
      and replaces the system trust anchors with these certificates.
      */
@@ -49,11 +49,11 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate {
 
     /**
      Lowercased list of excluded domains.
-     
+
      Matching rules:
      - Exact hostname match
      - Subdomain match
-     
+
      Example:
      - excluded: example.com
      - matches: example.com, api.example.com
@@ -63,14 +63,14 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate {
     /**
      Completion handler returning the raw result
      of the SSL pinning operation.
-     
+
      The delegate must ALWAYS invoke this exactly once.
      */
     private let completion: ([String: Any]) -> Void
 
     /**
      Controls verbose native logging.
-     
+
      Logging decisions are made outside this class.
      */
     private let verboseLogging: Bool
@@ -79,14 +79,14 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate {
 
     /**
      Initializes the SSLPinningDelegate.
-     
+
      - Parameters:
-       - expectedFingerprints: Allowed SHA-256 fingerprints.
-       - pinnedCertificates: Optional certificates for anchor-based validation.
-       - excludedDomains: Hostnames that bypass SSL pinning.
-       - completion: Completion handler returning structured result data.
-       - verboseLogging: Enables verbose native logging.
-     
+     - expectedFingerprints: Allowed SHA-256 fingerprints.
+     - pinnedCertificates: Optional certificates for anchor-based validation.
+     - excludedDomains: Hostnames that bypass SSL pinning.
+     - completion: Completion handler returning structured result data.
+     - verboseLogging: Enables verbose native logging.
+
      Design notes:
      - All inputs are normalized and stored.
      - No external configuration access is performed.
@@ -127,16 +127,16 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate {
      Mode behavior:
 
      1. Excluded Mode
-        - Bypasses pinning entirely.
-        - Uses system trust.
+     - Bypasses pinning entirely.
+     - Uses system trust.
 
      2. Certificate Mode
-        - Replaces system trust anchors with pinned certificates.
-        - Validates full chain using SecTrustEvaluateWithError.
+     - Replaces system trust anchors with pinned certificates.
+     - Validates full chain using SecTrustEvaluateWithError.
 
      3. Fingerprint Mode
-        - Does NOT evaluate system trust.
-        - Compares only the leaf certificate fingerprint.
+     - Does NOT evaluate system trust.
+     - Compares only the leaf certificate fingerprint.
      */
     func urlSession(
         _ session: URLSession,
@@ -189,10 +189,10 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate {
 
         /**
          Certificate-based pinning:
-         
+
          - Replaces system trust anchors with pinned certificates.
          - The handshake succeeds only if the server chain
-           can be validated against those anchors.
+         can be validated against those anchors.
          */
         if let pinnedCerts = pinnedCertificates {
 
@@ -233,11 +233,11 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate {
 
         /**
          Fingerprint-based pinning:
-         
+
          - Extracts the leaf certificate.
          - Computes SHA-256 fingerprint.
          - Compares against normalized expected fingerprints.
-         
+
          NOTE:
          - The system trust chain is NOT evaluated in this mode.
          - Only the leaf certificate fingerprint is considered.

@@ -7,7 +7,9 @@ import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 import com.getcapacitor.annotation.Permission
-import io.capkit.sslpinning.utils.SSLPinningLogger
+import io.capkit.sslpinning.config.SSLPinningConfig
+import io.capkit.sslpinning.error.SSLPinningError
+import io.capkit.sslpinning.logger.SSLPinningLogger
 
 /**
  * Capacitor bridge for the SSLPinning plugin (Android).
@@ -28,9 +30,9 @@ import io.capkit.sslpinning.utils.SSLPinningLogger
   ],
 )
 class SSLPinningPlugin : Plugin() {
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
   // Properties
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
 
   /**
    * Immutable plugin configuration read from capacitor.config.ts.
@@ -49,9 +51,9 @@ class SSLPinningPlugin : Plugin() {
    */
   private lateinit var implementation: SSLPinningImpl
 
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
   // Companion Object
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
 
   private companion object {
     /**
@@ -65,9 +67,9 @@ class SSLPinningPlugin : Plugin() {
     const val ACCOUNT_NAME = "SSLPinning"
   }
 
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
   // Lifecycle
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
 
   /**
    * Called once when the plugin is loaded by the Capacitor bridge.
@@ -86,9 +88,9 @@ class SSLPinningPlugin : Plugin() {
     SSLPinningLogger.debug("Plugin loaded")
   }
 
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
   // Error Mapping
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
 
   /**
    * Maps native SSLPinningError values
@@ -112,9 +114,9 @@ class SSLPinningPlugin : Plugin() {
     call.reject(error.message, code)
   }
 
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
   // SSL Pinning (single fingerprint)
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
 
   /**
    * Validates the SSL certificate of a HTTPS endpoint
@@ -156,9 +158,9 @@ class SSLPinningPlugin : Plugin() {
     }
   }
 
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
   // SSL Pinning (multiple fingerprints)
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
 
   /**
    * Validates the SSL certificate of a HTTPS endpoint
@@ -215,9 +217,9 @@ class SSLPinningPlugin : Plugin() {
     }
   }
 
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
   // Version
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
 
   /**
    * Returns the native plugin version.

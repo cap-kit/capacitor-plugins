@@ -1,6 +1,5 @@
-package io.capkit.sslpinning
+package io.capkit.sslpinning.config
 
-import android.content.Context
 import com.getcapacitor.Plugin
 
 /**
@@ -18,15 +17,9 @@ import com.getcapacitor.Plugin
 class SSLPinningConfig(
   plugin: Plugin,
 ) {
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
   // Properties
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Android application context.
-   * Exposed for native components that may require it.
-   */
-  val context: Context = plugin.context
+  // -----------------------------------------------------------------------------
 
   /**
    * Enables verbose native logging.
@@ -66,9 +59,9 @@ class SSLPinningConfig(
    */
   val excludedDomains: List<String>
 
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
   // Initialization
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
 
   init {
     val config = plugin.getConfig()
