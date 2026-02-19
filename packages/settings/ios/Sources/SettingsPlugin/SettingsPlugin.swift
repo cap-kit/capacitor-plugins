@@ -56,42 +56,49 @@ public final class SettingsPlugin: CAPPlugin, CAPBridgedPlugin {
         implementation.applyConfig(cfg)
 
         // Log if verbose logging is enabled
-        SettingsLogger.debug("Plugin loaded")
+        SettingsLogger.debug("Plugin loaded. Version: ", PluginVersion.number)
     }
 
     // MARK: - Error Mapping
 
     /**
-     Maps native SettingsError values to JS-facing error codes.
+     * Rejects the call using standardized error codes from the native SettingsError enum.
      */
-    private func reject(_ call: CAPPluginCall, error: SettingsError) {
-        let code: String
+    private func reject(
+        _ call: CAPPluginCall,
+        error: SettingsError
+    ) {
+        // Use the centralized errorCode and message defined in SettingsError.swift
+        call.reject(error.message, error.errorCode)
+    }
 
-        switch error {
-        case .unavailable:
-            code = "UNAVAILABLE"
-        case .permissionDenied:
-            code = "PERMISSION_DENIED"
-        case .initFailed:
-            code = "INIT_FAILED"
-        case .unknownType:
-            code = "UNKNOWN_TYPE"
+    private func handleError(_ call: CAPPluginCall, _ error: Error) {
+        if let settingsError = error as? SettingsError {
+            call.reject(settingsError.message, settingsError.errorCode)
+        } else {
+            reject(call, error: .initFailed(error.localizedDescription))
         }
-
-        call.reject(error.message, code)
     }
 
     // MARK: - Settings
 
     /// Opens the requested iOS settings page.
     @objc func open(_ call: CAPPluginCall) {
-        let option = call.getString("optionIOS", "")
+        let option = call.getString("optionIOS")
+        guard let option = option, !option.isEmpty else {
+            reject(call, error: .invalidInput("`optionIOS` must be provided and not empty."))
+            return
+        }
         handleOpen(call, option: option)
     }
 
     /// Opens the requested iOS settings page.
     @objc func openIOS(_ call: CAPPluginCall) {
-        let option = call.getString("option", "")
+        let option = call.getString("option")
+        guard let option = option, !option.isEmpty else {
+            reject(call, error: .invalidInput("`option` must be provided and not empty."))
+            return
+        }
         handleOpen(call, option: option)
     }
 
@@ -103,7 +110,7 @@ public final class SettingsPlugin: CAPPlugin, CAPBridgedPlugin {
         } catch let error as SettingsError {
             reject(call, error: error)
         } catch {
-            call.reject("Unknown error", "UNKNOWN")
+            reject(call, error: .initFailed(error.localizedDescription))
         }
     }
 

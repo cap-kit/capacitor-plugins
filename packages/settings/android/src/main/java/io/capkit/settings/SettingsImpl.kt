@@ -2,7 +2,9 @@ package io.capkit.settings
 
 import android.content.Context
 import android.content.Intent
-import io.capkit.settings.utils.SettingsLogger
+import io.capkit.settings.config.SettingsConfig
+import io.capkit.settings.error.SettingsError
+import io.capkit.settings.logger.SettingsLogger
 import io.capkit.settings.utils.SettingsUtils
 
 /**
@@ -46,7 +48,7 @@ class SettingsImpl(
    *
    * @throws SettingsError if the operation fails
    */
-  fun open(option: String) {
+  fun open(option: String): Intent {
     val intent =
       SettingsUtils.resolveIntent(option, context.packageName)
         ?: throw SettingsError.Unavailable(
@@ -61,6 +63,6 @@ class SettingsImpl(
       )
     }
 
-    context.startActivity(intent)
+    return intent
   }
 }

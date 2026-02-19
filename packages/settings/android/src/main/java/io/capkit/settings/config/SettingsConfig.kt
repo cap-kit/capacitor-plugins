@@ -1,4 +1,4 @@
-package io.capkit.settings
+package io.capkit.settings.config
 
 import android.content.Context
 import com.getcapacitor.Plugin

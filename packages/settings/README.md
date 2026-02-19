@@ -96,6 +96,8 @@ export default config;
 
 ## API
 
+The plugin provides a generic `open()` method for cross-platform usage, and platform-specific aliases (`openIOS()`, `openAndroid()`) for direct invocation. While `openIOS()` and `openAndroid()` can be used, it's generally recommended to use `open()` with `PlatformOptions` for a more unified approach.
+
 <docgen-index>
 
 - [`open(...)`](#open)
@@ -112,13 +114,15 @@ export default config;
 
 Public JavaScript API for the Settings Capacitor plugin.
 
-This plugin uses a state-based result model:
+This plugin uses a standard Promise rejection model for errors.
 
-- operations never throw
-- Promise rejection is not used
-- failures are reported via `{ success, error?, code? }`
+All methods return a Promise that:
 
-This design ensures consistent behavior across Android, iOS, and Web.
+- resolves when the operation is successful
+- rejects when the operation fails or is not supported
+
+When rejected, the error object contains a machine-readable `code`
+from `SettingsErrorCode`.
 
 ### open(...)
 
@@ -127,7 +131,7 @@ open(options: PlatformOptions) => Promise<void>
 ```
 
 Opens the specified settings option on the current platform.
-On Web, this method is not supported.
+On Web, this method is not supported and will reject.
 
 | Param         | Type                                                        | Description                         |
 | ------------- | ----------------------------------------------------------- | ----------------------------------- |
@@ -145,6 +149,9 @@ openIOS(options: IOSOptions) => Promise<void>
 
 Opens a specific system settings section. (iOS Only)
 
+This method is a platform-specific helper. For cross-platform usage,
+prefer the generic `open()` method with <a href="#platformoptions">`PlatformOptions`</a>.
+
 | Param         | Type                                              | Description           |
 | ------------- | ------------------------------------------------- | --------------------- |
 | **`options`** | <code><a href="#iosoptions">IOSOptions</a></code> | iOS settings options. |
@@ -160,7 +167,10 @@ openAndroid(options: AndroidOptions) => Promise<void>
 ```
 
 Opens a specific Android Intent. (Android Only)
-On Web, this method is not supported.
+On Web, this method is not supported and will reject.
+
+This method is a platform-specific helper. For cross-platform usage,
+prefer the generic `open()` method with <a href="#platformoptions">`PlatformOptions`</a>.
 
 | Param         | Type                                                      | Description               |
 | ------------- | --------------------------------------------------------- | ------------------------- |
@@ -202,10 +212,10 @@ Platform-specific options for opening system settings.
 This interface allows specifying settings options for both
 Android and iOS in a single call.
 
-| Prop                | Type                                                        | Description                                                                                                  |
-| ------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| **`optionAndroid`** | <code><a href="#androidsettings">AndroidSettings</a></code> | Android settings option to open. Used only when running on Android. Mapped internally to a system Intent.    |
-| **`optionIOS`**     | <code><a href="#iossettings">IOSSettings</a></code>         | iOS settings option to open. Used only when running on iOS. Mapped internally to an iOS settings URL scheme. |
+| Prop                | Type                                                        | Description                                                                                                                                                                                                                               |
+| ------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`optionAndroid`** | <code><a href="#androidsettings">AndroidSettings</a></code> | Android settings option to open. Used only when running on Android. Mapped internally to a system Intent. If running on Android and this option is missing or empty, the promise will be rejected with `SettingsErrorCode.INVALID_INPUT`. |
+| **`optionIOS`**     | <code><a href="#iossettings">IOSSettings</a></code>         | iOS settings option to open. Used only when running on iOS. Mapped internally to an iOS settings URL scheme. If running on iOS and this option is missing or empty, the promise will be rejected with `SettingsErrorCode.INVALID_INPUT`.  |
 
 #### IOSOptions
 
@@ -235,57 +245,37 @@ Result object returned by the `getPluginVersion()` method.
 
 #### AndroidSettings
 
-| Members                      | Value                                   | Description                                                                                              |
-| ---------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| **`Accessibility`**          | <code>'accessibility'</code>            | Opens Accessibility settings.                                                                            |
-| **`Account`**                | <code>'account'</code>                  | Opens the Add Account screen.                                                                            |
-| **`AirplaneMode`**           | <code>'airplane_mode'</code>            | Opens Airplane Mode settings.                                                                            |
-| **`Apn`**                    | <code>'apn'</code>                      | Opens Access Point Name (APN) settings.                                                                  |
-| **`ApplicationDetails`**     | <code>'application_details'</code>      | Opens the Application Details screen for the current app.                                                |
-| **`ApplicationDevelopment`** | <code>'application_development'</code>  | Opens Application Development settings. Availability depends on developer options being enabled.         |
-| **`Application`**            | <code>'application'</code>              | Opens Application settings.                                                                              |
-| **`AppNotification`**        | <code>'app_notification'</code>         | Opens app-specific notification settings.                                                                |
-| **`BatteryOptimization`**    | <code>'battery_optimization'</code>     | Opens Battery Optimization settings. Allows managing apps excluded from battery optimizations.           |
-| **`Bluetooth`**              | <code>'bluetooth'</code>                | Opens Bluetooth settings.                                                                                |
-| **`Captioning`**             | <code>'captioning'</code>               | Opens Captioning settings.                                                                               |
-| **`Cast`**                   | <code>'cast'</code>                     | Opens Cast device settings.                                                                              |
-| **`DataRoaming`**            | <code>'data_roaming'</code>             | Opens Data Roaming settings.                                                                             |
-| **`Date`**                   | <code>'date'</code>                     | Opens Date & Time settings.                                                                              |
-| **`Display`**                | <code>'display'</code>                  | Opens Display settings.                                                                                  |
-| **`Dream`**                  | <code>'dream'</code>                    | Opens Dream (Daydream / Screensaver) settings.                                                           |
-| **`Home`**                   | <code>'home'</code>                     | Opens Home app selection settings.                                                                       |
-| **`Keyboard`**               | <code>'keyboard'</code>                 | Opens Input Method (Keyboard) settings.                                                                  |
-| **`KeyboardSubType`**        | <code>'keyboard_subtype'</code>         | Opens Input Method Subtype settings.                                                                     |
-| **`Locale`**                 | <code>'locale'</code>                   | Opens Language & Input (Locale) settings.                                                                |
-| **`Location`**               | <code>'location'</code>                 | Opens Location Services settings.                                                                        |
-| **`ManageApplications`**     | <code>'manage_applications'</code>      | Opens Manage Applications settings.                                                                      |
-| **`ManageAllApplications`**  | <code>'manage_all_applications'</code>  | Opens Manage All Applications settings. Availability depends on Android version and OEM.                 |
-| **`MemoryCard`**             | <code>'memory_card'</code>              | Show settings for memory card storage                                                                    |
-| **`Network`**                | <code>'network'</code>                  | Opens Network Operator settings.                                                                         |
-| **`Nfc`**                    | <code>'nfc'</code>                      | Opens NFC settings.                                                                                      |
-| **`NfcSharing`**             | <code>'nfcsharing'</code>               | Opens NFC Sharing settings.                                                                              |
-| **`NfcPayment`**             | <code>'nfc_payment'</code>              | Opens NFC Payment settings.                                                                              |
-| **`Print`**                  | <code>'print'</code>                    | Opens Print settings.                                                                                    |
-| **`Privacy`**                | <code>'privacy'</code>                  | Opens Privacy settings.                                                                                  |
-| **`QuickLaunch`**            | <code>'quick_launch'</code>             | Opens Quick Launch settings.                                                                             |
-| **`Search`**                 | <code>'search'</code>                   | Opens Search settings.                                                                                   |
-| **`Security`**               | <code>'security'</code>                 | Opens Security settings.                                                                                 |
-| **`Settings`**               | <code>'settings'</code>                 | Opens the main System Settings screen.                                                                   |
-| **`ShowRegulatoryInfo`**     | <code>'show_regulatory_info'</code>     | Opens Regulatory Information screen.                                                                     |
-| **`Sound`**                  | <code>'sound'</code>                    | Opens Sound & Volume settings.                                                                           |
-| **`Storage`**                | <code>'storage'</code>                  | Opens Internal Storage settings.                                                                         |
-| **`Sync`**                   | <code>'sync'</code>                     | Opens Sync settings.                                                                                     |
-| **`TextToSpeech`**           | <code>'text_to_speech'</code>           | Opens Text-to-Speech (TTS) settings. Uses a non-public intent on some devices.                           |
-| **`Usage`**                  | <code>'usage'</code>                    | Opens Usage Access settings. Allows managing apps with access to usage data.                             |
-| **`UserDictionary`**         | <code>'user_dictionary'</code>          | Opens User Dictionary settings.                                                                          |
-| **`VoiceInput`**             | <code>'voice_input'</code>              | Opens Voice Input settings.                                                                              |
-| **`VPN`**                    | <code>'vpn'</code>                      | Opens VPN settings.                                                                                      |
-| **`Wifi`**                   | <code>'wifi'</code>                     | Opens Wi-Fi settings.                                                                                    |
-| **`WifiIp`**                 | <code>'wifi_ip'</code>                  | Opens Wi-Fi IP settings. Availability varies by device and Android version.                              |
-| **`Wireless`**               | <code>'wireless'</code>                 | Opens Wireless & Networks settings.                                                                      |
-| **`ZenMode`**                | <code>'zen_mode'</code>                 | Opens Zen Mode (Do Not Disturb) settings. This uses a non-public intent and may not work on all devices. |
-| **`ZenModePriority`**        | <code>'zen_mode_priority'</code>        | Opens Zen Mode Priority settings.                                                                        |
-| **`ZenModeBlockedEffects`**  | <code>'zen_mode_blocked_effects'</code> | Opens Zen Mode Blocked Effects settings.                                                                 |
+| Members                     | Value                                   | Description                                                                                              |
+| --------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **`Accessibility`**         | <code>'accessibility'</code>            | Opens Accessibility settings.                                                                            |
+| **`AirplaneMode`**          | <code>'airplane_mode'</code>            | Opens Airplane Mode settings.                                                                            |
+| **`Apn`**                   | <code>'apn'</code>                      | Opens Access Point Name (APN) settings.                                                                  |
+| **`ApplicationDetails`**    | <code>'application_details'</code>      | Opens the Application Details screen for the current app.                                                |
+| **`Application`**           | <code>'application'</code>              | Opens Application settings.                                                                              |
+| **`AppNotification`**       | <code>'app_notification'</code>         | Opens app-specific notification settings.                                                                |
+| **`BatteryOptimization`**   | <code>'battery_optimization'</code>     | Opens Battery Optimization settings. Allows managing apps excluded from battery optimizations.           |
+| **`Bluetooth`**             | <code>'bluetooth'</code>                | Opens Bluetooth settings.                                                                                |
+| **`Cast`**                  | <code>'cast'</code>                     | Opens Cast device settings.                                                                              |
+| **`DataRoaming`**           | <code>'data_roaming'</code>             | Opens Data Roaming settings.                                                                             |
+| **`Date`**                  | <code>'date'</code>                     | Opens Date & Time settings.                                                                              |
+| **`Display`**               | <code>'display'</code>                  | Opens Display settings.                                                                                  |
+| **`Home`**                  | <code>'home'</code>                     | Opens Home app selection settings.                                                                       |
+| **`Location`**              | <code>'location'</code>                 | Opens Location Services settings.                                                                        |
+| **`Nfc`**                   | <code>'nfc'</code>                      | Opens NFC settings.                                                                                      |
+| **`NfcSharing`**            | <code>'nfcsharing'</code>               | Opens NFC Sharing settings.                                                                              |
+| **`NfcPayment`**            | <code>'nfc_payment'</code>              | Opens NFC Payment settings.                                                                              |
+| **`Print`**                 | <code>'print'</code>                    | Opens Print settings.                                                                                    |
+| **`Security`**              | <code>'security'</code>                 | Opens Security settings.                                                                                 |
+| **`Settings`**              | <code>'settings'</code>                 | Opens the main System Settings screen.                                                                   |
+| **`Sound`**                 | <code>'sound'</code>                    | Opens Sound & Volume settings.                                                                           |
+| **`Storage`**               | <code>'storage'</code>                  | Opens Internal Storage settings.                                                                         |
+| **`TextToSpeech`**          | <code>'text_to_speech'</code>           | Opens Text-to-Speech (TTS) settings. Uses a non-public intent on some devices.                           |
+| **`Usage`**                 | <code>'usage'</code>                    | Opens Usage Access settings. Allows managing apps with access to usage data.                             |
+| **`VPN`**                   | <code>'vpn'</code>                      | Opens VPN settings.                                                                                      |
+| **`Wifi`**                  | <code>'wifi'</code>                     | Opens Wi-Fi settings.                                                                                    |
+| **`ZenMode`**               | <code>'zen_mode'</code>                 | Opens Zen Mode (Do Not Disturb) settings. This uses a non-public intent and may not work on all devices. |
+| **`ZenModePriority`**       | <code>'zen_mode_priority'</code>        | Opens Zen Mode Priority settings.                                                                        |
+| **`ZenModeBlockedEffects`** | <code>'zen_mode_blocked_effects'</code> | Opens Zen Mode Blocked Effects settings.                                                                 |
 
 #### IOSSettings
 

@@ -1,4 +1,4 @@
-package io.capkit.settings.utils
+package io.capkit.settings.logger
 
 import android.util.Log
 
