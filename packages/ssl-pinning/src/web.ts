@@ -1,6 +1,7 @@
 import { WebPlugin } from '@capacitor/core';
 
 import { PluginVersionResult, SSLPinningPlugin, SSLPinningResult } from './definitions';
+import { PLUGIN_VERSION } from './version';
 
 /**
  * Web implementation of the SSLPinning plugin.
@@ -42,6 +43,6 @@ export class SSLPinningWeb extends WebPlugin implements SSLPinningPlugin {
    * rather than a native implementation.
    */
   async getPluginVersion(): Promise<PluginVersionResult> {
-    return { version: 'web' };
+    return { version: PLUGIN_VERSION };
   }
 }
