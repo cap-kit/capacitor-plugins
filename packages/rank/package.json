@@ -1,6 +1,6 @@
 {
   "name": "@cap-kit/rank",
-  "version": "8.1.0",
+  "version": "8.1.1",
   "description": "Unified Capacitor v8 plugin for native In-App Reviews and cross-platform Store navigation.",
   "type": "module",
   "private": false,
