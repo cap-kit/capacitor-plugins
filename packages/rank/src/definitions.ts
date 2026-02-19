@@ -1,15 +1,8 @@
 /// <reference types="@capacitor/cli" />
 
 /**
- * Capacitor configuration extension for the Rank plugin.
- *
- * Configuration values defined here can be provided under the `plugins.Rank`
- * key inside `capacitor.config.ts`.
- *
- * These values are:
- * - read natively at build/runtime
- * - NOT accessible from JavaScript at runtime
- * - treated as read-only static configuration
+ * Extension of the Capacitor CLI configuration to include specific settings for Rank.
+ * This allows users to configure the plugin via capacitor.config.ts or capacitor.config.json.
  */
 declare module '@capacitor/cli' {
   export interface PluginsConfig {
@@ -25,6 +18,11 @@ declare module '@capacitor/cli' {
  *
  * These values are defined in `capacitor.config.ts` and consumed
  * exclusively by native code during plugin initialization.
+ *
+ * Configuration values:
+ * - do NOT change the JavaScript API shape
+ * - do NOT enable/disable methods
+ * - are applied once during plugin load
  */
 export interface RankConfig {
   /**
@@ -32,6 +30,9 @@ export interface RankConfig {
    *
    * When enabled, additional debug information is printed
    * to the native console (Logcat on Android, Xcode on iOS).
+   *
+   * This option affects native logging behavior only and
+   * has no impact on the JavaScript API.
    *
    * @default false
    * @example true
@@ -71,14 +72,24 @@ export interface RankConfig {
  * @since 8.0.0
  */
 export enum RankErrorCode {
-  /** The device does not have the requested hardware or the API is unavailable. */
+  /** The device does not have the requested hardware or the feature is not available on this platform. */
   UNAVAILABLE = 'UNAVAILABLE',
-  /** The user denied a required permission or the feature is disabled. */
+  /** The user cancelled an interactive flow. */
+  CANCELLED = 'CANCELLED',
+  /** The user denied the permission or the feature is disabled by the OS. */
   PERMISSION_DENIED = 'PERMISSION_DENIED',
-  /** The Rank plugin failed to initialize (e.g., native SDK error). */
+  /** The plugin failed to initialize or perform an operation. */
   INIT_FAILED = 'INIT_FAILED',
-  /** The requested operation or type is not valid or supported. */
+  /** The input provided to the plugin method is invalid, missing, or malformed. */
+  INVALID_INPUT = 'INVALID_INPUT',
+  /** The requested type is not valid or supported. */
   UNKNOWN_TYPE = 'UNKNOWN_TYPE',
+  /** The requested resource does not exist. */
+  NOT_FOUND = 'NOT_FOUND',
+  /** The operation conflicts with the current state. */
+  CONFLICT = 'CONFLICT',
+  /** The operation did not complete within the expected time. */
+  TIMEOUT = 'TIMEOUT',
 }
 
 /**

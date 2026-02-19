@@ -484,6 +484,7 @@ Result object returned by the `getPluginVersion()` method.
 - The in-app review prompt is **not guaranteed to appear**.
   Apple internally controls when and how often the review dialog is shown.
 - Calling `requestReview()` may result in **no visible UI**, even if the API is available.
+- On iOS, `requestReview()` is effectively always fire-and-forget because StoreKit does not provide a completion callback; the `fireAndForget` option does not change this behavior on iOS.
 
 ### Android
 

@@ -1,14 +1,20 @@
 package io.capkit.rank.utils
 
+import android.net.Uri
+
 /**
- * Utility helpers for the Rank plugin.
+ * Pure utility helpers for Rank Android.
  *
- * This object is intentionally empty and serves as a placeholder
- * for future shared utility functions.
- *
- * Keeping a dedicated utils package helps maintain a clean
- * separation between core logic and helper code.
+ * This object contains only deterministic URI builders and does not perform I/O.
  */
 object RankUtils {
-  // Utilities will be added here as the plugin evolves
+  fun marketDetailsUri(id: String): Uri = Uri.parse("market://details?id=$id")
+
+  fun playStoreDetailsHttpsUri(id: String): Uri = Uri.parse("https://play.google.com/store/apps/details?id=$id")
+
+  fun marketSearchUri(terms: String): Uri = Uri.parse("market://search?q=$terms")
+
+  fun playStoreDeveloperUri(devId: String): Uri = Uri.parse("https://play.google.com/store/apps/dev?id=$devId")
+
+  fun playStoreCollectionUri(name: String): Uri = Uri.parse("https://play.google.com/store/apps/collection/$name")
 }
