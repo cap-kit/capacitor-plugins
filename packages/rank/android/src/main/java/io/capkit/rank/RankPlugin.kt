@@ -191,23 +191,12 @@ class RankPlugin : Plugin() {
 
     // RULE: UI operations MUST be executed on the main thread
     currentActivity.runOnUiThread {
-      implementation.requestReview(currentActivity) { error: Exception? ->
+      implementation.requestReview(currentActivity) { error: RankError? ->
         // Ensure we only respond if we haven't already resolved via fireAndForget
         if (!fireAndForget) {
           if (error != null) {
             RankLogger.error("Review flow failed", error)
-
-            val message =
-              if (error is IllegalStateException) {
-                RankErrorMessages.REVIEW_ALREADY_IN_PROGRESS
-              } else {
-                error.message ?: RankErrorMessages.NATIVE_OPERATION_FAILED
-              }
-            if (error is IllegalStateException) {
-              reject(call, RankError.Conflict(message))
-            } else {
-              reject(call, RankError.InitFailed(message))
-            }
+            reject(call, error)
           } else {
             call.resolve()
           }
