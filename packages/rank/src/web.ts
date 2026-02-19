@@ -1,6 +1,7 @@
 import { WebPlugin } from '@capacitor/core';
 
-import { RankPlugin, PluginVersionResult, StoreOptions, ReviewEnvironmentResult } from './definitions';
+import { RankPlugin, PluginVersionResult, StoreOptions, ReviewEnvironmentResult, RankErrorCode } from './definitions';
+import { PLUGIN_VERSION } from './version';
 
 /**
  * Web implementation of the Rank plugin.
@@ -16,7 +17,9 @@ export class RankWeb extends WebPlugin implements RankPlugin {
     super();
   }
 
-  // --- Availability ---
+  // -----------------------------------------------------------------------------
+  // Availability
+  // -----------------------------------------------------------------------------
 
   /**
    * On Web, native In-App Review is never available.
@@ -34,7 +37,9 @@ export class RankWeb extends WebPlugin implements RankPlugin {
     };
   }
 
-  // --- In-App Review ---
+  // -----------------------------------------------------------------------------
+  // In-App Review
+  // -----------------------------------------------------------------------------
 
   /**
    * Requests the display of the native review popup.
@@ -42,10 +47,12 @@ export class RankWeb extends WebPlugin implements RankPlugin {
    * On Web, this feature is not available.
    */
   async requestReview(): Promise<void> {
-    throw this.unimplemented('In-App Review is not available on Web.');
+    this.rejectWithCode(RankErrorCode.UNAVAILABLE, 'In-App Review is not available on Web.');
   }
 
-  // --- Product Page Navigation ---
+  // -----------------------------------------------------------------------------
+  // Product Page Navigation
+  // -----------------------------------------------------------------------------
 
   /**
    * On Web, redirects to the store URL as an internal overlay is not possible.
@@ -54,7 +61,9 @@ export class RankWeb extends WebPlugin implements RankPlugin {
     return this.openStore(options);
   }
 
-  // --- Store Navigation ---
+  // -----------------------------------------------------------------------------
+  // Store Navigation
+  // -----------------------------------------------------------------------------
 
   /**
    * Opens the app's page in the App Store or Play Store via URL redirect.
@@ -63,8 +72,7 @@ export class RankWeb extends WebPlugin implements RankPlugin {
    */
   async openStore(options?: StoreOptions): Promise<void> {
     if (!options?.appId && !options?.packageName) {
-      console.warn('Rank: No App ID or Package Name provided. Store redirect skipped.');
-      return;
+      this.rejectWithCode(RankErrorCode.INVALID_INPUT, 'Invalid or missing appId/packageName.');
     }
 
     const url = this.getStoreUrl(options);
@@ -86,7 +94,7 @@ export class RankWeb extends WebPlugin implements RankPlugin {
     if (isIOS && options?.appId) {
       window.open(RankStoreUtils.appStoreUrl(options.appId), '_blank');
     } else {
-      console.warn('Rank: openStoreListing is primarily intended for iOS identifiers on Web.');
+      this.rejectWithCode(RankErrorCode.INVALID_INPUT, 'Invalid or missing appId.');
     }
   }
 
@@ -109,7 +117,7 @@ export class RankWeb extends WebPlugin implements RankPlugin {
    * @description This method is a no-op on Web and serves as a placeholder for potential future functionality.
    */
   async openCollection(): Promise<void> {
-    console.warn('Rank: openCollection is not available on Web.');
+    throw this.unavailable('openCollection is not available on Web.');
   }
 
   /**
@@ -125,7 +133,9 @@ export class RankWeb extends WebPlugin implements RankPlugin {
     window.open(url, '_blank');
   }
 
-  // --- Internal Helpers ---
+  // -----------------------------------------------------------------------------
+  // Internal Helpers
+  // -----------------------------------------------------------------------------
 
   /**
    * Generates the appropriate store URL based on user agent and provided options.
@@ -142,7 +152,13 @@ export class RankWeb extends WebPlugin implements RankPlugin {
     return RankStoreUtils.playStoreUrl(options.packageName);
   }
 
-  // --- Plugin Info ---
+  private rejectWithCode(code: RankErrorCode, message: string): never {
+    throw { message, code };
+  }
+
+  // -----------------------------------------------------------------------------
+  // Plugin Info
+  // -----------------------------------------------------------------------------
 
   /**
    * Returns the plugin version.
@@ -151,7 +167,7 @@ export class RankWeb extends WebPlugin implements RankPlugin {
    * rather than a native implementation.
    */
   async getPluginVersion(): Promise<PluginVersionResult> {
-    return { version: 'web' };
+    return { version: PLUGIN_VERSION };
   }
 }
 
