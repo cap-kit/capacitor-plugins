@@ -3,9 +3,11 @@ package io.capkit.rank
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
+import android.content.pm.PackageManager
 import com.google.android.play.core.review.ReviewManagerFactory
+import io.capkit.rank.error.RankErrorMessages
 import io.capkit.rank.utils.RankLogger
+import io.capkit.rank.utils.RankUtils
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -22,6 +24,12 @@ import java.util.concurrent.atomic.AtomicBoolean
 class RankImpl(
   private val context: Context,
 ) {
+  data class ReviewEnvironmentDiagnostic(
+    val canRequestReview: Boolean,
+    val reason: String? = null,
+    val error: RankError? = null,
+  )
+
   // ---------------------------------------------------------------------------
   // Properties
   // ---------------------------------------------------------------------------
@@ -69,8 +77,8 @@ class RankImpl(
    * Internally, it delegates to the diagnostic environment check.
    */
   fun isAvailable(onResult: (Boolean) -> Unit) {
-    checkReviewEnvironment { canRequest ->
-      onResult(canRequest)
+    checkReviewEnvironment { diagnostic ->
+      onResult(diagnostic.canRequestReview)
     }
   }
 
@@ -82,12 +90,64 @@ class RankImpl(
    *
    * No UI is triggered by this operation.
    */
-  fun checkReviewEnvironment(onResult: (Boolean) -> Unit) {
+  fun checkReviewEnvironment(onResult: (ReviewEnvironmentDiagnostic) -> Unit) {
+    val playStorePackage = "com.android.vending"
+    val playStoreIntent =
+      Intent(Intent.ACTION_VIEW, RankUtils.marketDetailsUri(context.packageName)).apply {
+        setPackage(playStorePackage)
+      }
+
+    if (playStoreIntent.resolveActivity(context.packageManager) == null) {
+      onResult(
+        ReviewEnvironmentDiagnostic(
+          canRequestReview = false,
+          reason = "PLAY_STORE_NOT_AVAILABLE",
+        ),
+      )
+      return
+    }
+
+    val installerPackage =
+      try {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+          context.packageManager.getInstallSourceInfo(context.packageName).installingPackageName
+        } else {
+          @Suppress("DEPRECATION")
+          context.packageManager.getInstallerPackageName(context.packageName)
+        }
+      } catch (_: PackageManager.NameNotFoundException) {
+        null
+      } catch (_: Exception) {
+        null
+      }
+
+    if (installerPackage != playStorePackage) {
+      onResult(
+        ReviewEnvironmentDiagnostic(
+          canRequestReview = false,
+          reason = "NOT_INSTALLED_FROM_PLAY_STORE",
+        ),
+      )
+      return
+    }
+
     val manager = ReviewManagerFactory.create(context)
     val request = manager.requestReviewFlow()
 
     request.addOnCompleteListener { task ->
-      onResult(task.isSuccessful)
+      if (task.isSuccessful) {
+        onResult(ReviewEnvironmentDiagnostic(canRequestReview = true))
+      } else {
+        onResult(
+          ReviewEnvironmentDiagnostic(
+            canRequestReview = false,
+            error =
+              RankError.Unavailable(
+                task.exception?.message ?: RankErrorMessages.PLAY_CORE_REVIEW_API_UNAVAILABLE,
+              ),
+          ),
+        )
+      }
     }
   }
 
@@ -183,7 +243,7 @@ class RankImpl(
 
     // Construct the native market Intent
     val intent =
-      Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$targetPackage")).apply {
+      Intent(Intent.ACTION_VIEW, RankUtils.marketDetailsUri(targetPackage)).apply {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
       }
 
@@ -194,7 +254,7 @@ class RankImpl(
       val webIntent =
         Intent(
           Intent.ACTION_VIEW,
-          Uri.parse("https://play.google.com/store/apps/details?id=$targetPackage"),
+          RankUtils.playStoreDetailsHttpsUri(targetPackage),
         ).apply {
           addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
@@ -209,10 +269,22 @@ class RankImpl(
    */
   fun openStoreListing(appId: String) {
     val intent =
-      Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$appId")).apply {
+      Intent(Intent.ACTION_VIEW, RankUtils.marketDetailsUri(appId)).apply {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
       }
-    context.startActivity(intent)
+
+    try {
+      context.startActivity(intent)
+    } catch (e: Exception) {
+      val webIntent =
+        Intent(
+          Intent.ACTION_VIEW,
+          RankUtils.playStoreDetailsHttpsUri(appId),
+        ).apply {
+          addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+      context.startActivity(webIntent)
+    }
   }
 
   /**
@@ -222,7 +294,7 @@ class RankImpl(
    */
   fun search(terms: String) {
     val intent =
-      Intent(Intent.ACTION_VIEW, Uri.parse("market://search?q=$terms")).apply {
+      Intent(Intent.ACTION_VIEW, RankUtils.marketSearchUri(terms)).apply {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
       }
     context.startActivity(intent)
@@ -235,7 +307,7 @@ class RankImpl(
    */
   fun openDevPage(devId: String) {
     val intent =
-      Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/dev?id=$devId")).apply {
+      Intent(Intent.ACTION_VIEW, RankUtils.playStoreDeveloperUri(devId)).apply {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
       }
     context.startActivity(intent)
@@ -248,7 +320,7 @@ class RankImpl(
    */
   fun openCollection(name: String) {
     val intent =
-      Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/collection/$name")).apply {
+      Intent(Intent.ACTION_VIEW, RankUtils.playStoreCollectionUri(name)).apply {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
       }
     context.startActivity(intent)

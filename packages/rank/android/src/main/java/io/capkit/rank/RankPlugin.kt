@@ -5,7 +5,7 @@ import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
-import com.getcapacitor.annotation.Permission
+import io.capkit.rank.error.RankErrorMessages
 import io.capkit.rank.utils.RankLogger
 import io.capkit.rank.utils.RankValidators
 
@@ -16,15 +16,7 @@ import io.capkit.rank.utils.RankValidators
  * It handles input parsing, configuration management, and delegates execution
  * to the platform-specific implementation.
  */
-@CapacitorPlugin(
-  name = "Rank",
-  permissions = [
-    Permission(
-      alias = "network",
-      strings = [android.Manifest.permission.INTERNET],
-    ),
-  ],
-)
+@CapacitorPlugin(name = "Rank")
 class RankPlugin : Plugin() {
   // ---------------------------------------------------------------------------
   // Properties
@@ -46,22 +38,6 @@ class RankPlugin : Plugin() {
    * - MUST NOT access PluginCall or Capacitor bridge APIs directly.
    */
   private lateinit var implementation: RankImpl
-
-  // ---------------------------------------------------------------------------
-  // Companion Object
-  // ---------------------------------------------------------------------------
-
-  private companion object {
-    /**
-     * Account type identifier for internal plugin identification.
-     */
-    const val ACCOUNT_TYPE = "io.capkit.rank"
-
-    /**
-     * Human-readable account name for the plugin.
-     */
-    const val ACCOUNT_NAME = "Rank"
-  }
 
   // ---------------------------------------------------------------------------
   // Lifecycle
@@ -92,11 +68,8 @@ class RankPlugin : Plugin() {
   // ---------------------------------------------------------------------------
 
   /**
-   * Maps native RankError sealed class instances to standardized
-   * JavaScript-facing error codes.
-   *
-   * * @param call The PluginCall to reject.
-   * * @param error The native error encountered.
+   * Rejects the call with a message and a standardized error code.
+   * Ensure consistency with the JS RankErrorCode enum.
    */
   private fun reject(
     call: PluginCall,
@@ -105,12 +78,19 @@ class RankPlugin : Plugin() {
     val code =
       when (error) {
         is RankError.Unavailable -> "UNAVAILABLE"
+        is RankError.Cancelled -> "CANCELLED"
         is RankError.PermissionDenied -> "PERMISSION_DENIED"
         is RankError.InitFailed -> "INIT_FAILED"
+        is RankError.InvalidInput -> "INVALID_INPUT"
         is RankError.UnknownType -> "UNKNOWN_TYPE"
+        is RankError.NotFound -> "NOT_FOUND"
+        is RankError.Conflict -> "CONFLICT"
+        is RankError.Timeout -> "TIMEOUT"
       }
 
-    call.reject(error.message, code)
+    // Always use the message from the RankError instance
+    val message = error.message ?: "Unknown native error"
+    call.reject(message, code)
   }
 
   // ---------------------------------------------------------------------------
@@ -147,12 +127,17 @@ class RankPlugin : Plugin() {
    */
   @PluginMethod
   fun checkReviewEnvironment(call: PluginCall) {
-    implementation.checkReviewEnvironment { canRequest ->
-      val ret = JSObject()
-      ret.put("canRequestReview", canRequest)
+    implementation.checkReviewEnvironment { diagnostic ->
+      if (diagnostic.error != null) {
+        reject(call, diagnostic.error)
+        return@checkReviewEnvironment
+      }
 
-      if (!canRequest) {
-        ret.put("reason", "PLAY_STORE_NOT_AVAILABLE")
+      val ret = JSObject()
+      ret.put("canRequestReview", diagnostic.canRequestReview)
+
+      if (!diagnostic.canRequestReview && diagnostic.reason != null) {
+        ret.put("reason", diagnostic.reason)
       }
 
       call.resolve(ret)
@@ -199,10 +184,7 @@ class RankPlugin : Plugin() {
       // Edge case: plugin invoked while Activity is not available
       RankLogger.error("Cannot request review: Activity is null")
       if (!fireAndForget) {
-        call.reject(
-          "Activity not available",
-          "INIT_FAILED",
-        )
+        reject(call, RankError.Unavailable(RankErrorMessages.ACTIVITY_NOT_AVAILABLE))
       }
       return
     }
@@ -217,15 +199,15 @@ class RankPlugin : Plugin() {
 
             val message =
               if (error is IllegalStateException) {
-                error.message ?: "Review flow already in progress."
+                RankErrorMessages.REVIEW_ALREADY_IN_PROGRESS
               } else {
-                error.message ?: "Native operation failed."
+                error.message ?: RankErrorMessages.NATIVE_OPERATION_FAILED
               }
-
-            call.reject(
-              message,
-              "INIT_FAILED",
-            )
+            if (error is IllegalStateException) {
+              reject(call, RankError.Conflict(message))
+            } else {
+              reject(call, RankError.InitFailed(message))
+            }
           } else {
             call.resolve()
           }
@@ -246,21 +228,23 @@ class RankPlugin : Plugin() {
     val packageName = RankValidators.validatePackageName(rawPackageName)
 
     if (packageName == null) {
-      call.reject(
-        "Invalid or missing Android package name.",
-        "INIT_FAILED",
-      )
+      reject(call, RankError.InvalidInput(RankErrorMessages.INVALID_ANDROID_PACKAGE_NAME))
       return
     }
 
-    try {
-      implementation.openStore(packageName)
-      call.resolve()
-    } catch (e: Exception) {
-      call.reject(
-        e.message ?: "Native operation failed.",
-        "INIT_FAILED",
-      )
+    val currentActivity = activity
+    if (currentActivity == null) {
+      reject(call, RankError.Unavailable(RankErrorMessages.ACTIVITY_NOT_AVAILABLE))
+      return
+    }
+
+    currentActivity.runOnUiThread {
+      try {
+        implementation.openStore(packageName)
+        call.resolve()
+      } catch (e: Exception) {
+        reject(call, RankError.InitFailed(e.message ?: RankErrorMessages.NATIVE_OPERATION_FAILED))
+      }
     }
   }
 
@@ -280,19 +264,22 @@ class RankPlugin : Plugin() {
     val packageName = RankValidators.validatePackageName(rawPackageName)
 
     if (packageName == null) {
-      call.reject("Invalid or missing Android package name.", "INIT_FAILED")
+      reject(call, RankError.InvalidInput(RankErrorMessages.INVALID_ANDROID_PACKAGE_NAME))
       return
     }
 
-    activity.runOnUiThread {
+    val currentActivity = activity
+    if (currentActivity == null) {
+      reject(call, RankError.Unavailable(RankErrorMessages.ACTIVITY_NOT_AVAILABLE))
+      return
+    }
+
+    currentActivity.runOnUiThread {
       try {
         implementation.openStoreListing(packageName)
         call.resolve()
       } catch (e: Exception) {
-        call.reject(
-          e.message ?: "Native operation failed.",
-          "INIT_FAILED",
-        )
+        reject(call, RankError.InitFailed(e.message ?: RankErrorMessages.NATIVE_OPERATION_FAILED))
       }
     }
   }
@@ -307,14 +294,17 @@ class RankPlugin : Plugin() {
     val name = RankValidators.validateCollectionName(rawName)
 
     if (name == null) {
-      call.reject(
-        "Invalid or missing collection name.",
-        "INIT_FAILED",
-      )
+      reject(call, RankError.InvalidInput(RankErrorMessages.INVALID_COLLECTION_NAME))
       return
     }
 
-    activity.runOnUiThread {
+    val currentActivity = activity
+    if (currentActivity == null) {
+      reject(call, RankError.Unavailable(RankErrorMessages.ACTIVITY_NOT_AVAILABLE))
+      return
+    }
+
+    currentActivity.runOnUiThread {
       implementation.openCollection(name)
       call.resolve()
     }
@@ -330,15 +320,20 @@ class RankPlugin : Plugin() {
     val terms = RankValidators.validateSearchTerms(rawTerms)
 
     if (terms == null) {
-      call.reject(
-        "Invalid or missing search terms.",
-        "INIT_FAILED",
-      )
+      reject(call, RankError.InvalidInput(RankErrorMessages.INVALID_SEARCH_TERMS))
       return
     }
 
-    implementation.search(terms)
-    call.resolve()
+    val currentActivity = activity
+    if (currentActivity == null) {
+      reject(call, RankError.Unavailable(RankErrorMessages.ACTIVITY_NOT_AVAILABLE))
+      return
+    }
+
+    currentActivity.runOnUiThread {
+      implementation.search(terms)
+      call.resolve()
+    }
   }
 
   /**
@@ -351,15 +346,20 @@ class RankPlugin : Plugin() {
     val devId = RankValidators.validateDevId(rawDevId)
 
     if (devId == null) {
-      call.reject(
-        "Invalid or missing developer ID.",
-        "INIT_FAILED",
-      )
+      reject(call, RankError.InvalidInput(RankErrorMessages.INVALID_DEVELOPER_ID))
       return
     }
 
-    implementation.openDevPage(devId)
-    call.resolve()
+    val currentActivity = activity
+    if (currentActivity == null) {
+      reject(call, RankError.Unavailable(RankErrorMessages.ACTIVITY_NOT_AVAILABLE))
+      return
+    }
+
+    currentActivity.runOnUiThread {
+      implementation.openDevPage(devId)
+      call.resolve()
+    }
   }
 
   // ---------------------------------------------------------------------------

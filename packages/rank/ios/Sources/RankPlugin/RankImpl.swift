@@ -85,7 +85,7 @@ import StoreKit
 
                     guard let rootVC = rootViewController else {
                         // No active root view controller available for presentation.
-                        completion(false, nil)
+                        completion(false, RankError.unavailable(RankErrorMessages.noRootViewControllerAvailable))
                         return
                     }
 

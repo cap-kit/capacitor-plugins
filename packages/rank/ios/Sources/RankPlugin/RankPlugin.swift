@@ -35,9 +35,14 @@ public final class RankPlugin: CAPPlugin, CAPBridgedPlugin {
      */
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "isAvailable", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "checkReviewEnvironment", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "requestReview", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "presentProductPage", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "openStore", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "openStoreListing", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "search", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "openDevPage", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "openCollection", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getPluginVersion", returnType: CAPPluginReturnPromise)
     ]
 
@@ -62,30 +67,22 @@ public final class RankPlugin: CAPPlugin, CAPBridgedPlugin {
     // MARK: - Error Mapping
 
     /**
-     * Maps native RankError categories to standardized JS-facing error codes.
-     *
-     * - Parameters:
-     * - call: The CAPPluginCall to reject.
-     * - error: The native RankError encountered during execution.
+     * Rejects the call using standardized error codes from the native RankError enum.
      */
     private func reject(
         _ call: CAPPluginCall,
         error: RankError
     ) {
-        let code: String
+        // Use the centralized errorCode and message defined in RankError.swift
+        call.reject(error.message, error.errorCode)
+    }
 
-        switch error {
-        case .unavailable:
-            code = "UNAVAILABLE"
-        case .permissionDenied:
-            code = "PERMISSION_DENIED"
-        case .initFailed:
-            code = "INIT_FAILED"
-        case .unknownType:
-            code = "UNKNOWN_TYPE"
+    private func handleError(_ call: CAPPluginCall, _ error: Error) {
+        if let rankError = error as? RankError {
+            call.reject(rankError.message, rankError.errorCode)
+        } else {
+            reject(call, error: .initFailed(error.localizedDescription))
         }
-
-        call.reject(error.message, code)
     }
 
     // MARK: - Availability
@@ -106,6 +103,13 @@ public final class RankPlugin: CAPPlugin, CAPBridgedPlugin {
         ])
     }
 
+    @objc func checkReviewEnvironment(_ call: CAPPluginCall) {
+        call.resolve([
+            "canRequestReview": false,
+            "reason": "PLAY_STORE_NOT_AVAILABLE"
+        ])
+    }
+
     // MARK: - Product Page
 
     /**
@@ -120,7 +124,7 @@ public final class RankPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func presentProductPage(_ call: CAPPluginCall) {
         let rawAppId = call.getString("appId") ?? config?.appleAppId
         guard let appId = RankValidators.validateAppId(rawAppId) else {
-            call.reject("Invalid or missing Apple App ID.", "INIT_FAILED")
+            reject(call, error: .invalidInput(RankErrorMessages.invalidAppleAppId))
             return
         }
 
@@ -130,10 +134,11 @@ public final class RankPlugin: CAPPlugin, CAPBridgedPlugin {
                 if success {
                     call.resolve()
                 } else {
-                    call.reject(
-                        error?.localizedDescription ?? "Failed to load product page.",
-                        "INIT_FAILED"
-                    )
+                    if let rankError = error as? RankError {
+                        self.reject(call, error: rankError)
+                    } else {
+                        self.reject(call, error: .initFailed(error?.localizedDescription ?? RankErrorMessages.productPageLoadFailed))
+                    }
                 }
             }
         }
@@ -172,10 +177,7 @@ public final class RankPlugin: CAPPlugin, CAPBridgedPlugin {
         let rawAppId = call.getString("appId") ?? config?.appleAppId
         // Attempt to retrieve the App ID from call parameters or static configuration
         guard let appId = RankValidators.validateAppId(rawAppId) else {
-            call.reject(
-                "Apple App ID is missing. Provide it in config or as a parameter.",
-                "INIT_FAILED"
-            )
+            reject(call, error: .invalidInput(RankErrorMessages.invalidAppleAppId))
             return
         }
 
@@ -192,7 +194,7 @@ public final class RankPlugin: CAPPlugin, CAPBridgedPlugin {
      * - Parameter call: CAPPluginCall provided by the bridge.
      */
     @objc func openCollection(_ call: CAPPluginCall) {
-        call.unavailable("Collections are not supported on iOS.")
+        reject(call, error: .unavailable(RankErrorMessages.collectionsNotSupportedIos))
     }
 
     /**
@@ -206,7 +208,7 @@ public final class RankPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func openStoreListing(_ call: CAPPluginCall) {
         let rawAppId = call.getString("appId") ?? config?.appleAppId
         guard let appId = RankValidators.validateAppId(rawAppId) else {
-            call.reject("Apple App ID is missing.", "INIT_FAILED")
+            reject(call, error: .invalidInput(RankErrorMessages.invalidAppleAppId))
             return
         }
         implementation.openStoreListing(appId: appId)
@@ -223,7 +225,7 @@ public final class RankPlugin: CAPPlugin, CAPBridgedPlugin {
      */
     @objc func search(_ call: CAPPluginCall) {
         guard let terms = call.getString("terms") else {
-            call.reject("Search terms are missing.")
+            reject(call, error: .invalidInput(RankErrorMessages.invalidSearchTerms))
             return
         }
         implementation.search(terms: terms)
@@ -242,7 +244,7 @@ public final class RankPlugin: CAPPlugin, CAPBridgedPlugin {
      */
     @objc func openDevPage(_ call: CAPPluginCall) {
         guard let devId = call.getString("devId") else {
-            call.reject("devId is missing.")
+            reject(call, error: .invalidInput(RankErrorMessages.invalidDeveloperId))
             return
         }
         implementation.search(terms: devId) // Fallback on iOS
