@@ -64,6 +64,11 @@ class RedsysPlugin : Plugin() {
 
   /**
    * Called once when the plugin is loaded by the Capacitor bridge.
+   *
+   * This is the correct place to:
+   * - read static configuration
+   * - initialize native resources
+   * - inject configuration into the implementation
    */
   override fun load() {
     super.load()
@@ -73,7 +78,7 @@ class RedsysPlugin : Plugin() {
     implementation.updateConfig(config)
 
     RedsysLogger.verbose = config.verboseLogging
-    RedsysLogger.debug("Plugin loaded")
+    RedsysLogger.debug("Plugin loaded. Version: ", BuildConfig.PLUGIN_VERSION)
   }
 
   // ---------------------------------------------------------------------------

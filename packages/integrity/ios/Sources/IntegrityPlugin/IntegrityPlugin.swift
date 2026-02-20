@@ -97,7 +97,7 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
         implementation.applyConfig(cfg)
 
         // Log if verbose logging is enabled
-        IntegrityLogger.debug("Plugin loaded")
+        IntegrityLogger.debug("Plugin loaded. Version: ", PluginVersion.number)
 
         // Register passive system observers
         addEventObservers()

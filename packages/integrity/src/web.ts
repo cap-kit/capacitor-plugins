@@ -1,6 +1,7 @@
 import { WebPlugin } from '@capacitor/core';
 
 import { IntegrityPlugin, IntegrityReport, PresentBlockPageResult, PluginVersionResult } from './definitions';
+import { PLUGIN_VERSION } from './version';
 
 /**
  * Web implementation of the Integrity plugin.
@@ -54,6 +55,6 @@ export class IntegrityWeb extends WebPlugin implements IntegrityPlugin {
    * On Web, this represents the JavaScript package version.
    */
   async getPluginVersion(): Promise<PluginVersionResult> {
-    return { version: 'web' };
+    return { version: PLUGIN_VERSION };
   }
 }

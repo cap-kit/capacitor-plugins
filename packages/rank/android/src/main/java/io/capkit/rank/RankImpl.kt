@@ -4,9 +4,11 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import com.google.android.play.core.review.ReviewException
 import com.google.android.play.core.review.ReviewManagerFactory
+import com.google.android.play.core.review.model.ReviewErrorCode
 import io.capkit.rank.error.RankErrorMessages
-import io.capkit.rank.utils.RankLogger
+import io.capkit.rank.logger.RankLogger
 import io.capkit.rank.utils.RankUtils
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -91,13 +93,7 @@ class RankImpl(
    * No UI is triggered by this operation.
    */
   fun checkReviewEnvironment(onResult: (ReviewEnvironmentDiagnostic) -> Unit) {
-    val playStorePackage = "com.android.vending"
-    val playStoreIntent =
-      Intent(Intent.ACTION_VIEW, RankUtils.marketDetailsUri(context.packageName)).apply {
-        setPackage(playStorePackage)
-      }
-
-    if (playStoreIntent.resolveActivity(context.packageManager) == null) {
+    if (!isOfficialPlayStoreAvailable()) {
       onResult(
         ReviewEnvironmentDiagnostic(
           canRequestReview = false,
@@ -107,21 +103,7 @@ class RankImpl(
       return
     }
 
-    val installerPackage =
-      try {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-          context.packageManager.getInstallSourceInfo(context.packageName).installingPackageName
-        } else {
-          @Suppress("DEPRECATION")
-          context.packageManager.getInstallerPackageName(context.packageName)
-        }
-      } catch (_: PackageManager.NameNotFoundException) {
-        null
-      } catch (_: Exception) {
-        null
-      }
-
-    if (installerPackage != playStorePackage) {
+    if (!isInstalledFromPlayStore()) {
       onResult(
         ReviewEnvironmentDiagnostic(
           canRequestReview = false,
@@ -165,6 +147,11 @@ class RankImpl(
    * This should be called early (e.g., during plugin load).
    */
   fun preloadReviewInfo() {
+    if (!isOfficialPlayStoreAvailable() || !isInstalledFromPlayStore()) {
+      RankLogger.debug("ReviewInfo pre-load skipped: Play Store unavailable or unofficial installer.")
+      return
+    }
+
     val manager = ReviewManagerFactory.create(context)
     val request = manager.requestReviewFlow()
     request.addOnCompleteListener { task ->
@@ -190,10 +177,20 @@ class RankImpl(
    */
   fun requestReview(
     activity: Activity,
-    onComplete: (Exception?) -> Unit,
+    onComplete: (RankError?) -> Unit,
   ) {
+    if (!isOfficialPlayStoreAvailable()) {
+      onComplete(RankError.Unavailable(RankErrorMessages.PLAY_STORE_NOT_AVAILABLE))
+      return
+    }
+
+    if (!isInstalledFromPlayStore()) {
+      onComplete(RankError.Unavailable(RankErrorMessages.NOT_INSTALLED_FROM_PLAY_STORE))
+      return
+    }
+
     if (!isReviewInProgress.compareAndSet(false, true)) {
-      onComplete(IllegalStateException("Review flow already in progress"))
+      onComplete(RankError.Conflict(RankErrorMessages.REVIEW_ALREADY_IN_PROGRESS))
       return
     }
 
@@ -219,10 +216,60 @@ class RankImpl(
           }
         } else {
           isReviewInProgress.set(false)
-          onComplete(task.exception)
+          onComplete(mapReviewRequestError(task.exception))
         }
       }
     }
+  }
+
+  private fun isOfficialPlayStoreAvailable(): Boolean {
+    val playStorePackage = "com.android.vending"
+    val playStoreIntent =
+      Intent(Intent.ACTION_VIEW, RankUtils.marketDetailsUri(context.packageName)).apply {
+        setPackage(playStorePackage)
+      }
+
+    if (playStoreIntent.resolveActivity(context.packageManager) == null) {
+      return false
+    }
+
+    return try {
+      context.packageManager.getApplicationInfo(playStorePackage, 0).enabled
+    } catch (_: PackageManager.NameNotFoundException) {
+      false
+    } catch (_: Exception) {
+      false
+    }
+  }
+
+  private fun isInstalledFromPlayStore(): Boolean {
+    val installerPackage =
+      try {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+          context.packageManager.getInstallSourceInfo(context.packageName).installingPackageName
+        } else {
+          @Suppress("DEPRECATION")
+          context.packageManager.getInstallerPackageName(context.packageName)
+        }
+      } catch (_: PackageManager.NameNotFoundException) {
+        null
+      } catch (_: Exception) {
+        null
+      }
+
+    return installerPackage == "com.android.vending"
+  }
+
+  private fun mapReviewRequestError(error: Throwable?): RankError {
+    if (error is ReviewException) {
+      return if (error.errorCode == ReviewErrorCode.PLAY_STORE_NOT_FOUND) {
+        RankError.Unavailable(RankErrorMessages.PLAY_STORE_NOT_AVAILABLE)
+      } else {
+        RankError.Unavailable("${RankErrorMessages.PLAY_CORE_REVIEW_API_UNAVAILABLE} (code: ${error.errorCode})")
+      }
+    }
+
+    return RankError.InitFailed(error?.message ?: RankErrorMessages.NATIVE_OPERATION_FAILED)
   }
 
   // ---------------------------------------------------------------------------

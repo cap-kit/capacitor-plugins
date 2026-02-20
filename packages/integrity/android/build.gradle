@@ -34,13 +34,15 @@ def getPluginVersion() {
         def packageJsonFile = file('../package.json')
         if (packageJsonFile.exists()) {
             def packageJson = new JsonSlurper().parseText(packageJsonFile.text)
-            return packageJson.version
+            if (packageJson.version) {
+                return packageJson.version
+            }
         }
     } catch (Exception e) {
-        // Ignore errors and fallback
-        logger.info("Exception", e)
+        throw new GradleException("Failed to read plugin version from package.json", e)
     }
-    return "8.0.0"
+
+    throw new GradleException("Plugin version not found in ../package.json")
 }
 
 def pluginVersion = getPluginVersion()

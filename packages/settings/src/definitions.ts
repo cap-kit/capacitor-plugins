@@ -51,24 +51,30 @@ export interface SettingsConfig {
 /**
  * Standardized error codes used by the Settings plugin.
  *
- * These codes are returned as part of structured error objects
- * and allow consumers to implement programmatic error handling.
- *
- * Note:
- * On iOS (Swift Package Manager), errors are returned as data
- * objects rather than rejected Promises.
+ * These codes are returned when a Promise is rejected and
+ * allow consumers to implement programmatic error handling.
  *
  * @since 8.0.0
  */
 export enum SettingsErrorCode {
-  /** The device does not have the requested hardware. */
+  /** The device does not have the requested hardware or the feature is not available on this platform. */
   UNAVAILABLE = 'UNAVAILABLE',
-  /** The user denied the permission or the feature is disabled in settings. */
+  /** The user cancelled an interactive flow. */
+  CANCELLED = 'CANCELLED',
+  /** The user denied the permission or the feature is disabled by the OS. */
   PERMISSION_DENIED = 'PERMISSION_DENIED',
-  /** The Settings plugin failed to initialize (e.g., runtime error or Looper failure). */
+  /** The plugin failed to initialize or perform an operation. */
   INIT_FAILED = 'INIT_FAILED',
-  /** The requested Settings plugin type is not valid or not supported by the plugin. */
+  /** The input provided to the plugin method is invalid, missing, or malformed. */
+  INVALID_INPUT = 'INVALID_INPUT',
+  /** The requested type is not valid or supported. */
   UNKNOWN_TYPE = 'UNKNOWN_TYPE',
+  /** The requested resource does not exist. */
+  NOT_FOUND = 'NOT_FOUND',
+  /** The operation conflicts with the current state. */
+  CONFLICT = 'CONFLICT',
+  /** The operation did not complete within the expected time. */
+  TIMEOUT = 'TIMEOUT',
 }
 
 /**
@@ -82,10 +88,10 @@ export interface PluginVersionResult {
 }
 
 /**
- * Structured error object returned by Settings plugin operations.
+ * Structured error object returned when a Settings plugin operation fails.
  *
- * This object allows consumers to handle errors without relying
- * on exception-based control flow.
+ * When a method fails, the Promise is rejected with an object
+ * conforming to this interface.
  */
 export interface SettingsError {
   /**
@@ -110,8 +116,11 @@ export interface SettingsError {
  * current runtime platform.
  *
  * Unsupported or unavailable options on the current platform
- * will result in a resolved response with:
- * `{ success: false, code: SettingsErrorCode.UNAVAILABLE }`
+ * will result in a rejected Promise with code:
+ * `SettingsErrorCode.UNAVAILABLE`
+ *
+ * - iOS: if `optionIOS` is missing or empty, rejects with `SettingsErrorCode.INVALID_INPUT`.
+ * - Android: if `optionAndroid` is missing or empty, rejects with `SettingsErrorCode.INVALID_INPUT`.
  *
  * Availability and behavior depend on platform-specific
  * system capabilities and restrictions.
@@ -122,16 +131,22 @@ export interface PlatformOptions {
    *
    * Used only when running on Android.
    * Mapped internally to a system Intent.
+   *
+   * If running on Android and this option is missing or empty,
+   * the promise will be rejected with `SettingsErrorCode.INVALID_INPUT`.
    */
-  optionAndroid: AndroidSettings;
+  optionAndroid?: AndroidSettings;
 
   /**
    * iOS settings option to open.
    *
    * Used only when running on iOS.
    * Mapped internally to an iOS settings URL scheme.
+   *
+   * If running on iOS and this option is missing or empty,
+   * the promise will be rejected with `SettingsErrorCode.INVALID_INPUT`.
    */
-  optionIOS: IOSSettings;
+  optionIOS?: IOSSettings;
 }
 
 /**
@@ -151,8 +166,7 @@ export interface PlatformOptions {
  * Android SDK and may not be available on all devices.
  *
  * When a requested settings screen cannot be resolved, the plugin
- * resolves with:
- * `{ success: false, code: SettingsErrorCode.UNAVAILABLE }`
+ * rejects with code: `SettingsErrorCode.UNAVAILABLE`
  *
  * This interface does NOT guarantee that a given settings screen
  * will open successfully on all devices.
@@ -184,8 +198,8 @@ export interface AndroidOptions {
  * - stop working in future iOS releases
  * - be restricted or rejected during App Store review
  *
- * For unsupported or unavailable settings, the plugin resolves with:
- * `{ success: false, code: SettingsErrorCode.UNAVAILABLE }`
+ * For unsupported or unavailable settings, the plugin rejects with
+ * code: `SettingsErrorCode.UNAVAILABLE`
  *
  * This interface does NOT guarantee that a given settings screen
  * will open successfully on all devices.
@@ -221,8 +235,7 @@ export interface IOSOptions {
  * available on all devices.
  *
  * When a requested settings screen cannot be resolved, the plugin
- * resolves with:
- * `{ success: false, code: SettingsErrorCode.UNAVAILABLE }`
+ * rejects with code: `SettingsErrorCode.UNAVAILABLE`
  *
  * @since 8.0.0
  */
@@ -231,11 +244,6 @@ export enum AndroidSettings {
    * Opens Accessibility settings.
    */
   Accessibility = 'accessibility',
-
-  /**
-   * Opens the Add Account screen.
-   */
-  Account = 'account',
 
   /**
    * Opens Airplane Mode settings.
@@ -251,13 +259,6 @@ export enum AndroidSettings {
    * Opens the Application Details screen for the current app.
    */
   ApplicationDetails = 'application_details',
-
-  /**
-   * Opens Application Development settings.
-   *
-   * Availability depends on developer options being enabled.
-   */
-  ApplicationDevelopment = 'application_development',
 
   /**
    * Opens Application settings.
@@ -282,11 +283,6 @@ export enum AndroidSettings {
   Bluetooth = 'bluetooth',
 
   /**
-   * Opens Captioning settings.
-   */
-  Captioning = 'captioning',
-
-  /**
    * Opens Cast device settings.
    */
   Cast = 'cast',
@@ -307,56 +303,14 @@ export enum AndroidSettings {
   Display = 'display',
 
   /**
-   * Opens Dream (Daydream / Screensaver) settings.
-   */
-  Dream = 'dream',
-
-  /**
    * Opens Home app selection settings.
    */
   Home = 'home',
 
   /**
-   * Opens Input Method (Keyboard) settings.
-   */
-  Keyboard = 'keyboard',
-
-  /**
-   * Opens Input Method Subtype settings.
-   */
-  KeyboardSubType = 'keyboard_subtype',
-
-  /**
-   * Opens Language & Input (Locale) settings.
-   */
-  Locale = 'locale',
-
-  /**
    * Opens Location Services settings.
    */
   Location = 'location',
-
-  /**
-   * Opens Manage Applications settings.
-   */
-  ManageApplications = 'manage_applications',
-
-  /**
-   * Opens Manage All Applications settings.
-   *
-   * Availability depends on Android version and OEM.
-   */
-  ManageAllApplications = 'manage_all_applications',
-
-  /**
-   * Show settings for memory card storage
-   */
-  MemoryCard = 'memory_card',
-
-  /**
-   * Opens Network Operator settings.
-   */
-  Network = 'network',
 
   /**
    * Opens NFC settings.
@@ -379,21 +333,6 @@ export enum AndroidSettings {
   Print = 'print',
 
   /**
-   * Opens Privacy settings.
-   */
-  Privacy = 'privacy',
-
-  /**
-   * Opens Quick Launch settings.
-   */
-  QuickLaunch = 'quick_launch',
-
-  /**
-   * Opens Search settings.
-   */
-  Search = 'search',
-
-  /**
    * Opens Security settings.
    */
   Security = 'security',
@@ -404,11 +343,6 @@ export enum AndroidSettings {
   Settings = 'settings',
 
   /**
-   * Opens Regulatory Information screen.
-   */
-  ShowRegulatoryInfo = 'show_regulatory_info',
-
-  /**
    * Opens Sound & Volume settings.
    */
   Sound = 'sound',
@@ -417,11 +351,6 @@ export enum AndroidSettings {
    * Opens Internal Storage settings.
    */
   Storage = 'storage',
-
-  /**
-   * Opens Sync settings.
-   */
-  Sync = 'sync',
 
   /**
    * Opens Text-to-Speech (TTS) settings.
@@ -438,16 +367,6 @@ export enum AndroidSettings {
   Usage = 'usage',
 
   /**
-   * Opens User Dictionary settings.
-   */
-  UserDictionary = 'user_dictionary',
-
-  /**
-   * Opens Voice Input settings.
-   */
-  VoiceInput = 'voice_input',
-
-  /**
    * Opens VPN settings.
    */
   VPN = 'vpn',
@@ -456,18 +375,6 @@ export enum AndroidSettings {
    * Opens Wi-Fi settings.
    */
   Wifi = 'wifi',
-
-  /**
-   * Opens Wi-Fi IP settings.
-   *
-   * Availability varies by device and Android version.
-   */
-  WifiIp = 'wifi_ip',
-
-  /**
-   * Opens Wireless & Networks settings.
-   */
-  Wireless = 'wireless',
 
   /**
    * Opens Zen Mode (Do Not Disturb) settings.
@@ -498,7 +405,8 @@ export enum AndroidSettings {
  *
  * - behave differently across iOS versions
  * - stop working in future releases
- * - be restricted during App Store review
+ *
+ * - be restricted or rejected during App Store review
  *
  * Availability is best-effort and not guaranteed.
  *
@@ -685,20 +593,22 @@ export enum IOSSettings {
 /**
  * Public JavaScript API for the Settings Capacitor plugin.
  *
- * This plugin uses a state-based result model:
- * - operations never throw
- * - Promise rejection is not used
- * - failures are reported via `{ success, error?, code? }`
+ * This plugin uses a standard Promise rejection model for errors.
  *
- * This design ensures consistent behavior across Android, iOS, and Web.
+ * All methods return a Promise that:
+ * - resolves when the operation is successful
+ * - rejects when the operation fails or is not supported
+ *
+ * When rejected, the error object contains a machine-readable `code`
+ * from `SettingsErrorCode`.
  */
 export interface SettingsPlugin {
   /**
    * Opens the specified settings option on the current platform.
-   * On Web, this method is not supported.
+   * On Web, this method is not supported and will reject.
    *
    * @param options Platform-specific settings options.
-   * @returns A promise resolving to the operation result.
+   * @returns A promise resolving when the settings screen is opened.
    *
    * @since 8.0.0
    */
@@ -707,6 +617,9 @@ export interface SettingsPlugin {
   /**
    * Opens a specific system settings section. (iOS Only)
    *
+   * This method is a platform-specific helper. For cross-platform usage,
+   * prefer the generic `open()` method with `PlatformOptions`.
+   *
    * @platforms iOS
    *
    * @remarks
@@ -714,13 +627,13 @@ export interface SettingsPlugin {
    * Other settings destinations rely on undocumented URL schemes and may:
    * - behave differently across iOS versions
    * - stop working in future releases
-   * - be restricted during App Store review
+   * - be restricted or rejected during App Store review
    *
-   * When unavailable, the method resolves with:
-   * `{ success: false, code: SettingsErrorCode.UNAVAILABLE }`.
+   * When unavailable or unsupported, the method rejects with
+   * code: `SettingsErrorCode.UNAVAILABLE`.
    *
    * @param options iOS settings options.
-   * @returns A promise resolving to the operation result.
+   * @returns A promise resolving when the settings screen is opened.
    *
    * @since 8.0.0
    */
@@ -728,12 +641,15 @@ export interface SettingsPlugin {
 
   /**
    * Opens a specific Android Intent. (Android Only)
-   * On Web, this method is not supported.
+   * On Web, this method is not supported and will reject.
+   *
+   * This method is a platform-specific helper. For cross-platform usage,
+   * prefer the generic `open()` method with `PlatformOptions`.
    *
    * @platforms Android
    *
    * @param options Android settings options.
-   * @returns A promise resolving to the operation result.
+   * @returns A promise resolving when the settings screen is opened.
    *
    * @since 8.0.0
    */

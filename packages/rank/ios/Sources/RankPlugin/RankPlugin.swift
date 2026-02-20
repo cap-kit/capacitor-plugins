@@ -49,10 +49,13 @@ public final class RankPlugin: CAPPlugin, CAPBridgedPlugin {
     // MARK: - Lifecycle
 
     /**
-     * Plugin lifecycle entry point.
-     *
-     * Called once when the plugin is loaded. This method initializes the configuration
-     * and prepares the native implementation.
+     Plugin lifecycle entry point.
+
+     Called once when the plugin is loaded by the Capacitor bridge.
+     This is the correct place to:
+     - read configuration values
+     - initialize native resources
+     - configure the implementation instance
      */
     override public func load() {
         // Initialize RankConfig with the correct type
@@ -61,7 +64,7 @@ public final class RankPlugin: CAPPlugin, CAPBridgedPlugin {
         implementation.applyConfig(cfg)
 
         // Log if verbose logging is enabled
-        RankLogger.debug("Plugin loaded.")
+        RankLogger.debug("Plugin loaded. Version: ", PluginVersion.number)
     }
 
     // MARK: - Error Mapping

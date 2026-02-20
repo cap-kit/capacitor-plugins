@@ -72,8 +72,10 @@ class PeoplePlugin : Plugin() {
   /**
    * Called once when the plugin is loaded by the Capacitor bridge.
    *
-   * This method initializes the configuration container and the native
-   * implementation layer, ensuring all dependencies are injected.
+   * This is the correct place to:
+   * - read static configuration
+   * - initialize native resources
+   * - inject configuration into the implementation
    */
   override fun load() {
     super.load()
@@ -82,8 +84,7 @@ class PeoplePlugin : Plugin() {
     implementation = PeopleImpl(context)
     implementation.updateConfig(config)
 
-    PeopleLogger.verbose = config.verboseLogging
-    PeopleLogger.debug("Plugin loaded")
+    PeopleLogger.debug("Plugin loaded. Version: ", BuildConfig.PLUGIN_VERSION)
   }
 
   /**
