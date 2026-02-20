@@ -50,8 +50,11 @@ class SSLPinningImpl(
    *
    * This avoids repeated I/O operations when certificate-based
    * pinning is used multiple times during the app lifecycle.
+   *
+   * Key: certificate file name (or domain-specific key)
+   * Value: loaded certificate
    */
-  private var cachedPinnedCerts: List<X509Certificate>? = null
+  private var cachedPinnedCerts: Map<String, List<X509Certificate>> = emptyMap()
 
   /**
    * Cached plugin configuration.
@@ -73,10 +76,30 @@ class SSLPinningImpl(
   fun updateConfig(newConfig: SSLPinningConfig) {
     this.config = newConfig
     SSLPinningLogger.verbose = newConfig.verboseLogging
+
+    // Validate certificates at load time (fail-fast)
+    validateCertificatesAtLoad()
+
     SSLPinningLogger.debug(
       "Configuration applied. Verbose logging:",
       newConfig.verboseLogging.toString(),
     )
+  }
+
+  /**
+   * Validates all configured certificates at load time.
+   * Throws if any configured certificate is invalid.
+   */
+  private fun validateCertificatesAtLoad() {
+    val allCertFiles = config.getAllCertFileNames()
+
+    for (certFile in allCertFiles) {
+      if (!config.isCertValid(certFile)) {
+        throw SSLPinningError.InvalidConfig(
+          SSLPinningErrorMessages.certNotFound(certFile),
+        )
+      }
+    }
   }
 
   // -----------------------------------------------------------------------------
@@ -109,8 +132,9 @@ class SSLPinningImpl(
       )
     }
 
-    val hasCerts = config.certs.isNotEmpty()
-    if (hasCerts) {
+    // Determine effective certificates for this host
+    val effectiveCerts = getEffectiveCertsForUrl(urlString)
+    if (effectiveCerts.isNotEmpty()) {
       return performCheck(
         urlString = urlString,
         fingerprints = emptyList(),
@@ -153,8 +177,9 @@ class SSLPinningImpl(
       )
     }
 
-    val hasCerts = config.certs.isNotEmpty()
-    if (hasCerts) {
+    // Determine effective certificates for this host
+    val effectiveCerts = getEffectiveCertsForUrl(urlString)
+    if (effectiveCerts.isNotEmpty()) {
       return performCheck(
         urlString = urlString,
         fingerprints = emptyList(),
@@ -163,6 +188,25 @@ class SSLPinningImpl(
 
     throw SSLPinningError.Unavailable(
       SSLPinningErrorMessages.NO_FINGERPRINTS_PROVIDED,
+    )
+  }
+
+  // -----------------------------------------------------------------------------
+  // Certificate Resolution
+  // -----------------------------------------------------------------------------
+
+  /**
+   * Gets the effective certificate list for a given URL.
+   * Uses domain-based resolution with fallback to global certs.
+   */
+  private fun getEffectiveCertsForUrl(urlString: String): List<String> {
+    val url = SSLPinningUtils.httpsUrl(urlString) ?: return emptyList()
+    val host = url.host ?: return emptyList()
+
+    return SSLPinningUtils.getEffectiveCertsForHost(
+      host = host,
+      certsByDomain = config.certsByDomain,
+      globalCerts = config.certs,
     )
   }
 
@@ -181,7 +225,7 @@ class SSLPinningImpl(
    *
    * Certificate-based pinning is activated ONLY when:
    * - No fingerprints are provided
-   * - One or more certificates are configured
+   * - One or more certificates are configured for the domain
    *
    * @throws SSLPinningError when validation fails.
    */
@@ -252,9 +296,18 @@ class SSLPinningImpl(
      * This mode validates the full server certificate chain
      * against pinned X.509 certificates bundled with the app.
      */
-    if (fingerprints.isEmpty() && config.certs.isNotEmpty()) {
-      // Use helper to get certificates from memory or load them from assets if needed
-      val pinnedCerts = getPinnedCertsInternal()
+    if (fingerprints.isEmpty()) {
+      // Get effective certificates for this domain
+      val effectiveCerts = getEffectiveCertsForUrl(urlString)
+
+      if (effectiveCerts.isEmpty()) {
+        throw SSLPinningError.NoPinningConfig(
+          SSLPinningErrorMessages.NO_FINGERPRINTS_PROVIDED,
+        )
+      }
+
+      // Load certificates (with caching)
+      val pinnedCerts = getPinnedCertsInternal(effectiveCerts)
 
       if (pinnedCerts.isEmpty()) {
         throw SSLPinningError.CertNotFound(
@@ -299,12 +352,6 @@ class SSLPinningImpl(
      * Only the leaf certificate fingerprint is compared.
      * The system trust chain is NOT evaluated in this mode.
      */
-    if (fingerprints.isEmpty()) {
-      throw SSLPinningError.NoPinningConfig(
-        SSLPinningErrorMessages.NO_FINGERPRINTS_PROVIDED,
-      )
-    }
-
     val certificate: Certificate
     try {
       certificate = getCertificate(url)
@@ -530,10 +577,15 @@ class SSLPinningImpl(
    * Internal helper to retrieve pinned certificates.
    * Uses cached values if available to avoid redundant asset I/O.
    */
-  private fun getPinnedCertsInternal(): List<X509Certificate> {
-    if (cachedPinnedCerts == null) {
-      cachedPinnedCerts = SSLPinningUtils.loadPinnedCertificates(context, config.certs)
+  private fun getPinnedCertsInternal(certFileNames: List<String>): List<X509Certificate> {
+    // Create a cache key from the sorted certificate filenames
+    val cacheKey = certFileNames.sorted().joinToString(",")
+
+    if (!cachedPinnedCerts.containsKey(cacheKey)) {
+      val loaded = SSLPinningUtils.loadPinnedCertificates(context, certFileNames)
+      cachedPinnedCerts = cachedPinnedCerts + (cacheKey to loaded)
     }
-    return cachedPinnedCerts ?: emptyList()
+
+    return cachedPinnedCerts[cacheKey] ?: emptyList()
   }
 }

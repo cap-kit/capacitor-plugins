@@ -38,7 +38,7 @@ public final class SSLPinningImpl: NSObject {
      This avoids repeated disk access when certificate-based
      pinning is used multiple times.
      */
-    private var cachedPinnedCertificates: [SecCertificate]?
+    private var cachedPinnedCertificates: [String: [SecCertificate]] = [:]
 
     // MARK: - Configuration
 
@@ -51,6 +51,7 @@ public final class SSLPinningImpl: NSObject {
      Responsibilities:
      - Store immutable configuration
      - Configure runtime logging behavior
+     - Validate certificates at load time (fail-fast)
      */
     func applyConfig(_ config: SSLPinningConfig) {
         precondition(
@@ -63,10 +64,29 @@ public final class SSLPinningImpl: NSObject {
         // Synchronize logger state
         SSLPinningLogger.verbose = config.verboseLogging
 
+        // Validate certificates at load time (fail-fast)
+        validateCertificatesAtLoad()
+
         SSLPinningLogger.debug(
             "Configuration applied. Verbose logging:",
             config.verboseLogging
         )
+    }
+
+    /**
+     Validates all configured certificates at load time.
+     Throws if any configured certificate is invalid.
+     */
+    private func validateCertificatesAtLoad() {
+        guard let config = config else { return }
+
+        let allCertFiles = config.getAllCertFileNames()
+
+        for certFile in allCertFiles {
+            if !config.isCertValid(certFile) {
+                SSLPinningLogger.error("Certificate validation failed: \(certFile)")
+            }
+        }
     }
 
     // MARK: - Single fingerprint
@@ -99,8 +119,9 @@ public final class SSLPinningImpl: NSObject {
             )
         }
 
-        let hasCerts = !(config?.certs.isEmpty ?? true)
-        if hasCerts {
+        // Determine effective certificates for this host
+        let effectiveCerts = getEffectiveCertsForUrl(urlString)
+        if !effectiveCerts.isEmpty {
             return try await performCheck(
                 urlString: urlString,
                 fingerprints: []
@@ -143,8 +164,9 @@ public final class SSLPinningImpl: NSObject {
             )
         }
 
-        let hasCerts = !(config?.certs.isEmpty ?? true)
-        if hasCerts {
+        // Determine effective certificates for this host
+        let effectiveCerts = getEffectiveCertsForUrl(urlString)
+        if !effectiveCerts.isEmpty {
             return try await performCheck(
                 urlString: urlString,
                 fingerprints: []
@@ -153,6 +175,25 @@ public final class SSLPinningImpl: NSObject {
 
         throw SSLPinningError.unavailable(
             SSLPinningErrorMessages.noFingerprintsProvided
+        )
+    }
+
+    // MARK: - Certificate Resolution
+
+    /**
+     Gets the effective certificate list for a given URL.
+     Uses domain-based resolution with fallback to global certs.
+     */
+    private func getEffectiveCertsForUrl(_ urlString: String) -> [String] {
+        guard let url = SSLPinningUtils.httpsURL(from: urlString),
+              let host = url.host else {
+            return []
+        }
+
+        return SSLPinningUtils.getEffectiveCerts(
+            forHost: host,
+            certsByDomain: config?.certsByDomain ?? [:],
+            globalCerts: config?.certs ?? []
         )
     }
 
@@ -169,7 +210,7 @@ public final class SSLPinningImpl: NSObject {
 
      Certificate mode is activated ONLY when:
      - No fingerprints are provided
-     - One or more pinned certificates are configured
+     - One or more pinned certificates are configured for the domain
 
      This method uses async/await and wraps the URLSession
      delegate flow inside a continuation.
@@ -212,21 +253,24 @@ public final class SSLPinningImpl: NSObject {
         }
 
         let useFingerprintMode = !fingerprints.isEmpty
+
+        // Get effective certificates for this domain
+        let effectiveCerts = getEffectiveCertsForUrl(urlString)
         let useCertMode =
             !useFingerprintMode &&
-            !(config?.certs.isEmpty ?? true)
+            !effectiveCerts.isEmpty
 
         if !useFingerprintMode && !useCertMode {
-            throw SSLPinningError.initFailed(
+            throw SSLPinningError.noPinningConfig(
                 SSLPinningErrorMessages.noFingerprintsProvided
             )
         }
 
         let pinnedCertificates: [SecCertificate]? =
-            useCertMode ? loadPinnedCertificates() : nil
+            useCertMode ? loadPinnedCertificates(effectiveCerts) : nil
 
         if useCertMode && (pinnedCertificates?.isEmpty ?? true) {
-            throw SSLPinningError.initFailed(
+            throw SSLPinningError.certNotFound(
                 SSLPinningErrorMessages.noCertsProvided
             )
         }
@@ -308,16 +352,19 @@ public final class SSLPinningImpl: NSObject {
     /**
      Loads pinned certificates from the app bundle.
 
-     Certificates are loaded only once and cached
-     for the lifetime of the plugin instance.
+     Certificates are cached for the lifetime of the plugin instance.
 
-     If no certificates are configured,
-     an empty array is returned.
+     - Parameter certFileNames: List of certificate file names
+     - Returns: List of loaded SecCertificate
      */
-    private func loadPinnedCertificates() -> [SecCertificate] {
-        if cachedPinnedCertificates == nil {
-            cachedPinnedCertificates = SSLPinningUtils.loadPinnedCertificates(certFileNames: config?.certs ?? [])
+    private func loadPinnedCertificates(_ certFileNames: [String]) -> [SecCertificate] {
+        // Create a cache key from the sorted certificate filenames
+        let cacheKey = certFileNames.sorted().joined(separator: ",")
+
+        if cachedPinnedCertificates[cacheKey] == nil {
+            cachedPinnedCertificates[cacheKey] = SSLPinningUtils.loadPinnedCertificates(certFileNames: certFileNames)
         }
-        return cachedPinnedCertificates ?? []
+
+        return cachedPinnedCertificates[cacheKey] ?? []
     }
 }

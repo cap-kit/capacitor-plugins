@@ -19,8 +19,18 @@ enum SSLPinningErrorMessages {
     static let timeout = "Timeout"
     static let networkError = "Network error"
     static let internalError = "Internal error"
+    static let invalidConfig = "Invalid configuration: %@"
+    static let certNotFound = "Certificate not found: %@"
 
     static func unsupportedHost(_ value: String) -> String {
         return String(format: unsupportedHost, value)
+    }
+
+    static func invalidConfig(_ value: String) -> String {
+        return String(format: invalidConfig, value)
+    }
+
+    static func certNotFound(_ value: String) -> String {
+        return String(format: certNotFound, value)
     }
 }

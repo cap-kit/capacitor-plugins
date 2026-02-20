@@ -14,6 +14,9 @@ import java.security.cert.X509Certificate
  * - No Capacitor dependency
  * - No side effects
  * - Fully testable
+ *
+ * NOTE: Certificate loading involves I/O and is NOT pure.
+ * It is provided as a separate utility function.
  */
 object SSLPinningUtils {
   /**
@@ -51,10 +54,28 @@ object SSLPinningUtils {
    *
    * Valid fingerprint:
    * - Exactly 64 hexadecimal characters (after normalization)
+   * - Contains only [a-f0-9]
    */
   fun isValidFingerprintFormat(value: String): Boolean {
     val normalized = normalizeFingerprint(value)
     return normalized.length == 64 && normalized.matches(Regex("^[a-f0-9]+$"))
+  }
+
+  /**
+   * Validates a fingerprint and returns an error message if invalid, or null if valid.
+   */
+  fun validateFingerprint(value: String): String? {
+    if (value.isBlank()) {
+      return "Fingerprint cannot be blank"
+    }
+    val normalized = normalizeFingerprint(value)
+    if (normalized.length != 64) {
+      return "Invalid fingerprint: must be 64 hex characters"
+    }
+    if (!normalized.matches(Regex("^[a-f0-9]+$"))) {
+      return "Invalid fingerprint: must contain only hex characters [a-f0-9]"
+    }
+    return null
   }
 
   /**
@@ -75,12 +96,61 @@ object SSLPinningUtils {
   }
 
   /**
+   * Determines the effective certificate list for a given host.
+   *
+   * Matching rules (in order of precedence):
+   * 1. Exact domain match (e.g., "api.example.com")
+   * 2. Subdomain match - most specific wins (longest key)
+   * 3. Fallback to global certs
+   *
+   * @param host The request host (e.g., "api.example.com")
+   * @param certsByDomain Per-domain certificate configuration
+   * @param globalCerts Global fallback certificates
+   * @return The effective list of certificate file names
+   */
+  fun getEffectiveCertsForHost(
+    host: String,
+    certsByDomain: Map<String, List<String>>,
+    globalCerts: List<String>,
+  ): List<String> {
+    val hostLower = host.lowercase().trim()
+
+    // 1. Try exact match
+    certsByDomain[hostLower]?.let { return it }
+
+    // 2. Try subdomain match - find most specific (longest key)
+    val matchingSubdomains =
+      certsByDomain.keys
+        .filter { key ->
+          hostLower.endsWith(".$key") || hostLower == key
+        }.sortedByDescending { it.length }
+
+    matchingSubdomains.firstOrNull()?.let { bestMatch ->
+      return certsByDomain[bestMatch] ?: globalCerts
+    }
+
+    // 3. Fallback to global certs
+    return globalCerts
+  }
+
+  /**
+   * Checks if any configured certificate is invalid.
+   * Returns the first invalid certificate filename, or null if all are valid.
+   */
+  fun findFirstInvalidCert(
+    certFileNames: List<String>,
+    isValidChecker: (String) -> Boolean,
+  ): String? = certFileNames.firstOrNull { !isValidChecker(it) }
+
+  /**
    * Loads X.509 certificates from the app assets.
    *
    * Certificates must be placed under:
    * assets/certs/
    *
-   * Invalid or unreadable certificates are silently ignored.
+   * @param context Android context
+   * @param certFileNames List of certificate file names
+   * @return List of loaded X509Certificates (empty on any failure)
    */
   fun loadPinnedCertificates(
     context: Context,

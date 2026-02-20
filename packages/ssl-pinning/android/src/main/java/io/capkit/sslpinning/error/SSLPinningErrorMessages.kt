@@ -18,7 +18,15 @@ object SSLPinningErrorMessages {
   const val TIMEOUT = "Timeout"
   const val NETWORK_ERROR = "Network error"
   const val INTERNAL_ERROR = "Internal error"
+  const val INVALID_CONFIG = "Invalid configuration: %s"
+  const val CERT_NOT_FOUND = "Certificate not found: %s"
 
   @JvmStatic
   fun unsupportedHost(value: String): String = String.format(UNSUPPORTED_HOST, value)
+
+  @JvmStatic
+  fun invalidConfig(value: String): String = String.format(INVALID_CONFIG, value)
+
+  @JvmStatic
+  fun certNotFound(value: String): String = String.format(CERT_NOT_FOUND, value)
 }

@@ -83,6 +83,10 @@ This is a **normal permission** (no runtime prompt required). The app will
 automatically be granted this permission at install time. No user interaction
 or runtime permission request is needed.
 
+### iOS
+
+No special permissions are required. The plugin uses standard URLSession APIs.
+
 ---
 
 ## Install
@@ -295,13 +299,15 @@ These values are:
 
 Configuration options for the SSLPinning plugin.
 
-| Prop                  | Type                  | Description                                                                                                                 | Default            | Since  |
-| --------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------ | ------ |
-| **`verboseLogging`**  | <code>boolean</code>  | Enables verbose native logging (Logcat / Xcode console).                                                                    | <code>false</code> | 0.0.15 |
-| **`fingerprint`**     | <code>string</code>   | Default fingerprint used by `checkCertificate()` when `options.fingerprint` is not provided at runtime.                     |                    | 0.0.14 |
-| **`fingerprints`**    | <code>string[]</code> | Default fingerprints used by `checkCertificates()` when `options.fingerprints` is not provided at runtime.                  |                    | 0.0.15 |
-| **`certs`**           | <code>string[]</code> | Local certificate filenames (e.g., ["mycert.cer"]). Files must be in 'assets/certs' (Android) or main bundle 'certs' (iOS). |                    | 8.0.3  |
-| **`excludedDomains`** | <code>string[]</code> | Domains to bypass. Matches exact domain or subdomains. Do not include schemes or paths.                                     |                    | 8.0.3  |
+| Prop                  | Type                                        | Description                                                                                                                                                                                                                                                                                                                                                                                                                                          | Default            | Since  |
+| --------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ------ |
+| **`verboseLogging`**  | <code>boolean</code>                        | Enables verbose native logging (Logcat / Xcode console).                                                                                                                                                                                                                                                                                                                                                                                             | <code>false</code> | 0.0.15 |
+| **`fingerprint`**     | <code>string</code>                         | Default fingerprint used by `checkCertificate()` when `options.fingerprint` is not provided at runtime.                                                                                                                                                                                                                                                                                                                                              |                    | 0.0.14 |
+| **`fingerprints`**    | <code>string[]</code>                       | Default fingerprints used by `checkCertificates()` when `options.fingerprints` is not provided at runtime.                                                                                                                                                                                                                                                                                                                                           |                    | 0.0.15 |
+| **`certs`**           | <code>string[]</code>                       | Local certificate filenames (e.g., ["mycert.cer"]). Files must be in 'assets/certs' (Android) or main bundle 'certs' (iOS). This is the global fallback used when no domain-specific certificates are configured via `certsByDomain`.                                                                                                                                                                                                                |                    | 8.0.3  |
+| **`certsByDomain`**   | <code>Record&lt;string, string[]&gt;</code> | Per-domain certificate configuration. Maps a domain (or subdomain pattern) to a list of certificate filenames to use for that domain. Matching rules: - First, try exact domain match (e.g., "api.example.com") - Then, try subdomain match (e.g., "example.com" matches "api.example.com") - If multiple subdomain keys match, the MOST SPECIFIC (longest) wins - If no match found, fallback to global `certs`                                     |                    | 8.0.4  |
+| **`certsManifest`**   | <code>string</code>                         | Optional manifest file for certificate auto-discovery. The manifest is a JSON file containing either: - `{ "certs": ["a.cer", "b.cer"] }` - `{ "certsByDomain": { "example.com": ["cert.cer"] } }` - Both, which extend/override the explicit config values Location: - Android: assets/certs/&lt;path&gt; - iOS: main bundle &lt;path&gt; Precedence (later overrides earlier): 1. Explicit config values (certs, certsByDomain) 2. Manifest values |                    | 8.0.4  |
+| **`excludedDomains`** | <code>string[]</code>                       | Domains to bypass. Matches exact domain or subdomains. Do not include schemes or paths.                                                                                                                                                                                                                                                                                                                                                              |                    | 8.0.3  |
 
 ### Examples
 
@@ -315,7 +321,8 @@ In `capacitor.config.json`:
       "fingerprint": "50:4B:A1:B5:48:96:71:F3:9F:87:7E:0A:09:FD:3E:1B:C0:4F:AA:9F:FC:83:3E:A9:3A:00:78:88:F8:BA:60:26",
       "fingerprints": [
         "50:4B:A1:B5:48:96:71:F3:9F:87:7E:0A:09:FD:3E:1B:C0:4F:AA:9F:FC:83:3E:A9:3A:00:78:88:F8:BA:60:26"
-      ]
+      ],
+      "certsManifest": "certs/index.json"
     }
   }
 }
@@ -334,6 +341,7 @@ const config: CapacitorConfig = {
       verboseLogging: false,
       fingerprint: '50:4B:A1:B5:48:96:71:F3:9F:87:7E:0A:09:FD:3E:1B:C0:4F:AA:9F:FC:83:3E:A9:3A:00:78:88:F8:BA:60:26',
       fingerprints: ['50:4B:A1:B5:48:96:71:F3:9F:87:7E:0A:09:FD:3E:1B:C0:4F:AA:9F:FC:83:3E:A9:3A:00:78:88:F8:BA:60:26'],
+      certsManifest: 'certs/index.json',
     },
   },
 };
@@ -351,6 +359,108 @@ For each method call, fingerprint resolution follows this order:
 2. Static configuration from `capacitor.config.ts`
 
 If no fingerprint is available from either source, the call will fail.
+
+---
+
+### Per-Domain Certificates (`certsByDomain`)
+
+The plugin supports **per-domain certificate pinning** via the `certsByDomain` configuration option. This allows you to specify different certificates for different domains.
+
+#### Matching Rules
+
+The effective certificate list for a request is determined as follows:
+
+1. **Exact match**: The request host is matched against domain keys exactly (e.g., `"api.example.com"` matches key `"api.example.com"`)
+
+2. **Subdomain match**: If no exact match, the host is matched against parent domains (e.g., `"api.example.com"` matches key `"example.com"`). If multiple subdomain keys match, the **most specific** (longest) key wins.
+
+3. **Global fallback**: If no domain match is found, the global `certs` list is used.
+
+#### Example
+
+```ts
+// capacitor.config.ts
+{
+  plugins: {
+    SSLPinning: {
+      // Global fallback (used for any domain not matched below)
+      certs: ['default.cer'],
+
+      // Per-domain certificates
+      certsByDomain: {
+        'api.example.com': ['api-cert.cer'],
+        'example.com': ['wildcard.cer'],
+        'other-service.com': ['other-cert.cer'],
+      },
+    }
+  }
+}
+```
+
+For a request to `https://api.example.com`:
+
+- First tries exact match: `"api.example.com"` → uses `['api-cert.cer']`
+- For `https://sub.example.com`: matches `"example.com"` → uses `['wildcard.cer']`
+- For `https://unknown.com`: no match → uses global `['default.cer']`
+
+---
+
+### Certificate Manifest (`certsManifest`)
+
+For easier certificate management, you can use a **manifest file** to define certificates. This is especially useful when certificates are updated frequently.
+
+#### Manifest File Format
+
+Create a JSON file (e.g., `assets/certs/index.json` on Android, or copy to bundle on iOS):
+
+```json
+{
+  "certs": ["default.cer"],
+  "certsByDomain": {
+    "api.example.com": ["api-cert.cer"],
+    "example.com": ["wildcard.cer"]
+  }
+}
+```
+
+#### Configuration
+
+```ts
+// capacitor.config.ts
+{
+  plugins: {
+    SSLPinning: {
+      // Point to the manifest file
+      certsManifest: 'index.json',
+    }
+  }
+}
+```
+
+#### Precedence
+
+When both explicit config and manifest are provided:
+
+- **Explicit config values take precedence** over manifest values
+- Manifest values serve as defaults that can be overridden
+
+```ts
+{
+  certs: ['explicit.cer'],           // This wins over manifest
+  certsManifest: 'index.json'        // Manifest values used as fallback
+}
+```
+
+#### Certificate Validation
+
+Certificate files are validated at **plugin load time**. If any configured certificate file is missing or invalid:
+
+- The plugin logs an error with the filename
+- The operation will fail at runtime with `CERT_NOT_FOUND` or `INVALID_INPUT`
+
+This fail-fast behavior ensures misconfigured certificates are detected early rather than silently ignored.
+
+---
 
 ### Excluded Domains
 
@@ -681,10 +791,35 @@ try {
 
 ## Security Notes
 
-- Only HTTPS URLs are accepted.
-- The system trust chain is **not** evaluated.
-- Certificate acceptance is based **solely on fingerprint matching**.
+### Security Model
 
+The plugin supports two pinning modes with different security properties:
+
+#### Fingerprint Mode
+
+- **Only the leaf certificate fingerprint is compared**
+- The system trust chain is **NOT evaluated**
+- Validation is performed manually via fingerprint comparison
+- A permissive TrustManager is used intentionally to bypass system trust
+
+This mode is useful when you want to pin to a specific certificate fingerprint without relying on the system's CA certificates.
+
+#### Certificate Mode (`cert`)
+
+- **Full certificate chain validation** against pinned X.509 certificates
+- The system trust chain is **replaced** with pinned anchors
+- The TLS handshake succeeds **only if** the server chain can be validated against pinned certificates
+- More secure than fingerprint mode as it validates the entire chain
+
+#### Excluded Domains
+
+- SSL pinning is bypassed
+- System trust is still validated (device's CA certificates)
+- Useful for debugging or trusted internal services
+
+### General Security Considerations
+
+- Only HTTPS URLs are accepted.
 - SSL pinning **requires ongoing maintenance**.
   Certificates that expire or are rotated **must be updated** before they become invalid.
 - Incorrect configuration may result in **loss of network connectivity**.

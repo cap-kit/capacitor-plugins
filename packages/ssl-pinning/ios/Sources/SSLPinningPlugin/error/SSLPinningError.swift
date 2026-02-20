@@ -50,6 +50,9 @@ enum SSLPinningError: Error {
     /// Certificate-based trust evaluation failed
     case trustEvaluationFailed(String)
 
+    /// Invalid or malformed configuration
+    case invalidConfig(String)
+
     // MARK: - Human-readable message
 
     /**
@@ -84,6 +87,8 @@ enum SSLPinningError: Error {
             return message
         case .trustEvaluationFailed(let message):
             return message
+        case .invalidConfig(let message):
+            return message
         }
     }
 
@@ -102,6 +107,7 @@ enum SSLPinningError: Error {
         case .noPinningConfig: return "NO_PINNING_CONFIG"
         case .certNotFound: return "CERT_NOT_FOUND"
         case .trustEvaluationFailed: return "TRUST_EVALUATION_FAILED"
+        case .invalidConfig: return "INVALID_INPUT"
         }
     }
 }

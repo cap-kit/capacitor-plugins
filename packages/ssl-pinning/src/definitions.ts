@@ -108,9 +108,59 @@ export interface SSLPinningConfig {
    * Local certificate filenames (e.g., ["mycert.cer"]).
    * Files must be in 'assets/certs' (Android) or main bundle 'certs' (iOS).
    *
+   * This is the global fallback used when no domain-specific
+   * certificates are configured via `certsByDomain`.
+   *
    * @since 8.0.3
    */
   certs?: string[];
+
+  /**
+   * Per-domain certificate configuration.
+   *
+   * Maps a domain (or subdomain pattern) to a list of
+   * certificate filenames to use for that domain.
+   *
+   * Matching rules:
+   * - First, try exact domain match (e.g., "api.example.com")
+   * - Then, try subdomain match (e.g., "example.com" matches "api.example.com")
+   * - If multiple subdomain keys match, the MOST SPECIFIC (longest) wins
+   * - If no match found, fallback to global `certs`
+   *
+   * @example
+   * ```ts
+   * {
+   *   "api.example.com": ["api-cert.cer"],
+   *   "example.com": ["wildcard.cer"],
+   *   "other.com": ["other-cert.cer"]
+   * }
+   * ```
+   *
+   * @since 8.0.4
+   */
+  certsByDomain?: Record<string, string[]>;
+
+  /**
+   * Optional manifest file for certificate auto-discovery.
+   *
+   * The manifest is a JSON file containing either:
+   * - `{ "certs": ["a.cer", "b.cer"] }`
+   * - `{ "certsByDomain": { "example.com": ["cert.cer"] } }`
+   * - Both, which extend/override the explicit config values
+   *
+   * Location:
+   * - Android: assets/certs/<path>
+   * - iOS: main bundle <path>
+   *
+   * Precedence (later overrides earlier):
+   * 1. Explicit config values (certs, certsByDomain)
+   * 2. Manifest values
+   *
+   * @example "certs/index.json"
+   *
+   * @since 8.0.4
+   */
+  certsManifest?: string;
 
   /**
    * Domains to bypass. Matches exact domain or subdomains.

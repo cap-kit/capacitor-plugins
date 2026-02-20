@@ -120,4 +120,12 @@ sealed class SSLPinningError(
   class NetworkError(
     message: String,
   ) : SSLPinningError(message)
+
+  /**
+   * Invalid or malformed configuration.
+   * Maps to the 'INVALID_INPUT' error code in JavaScript.
+   */
+  class InvalidConfig(
+    message: String,
+  ) : SSLPinningError(message)
 }
