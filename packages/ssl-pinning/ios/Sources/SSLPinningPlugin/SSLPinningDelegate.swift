@@ -325,6 +325,7 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate, URLSessionTaskDele
         if let error = error {
             let nsError = error as NSError
 
+            // Timeout
             if nsError.code == NSURLErrorTimedOut {
                 hasCompleted = true
                 completion([
@@ -332,7 +333,21 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate, URLSessionTaskDele
                     "errorCode": "TIMEOUT",
                     "error": SSLPinningErrorMessages.timeout
                 ])
-            } else if nsError.code == NSURLErrorCancelled {
+            }
+            // Common network errors (non-timeout)
+            else if nsError.domain == NSURLErrorDomain,
+                    [NSURLErrorNotConnectedToInternet,
+                     NSURLErrorNetworkConnectionLost,
+                     NSURLErrorCannotFindHost,
+                     NSURLErrorCannotConnectToHost].contains(nsError.code) {
+                hasCompleted = true
+                completion([
+                    "fingerprintMatched": false,
+                    "errorCode": "NETWORK_ERROR",
+                    "error": SSLPinningErrorMessages.networkError
+                ])
+            } else {
+                // Fallback for other errors
                 hasCompleted = true
                 completion([
                     "fingerprintMatched": false,

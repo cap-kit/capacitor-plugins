@@ -5,7 +5,9 @@ import io.capkit.sslpinning.config.SSLPinningConfig
 import io.capkit.sslpinning.error.SSLPinningError
 import io.capkit.sslpinning.error.SSLPinningErrorMessages
 import io.capkit.sslpinning.logger.SSLPinningLogger
+import io.capkit.sslpinning.model.SSLPinningResultModel
 import io.capkit.sslpinning.utils.SSLPinningUtils
+import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.URL
 import java.security.cert.Certificate
@@ -95,7 +97,7 @@ class SSLPinningImpl(
   fun checkCertificate(
     urlString: String,
     fingerprintFromArgs: String?,
-  ): Map<String, Any> {
+  ): SSLPinningResultModel {
     val fingerprint =
       fingerprintFromArgs ?: config.fingerprint
 
@@ -127,7 +129,7 @@ class SSLPinningImpl(
   fun checkCertificates(
     urlString: String,
     fingerprintsFromArgs: List<String>?,
-  ): Map<String, Any> {
+  ): SSLPinningResultModel {
     val fingerprints =
       fingerprintsFromArgs?.takeIf { it.isNotEmpty() }
         ?: config.fingerprints.takeIf { it.isNotEmpty() }
@@ -167,7 +169,7 @@ class SSLPinningImpl(
   private fun performCheck(
     urlString: String,
     fingerprints: List<String>,
-  ): Map<String, Any> {
+  ): SSLPinningResultModel {
     val url =
       SSLPinningUtils.httpsUrl(urlString)
         ?: throw SSLPinningError.UnknownType(
@@ -205,16 +207,18 @@ class SSLPinningImpl(
             SSLPinningUtils.sha256Fingerprint(certificate),
           )
 
-        return mapOf(
-          "fingerprintMatched" to true,
-          "excludedDomain" to true,
-          "mode" to "excluded",
-          "actualFingerprint" to actualFingerprint,
-          "errorCode" to "EXCLUDED_DOMAIN",
-          "error" to SSLPinningErrorMessages.EXCLUDED_DOMAIN,
+        return SSLPinningResultModel(
+          actualFingerprint = actualFingerprint,
+          fingerprintMatched = true,
+          excludedDomain = true,
+          mode = "excluded",
+          errorCode = "EXCLUDED_DOMAIN",
+          error = SSLPinningErrorMessages.EXCLUDED_DOMAIN,
         )
       } catch (e: SocketTimeoutException) {
         throw SSLPinningError.Timeout(SSLPinningErrorMessages.TIMEOUT)
+      } catch (e: IOException) {
+        throw SSLPinningError.NetworkError(SSLPinningErrorMessages.NETWORK_ERROR)
       }
     }
 
@@ -247,15 +251,17 @@ class SSLPinningImpl(
             SSLPinningUtils.sha256Fingerprint(certificate),
           )
 
-        return mapOf(
-          "fingerprintMatched" to true,
-          "actualFingerprint" to actualFingerprint,
-          "mode" to "cert",
-          "errorCode" to "",
-          "error" to "",
+        return SSLPinningResultModel(
+          actualFingerprint = actualFingerprint,
+          fingerprintMatched = true,
+          mode = "cert",
+          errorCode = "",
+          error = "",
         )
       } catch (e: SocketTimeoutException) {
         throw SSLPinningError.Timeout(SSLPinningErrorMessages.TIMEOUT)
+      } catch (e: IOException) {
+        throw SSLPinningError.NetworkError(SSLPinningErrorMessages.NETWORK_ERROR)
       } catch (e: Exception) {
         throw SSLPinningError.TrustEvaluationFailed(
           SSLPinningErrorMessages.PINNING_FAILED,
@@ -284,6 +290,8 @@ class SSLPinningImpl(
       certificate = getCertificate(url)
     } catch (e: SocketTimeoutException) {
       throw SSLPinningError.Timeout(SSLPinningErrorMessages.TIMEOUT)
+    } catch (e: IOException) {
+      throw SSLPinningError.NetworkError(SSLPinningErrorMessages.NETWORK_ERROR)
     }
 
     val actualFingerprint =
@@ -311,13 +319,13 @@ class SSLPinningImpl(
       matched.toString(),
     )
 
-    return mapOf(
-      "actualFingerprint" to actualFingerprint,
-      "fingerprintMatched" to matched,
-      "matchedFingerprint" to (matchedFingerprint ?: ""),
-      "mode" to "fingerprint",
-      "errorCode" to errorCode,
-      "error" to errorMessage,
+    return SSLPinningResultModel(
+      actualFingerprint = actualFingerprint,
+      fingerprintMatched = matched,
+      matchedFingerprint = matchedFingerprint,
+      mode = "fingerprint",
+      errorCode = errorCode,
+      error = errorMessage,
     )
   }
 

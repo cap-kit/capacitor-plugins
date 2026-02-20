@@ -16,7 +16,7 @@ struct SSLPinningUtils {
         fingerprint
             .replacingOccurrences(of: ":", with: "")
             .replacingOccurrences(of: " ", with: "")
-            .uppercased()
+            .lowercased()
     }
 
     // MARK: - Certificate Helpers
@@ -27,7 +27,7 @@ struct SSLPinningUtils {
         certData.withUnsafeBytes { bytes in
             _ = CC_SHA256(bytes.baseAddress, CC_LONG(certData.count), &hash)
         }
-        return hash.map { String(format: "%02X", $0) }.joined()
+        return hash.map { String(format: "%02x", $0) }.joined()
     }
 
     static func leafCertificate(from trust: SecTrust) -> SecCertificate? {

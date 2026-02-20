@@ -11,6 +11,7 @@ import io.capkit.sslpinning.config.SSLPinningConfig
 import io.capkit.sslpinning.error.SSLPinningError
 import io.capkit.sslpinning.error.SSLPinningErrorMessages
 import io.capkit.sslpinning.logger.SSLPinningLogger
+import io.capkit.sslpinning.model.SSLPinningResultModel
 
 /**
  * Capacitor bridge for the SSLPinning plugin (Android).
@@ -140,29 +141,39 @@ class SSLPinningPlugin : Plugin() {
       return
     }
 
-    execute {
-      try {
-        // Calling the implementation layer
-        val result: Map<String, Any> =
-          implementation.checkCertificate(
-            urlString = url,
-            fingerprintFromArgs = fingerprint,
+    try {
+      execute {
+        try {
+          val result: SSLPinningResultModel =
+            implementation.checkCertificate(
+              urlString = url ?: "",
+              fingerprintFromArgs = fingerprint,
+            )
+
+          val jsResult = JSObject()
+          jsResult.put("actualFingerprint", result.actualFingerprint)
+          jsResult.put("fingerprintMatched", result.fingerprintMatched)
+          jsResult.put("matchedFingerprint", result.matchedFingerprint)
+          jsResult.put("excludedDomain", result.excludedDomain)
+          jsResult.put("mode", result.mode)
+          jsResult.put("error", result.error)
+          jsResult.put("errorCode", result.errorCode)
+
+          call.resolve(jsResult)
+        } catch (error: SSLPinningError) {
+          reject(call, error)
+        } catch (error: Exception) {
+          call.reject(
+            error.message ?: SSLPinningErrorMessages.INTERNAL_ERROR,
+            "INIT_FAILED",
           )
-
-        val jsResult = JSObject()
-        for ((key, value) in result) {
-          jsResult.put(key, value)
         }
-
-        call.resolve(jsResult)
-      } catch (error: SSLPinningError) {
-        reject(call, error)
-      } catch (error: Exception) {
-        call.reject(
-          error.message ?: SSLPinningErrorMessages.PINNING_FAILED,
-          "INIT_FAILED",
-        )
       }
+    } catch (error: Exception) {
+      call.reject(
+        error.message ?: SSLPinningErrorMessages.INTERNAL_ERROR,
+        "INIT_FAILED",
+      )
     }
   }
 
@@ -200,28 +211,39 @@ class SSLPinningPlugin : Plugin() {
       return
     }
 
-    execute {
-      try {
-        val result: Map<String, Any> =
-          implementation.checkCertificates(
-            urlString = url,
-            fingerprintsFromArgs = fingerprints,
+    try {
+      execute {
+        try {
+          val result: SSLPinningResultModel =
+            implementation.checkCertificates(
+              urlString = url ?: "",
+              fingerprintsFromArgs = fingerprints,
+            )
+
+          val jsResult = JSObject()
+          jsResult.put("actualFingerprint", result.actualFingerprint)
+          jsResult.put("fingerprintMatched", result.fingerprintMatched)
+          jsResult.put("matchedFingerprint", result.matchedFingerprint)
+          jsResult.put("excludedDomain", result.excludedDomain)
+          jsResult.put("mode", result.mode)
+          jsResult.put("error", result.error)
+          jsResult.put("errorCode", result.errorCode)
+
+          call.resolve(jsResult)
+        } catch (error: SSLPinningError) {
+          reject(call, error)
+        } catch (error: Exception) {
+          call.reject(
+            error.message ?: SSLPinningErrorMessages.INTERNAL_ERROR,
+            "INIT_FAILED",
           )
-
-        val jsResult = JSObject()
-        for ((key, value) in result) {
-          jsResult.put(key, value)
         }
-
-        call.resolve(jsResult)
-      } catch (error: SSLPinningError) {
-        reject(call, error)
-      } catch (error: Exception) {
-        call.reject(
-          error.message ?: SSLPinningErrorMessages.PINNING_FAILED,
-          "INIT_FAILED",
-        )
       }
+    } catch (error: Exception) {
+      call.reject(
+        error.message ?: SSLPinningErrorMessages.INTERNAL_ERROR,
+        "INIT_FAILED",
+      )
     }
   }
 
