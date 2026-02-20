@@ -93,7 +93,7 @@ public final class SSLPinningImpl: NSObject {
 
         guard let expectedFingerprint = fingerprint else {
             throw SSLPinningError.unavailable(
-                "No fingerprint provided (args or config)"
+                SSLPinningErrorMessages.noFingerprintsProvided
             )
         }
 
@@ -127,7 +127,7 @@ public final class SSLPinningImpl: NSObject {
         guard let fingerprints,
               !fingerprints.isEmpty else {
             throw SSLPinningError.unavailable(
-                "No fingerprints provided (args or config)"
+                SSLPinningErrorMessages.noFingerprintsProvided
             )
         }
 
@@ -166,7 +166,7 @@ public final class SSLPinningImpl: NSObject {
 
         guard let url = SSLPinningUtils.httpsURL(from: urlString) else {
             throw SSLPinningError.unknownType(
-                "Invalid HTTPS URL"
+                SSLPinningErrorMessages.invalidUrlMustBeHttps
             )
         }
 
@@ -197,7 +197,7 @@ public final class SSLPinningImpl: NSObject {
 
         if !useFingerprintMode && !useCertMode {
             throw SSLPinningError.initFailed(
-                "No fingerprint provided (args or config)"
+                SSLPinningErrorMessages.noFingerprintsProvided
             )
         }
 
@@ -206,7 +206,7 @@ public final class SSLPinningImpl: NSObject {
 
         if useCertMode && (pinnedCertificates?.isEmpty ?? true) {
             throw SSLPinningError.initFailed(
-                "No valid pinned certificates found in app bundle"
+                SSLPinningErrorMessages.noCertsProvided
             )
         }
 

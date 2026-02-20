@@ -151,7 +151,7 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate {
             completionHandler(.cancelAuthenticationChallenge, nil)
             completion([
                 "fingerprintMatched": false,
-                "error": "Unable to extract server trust",
+                "error": SSLPinningErrorMessages.internalError,
                 "errorCode": "INIT_FAILED"
             ])
             return
@@ -218,7 +218,7 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate {
                 completion([
                     "fingerprintMatched": false,
                     "errorCode": "TRUST_EVALUATION_FAILED",
-                    "error": error?.localizedDescription ?? "Trust evaluation failed"
+                    "error": error?.localizedDescription ?? SSLPinningErrorMessages.pinningFailed
                 ])
 
                 completionHandler(.cancelAuthenticationChallenge, nil)
@@ -248,7 +248,7 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate {
             completionHandler(.cancelAuthenticationChallenge, nil)
             completion([
                 "fingerprintMatched": false,
-                "error": "Unable to extract certificate",
+                "error": SSLPinningErrorMessages.internalError,
                 "errorCode": "INIT_FAILED"
             ])
             return
@@ -275,7 +275,9 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate {
             "actualFingerprint": actualFingerprint,
             "fingerprintMatched": matched,
             "matchedFingerprint": matchedFingerprint as Any,
-            "mode": "fingerprint"
+            "mode": "fingerprint",
+            "errorCode": matched ? "" : "PINNING_FAILED",
+            "error": matched ? "" : SSLPinningErrorMessages.pinningFailed
         ])
 
         completionHandler(

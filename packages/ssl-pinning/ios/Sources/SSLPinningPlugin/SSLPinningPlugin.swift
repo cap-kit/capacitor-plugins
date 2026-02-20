@@ -59,39 +59,28 @@ public final class SSLPinningPlugin: CAPPlugin, CAPBridgedPlugin {
         implementation.applyConfig(cfg)
 
         // Log if verbose logging is enabled
-        SSLPinningLogger.debug("Plugin loaded")
+        SSLPinningLogger.debug("Plugin loaded. Version: ", PluginVersion.number)
     }
 
     // MARK: - Error Mapping
 
     /**
-     Maps native SSLPinningError values
-     to JavaScript-facing error codes.
+     * Rejects the call using standardized error codes from the native SSLPinningError enum.
      */
     private func reject(
         _ call: CAPPluginCall,
         error: SSLPinningError
     ) {
-        let code: String
+        // Use the centralized errorCode and message defined in SSLPinningError.swift
+        call.reject(error.message, error.errorCode)
+    }
 
-        switch error {
-        case .unavailable:
-            code = "UNAVAILABLE"
-        case .permissionDenied:
-            code = "PERMISSION_DENIED"
-        case .initFailed:
-            code = "INIT_FAILED"
-        case .unknownType:
-            code = "UNKNOWN_TYPE"
-        case .noPinningConfig:
-            code = "NO_PINNING_CONFIG"
-        case .certNotFound:
-            code = "CERT_NOT_FOUND"
-        case .trustEvaluationFailed:
-            code = "TRUST_EVALUATION_FAILED"
+    private func handleError(_ call: CAPPluginCall, _ error: Error) {
+        if let SSLPinningError = error as? SSLPinningError {
+            call.reject(SSLPinningError.message, SSLPinningError.errorCode)
+        } else {
+            reject(call, error: .initFailed(error.localizedDescription))
         }
-
-        call.reject(error.message, code)
     }
 
     // MARK: - SSL Pinning (single fingerprint)
@@ -110,8 +99,8 @@ public final class SSLPinningPlugin: CAPPlugin, CAPBridgedPlugin {
 
         guard !url.isEmpty else {
             call.reject(
-                "Missing url",
-                "UNKNOWN_TYPE"
+                SSLPinningErrorMessages.urlRequired,
+                "INVALID_INPUT"
             )
             return
         }
@@ -154,8 +143,8 @@ public final class SSLPinningPlugin: CAPPlugin, CAPBridgedPlugin {
 
         guard !url.isEmpty else {
             call.reject(
-                "Missing url",
-                "UNKNOWN_TYPE"
+                SSLPinningErrorMessages.urlRequired,
+                "INVALID_INPUT"
             )
             return
         }

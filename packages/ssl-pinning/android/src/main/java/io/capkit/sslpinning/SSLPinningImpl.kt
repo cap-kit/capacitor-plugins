@@ -3,6 +3,7 @@ package io.capkit.sslpinning
 import android.content.Context
 import io.capkit.sslpinning.config.SSLPinningConfig
 import io.capkit.sslpinning.error.SSLPinningError
+import io.capkit.sslpinning.error.SSLPinningErrorMessages
 import io.capkit.sslpinning.logger.SSLPinningLogger
 import io.capkit.sslpinning.utils.SSLPinningUtils
 import java.net.URL
@@ -91,7 +92,7 @@ class SSLPinningImpl(
 
     if (fingerprint == null) {
       throw SSLPinningError.Unavailable(
-        "No fingerprint provided (args or config)",
+        SSLPinningErrorMessages.NO_FINGERPRINTS_PROVIDED,
       )
     }
 
@@ -124,7 +125,7 @@ class SSLPinningImpl(
 
     if (fingerprints == null) {
       throw SSLPinningError.Unavailable(
-        "No fingerprints provided (args or config)",
+        SSLPinningErrorMessages.NO_FINGERPRINTS_PROVIDED,
       )
     }
 
@@ -161,7 +162,7 @@ class SSLPinningImpl(
     val url =
       SSLPinningUtils.httpsUrl(urlString)
         ?: throw SSLPinningError.UnknownType(
-          "Invalid HTTPS URL",
+          SSLPinningErrorMessages.INVALID_URL_MUST_BE_HTTPS,
         )
 
     val host = url.host
@@ -210,7 +211,7 @@ class SSLPinningImpl(
 
       if (pinnedCerts.isEmpty()) {
         throw SSLPinningError.CertNotFound(
-          "No valid pinned certificates found",
+          SSLPinningErrorMessages.NO_CERTS_PROVIDED,
         )
       }
 
@@ -230,7 +231,7 @@ class SSLPinningImpl(
         )
       } catch (e: Exception) {
         throw SSLPinningError.TrustEvaluationFailed(
-          e.message ?: "Trust evaluation failed",
+          SSLPinningErrorMessages.PINNING_FAILED,
         )
       }
     }
@@ -247,7 +248,7 @@ class SSLPinningImpl(
      */
     if (fingerprints.isEmpty()) {
       throw SSLPinningError.NoPinningConfig(
-        "No fingerprint provided (args or config)",
+        SSLPinningErrorMessages.NO_FINGERPRINTS_PROVIDED,
       )
     }
 
@@ -270,6 +271,9 @@ class SSLPinningImpl(
 
     val matched = matchedFingerprint != null
 
+    val errorCode = if (matched) "" else "PINNING_FAILED"
+    val errorMessage = if (matched) "" else SSLPinningErrorMessages.PINNING_FAILED
+
     SSLPinningLogger.debug(
       "SSLPinning matched:",
       matched.toString(),
@@ -280,6 +284,8 @@ class SSLPinningImpl(
       "fingerprintMatched" to matched,
       "matchedFingerprint" to (matchedFingerprint ?: ""),
       "mode" to "fingerprint",
+      "errorCode" to errorCode,
+      "error" to errorMessage,
     )
   }
 

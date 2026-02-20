@@ -440,13 +440,13 @@ const { version } = await SSLPinning.getPluginVersion();
 
 Result returned by an SSL pinning operation.
 
-This object is returned ONLY on success.
-Failures are delivered via Promise rejection when
-using strict Promise semantics.
+This object is returned for ALL outcomes:
 
-However, the native layer may return structured
-error information inside this object when the
-pinning strategy explicitly reports failure.
+- Success: `fingerprintMatched: true`
+- Mismatch: `fingerprintMatched: false` with error info (RESOLVED, not rejected)
+
+Only operation failures (invalid input, config missing, network errors,
+timeout, internal errors) reject the Promise.
 
 | Prop                     | Type                                                                | Description                                                                                              |
 | ------------------------ | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -455,7 +455,7 @@ pinning strategy explicitly reports failure.
 | **`matchedFingerprint`** | <code>string</code>                                                 | The fingerprint that successfully matched, if any.                                                       |
 | **`excludedDomain`**     | <code>boolean</code>                                                | Indicates that SSL pinning was skipped because the request host matched an excluded domain.              |
 | **`mode`**               | <code>'fingerprint' \| 'cert' \| 'excluded'</code>                  | Indicates which pinning mode was used. - "fingerprint" - "cert" - "excluded"                             |
-| **`error`**              | <code>string</code>                                                 | Human-readable error message when pinning fails.                                                         |
+| **`error`**              | <code>string</code>                                                 | Human-readable error message when pinning fails. Present when `fingerprintMatched: false`.               |
 | **`errorCode`**          | <code><a href="#sslpinningerrorcode">SSLPinningErrorCode</a></code> | Standardized error code aligned with <a href="#sslpinningerrorcode">SSLPinningErrorCode</a>.             |
 
 #### SSLPinningOptions
@@ -491,12 +491,18 @@ Result returned by the getPluginVersion method.
 | Members                       | Value                                  | Description                                                                           |
 | ----------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------- |
 | **`UNAVAILABLE`**             | <code>'UNAVAILABLE'</code>             | Required data is missing or the feature is not available.                             |
+| **`CANCELLED`**               | <code>'CANCELLED'</code>               | The user cancelled an interactive flow.                                               |
 | **`PERMISSION_DENIED`**       | <code>'PERMISSION_DENIED'</code>       | The user denied a required permission or the feature is disabled.                     |
 | **`INIT_FAILED`**             | <code>'INIT_FAILED'</code>             | The SSL pinning operation failed due to a runtime or initialization error.            |
+| **`INVALID_INPUT`**           | <code>'INVALID_INPUT'</code>           | The input provided to the plugin method is invalid, missing, or malformed.            |
 | **`UNKNOWN_TYPE`**            | <code>'UNKNOWN_TYPE'</code>            | Invalid or unsupported input was provided.                                            |
+| **`NOT_FOUND`**               | <code>'NOT_FOUND'</code>               | The requested resource does not exist.                                                |
+| **`CONFLICT`**                | <code>'CONFLICT'</code>                | The operation conflicts with the current state.                                       |
+| **`TIMEOUT`**                 | <code>'TIMEOUT'</code>                 | The operation did not complete within the expected time.                              |
 | **`NO_PINNING_CONFIG`**       | <code>'NO_PINNING_CONFIG'</code>       | No runtime fingerprints, no config fingerprints, and no certificates were configured. |
 | **`CERT_NOT_FOUND`**          | <code>'CERT_NOT_FOUND'</code>          | Certificate-based pinning was selected, but no valid certificate files were found.    |
 | **`TRUST_EVALUATION_FAILED`** | <code>'TRUST_EVALUATION_FAILED'</code> | Certificate-based trust evaluation failed at the handshake level.                     |
+| **`PINNING_FAILED`**          | <code>'PINNING_FAILED'</code>          | The server certificate fingerprint did not match any expected fingerprint.            |
 
 </docgen-api>
 
@@ -516,6 +522,9 @@ const result = await SSLPinning.checkCertificate({
 
 if (result.fingerprintMatched) {
   console.log('Certificate is trusted');
+} else {
+  // Fingerprint mismatch - Promise resolved with details
+  console.log('Pinning failed:', result.errorCode, result.error);
 }
 ```
 
@@ -531,6 +540,9 @@ const result = await SSLPinning.checkCertificates({
 
 if (result.fingerprintMatched) {
   console.log('Certificate matched:', result.matchedFingerprint);
+} else {
+  // Fingerprint mismatch - Promise resolved with details
+  console.log('Pinning failed:', result.errorCode, result.error);
 }
 ```
 
@@ -538,13 +550,24 @@ if (result.fingerprintMatched) {
 
 ## Result Object
 
-On success, the Promise resolves with the following object:
+The Promise always resolves with an `SSLPinningResult` object:
 
 ```ts
 interface SSLPinningResult {
-  actualFingerprint: string;
+  // Always present
   fingerprintMatched: boolean;
+
+  // Present on success or mismatch
+  actualFingerprint?: string;
   matchedFingerprint?: string;
+  mode?: 'fingerprint' | 'cert' | 'excluded';
+
+  // Present when fingerprintMatched is false
+  error?: string;
+  errorCode?: 'PINNING_FAILED' | 'TRUST_EVALUATION_FAILED';
+
+  // Present when domain is excluded
+  excludedDomain?: boolean;
 }
 ```
 
@@ -552,13 +575,50 @@ interface SSLPinningResult {
 
 ## Error Handling Model (Important)
 
-This plugin uses a **Promise rejection–based error model**.
+This plugin uses a **hybrid error model**:
 
-- Successful calls always resolve with `SSLPinningResult`
-- Failures always reject with `CapacitorException`
-- Error codes are exposed via `err.code`
+- **Fingerprint mismatch**: Promise resolves with `fingerprintMatched: false` and error details
+- **Operation failures**: Promise rejects with `CapacitorException`
 
-### Example
+### Fingerprint Mismatch (Resolved)
+
+When the server certificate fingerprint does not match any expected fingerprint,
+the Promise **resolves** (not rejects) with:
+
+```ts
+{
+  fingerprintMatched: false,
+  error: "Certificate fingerprint did not match any expected fingerprint",
+  errorCode: "PINNING_FAILED",
+  actualFingerprint: "...",
+  mode: "fingerprint"
+}
+```
+
+This allows you to handle the mismatch gracefully without try/catch:
+
+```ts
+const result = await SSLPinning.checkCertificate({
+  url: 'https://example.com',
+  fingerprint: 'AA:BB:CC:DD:...',
+});
+
+if (result.fingerprintMatched) {
+  console.log('Certificate is trusted');
+} else {
+  console.log('Pinning failed:', result.errorCode, result.error);
+}
+```
+
+### Operation Failures (Rejected)
+
+Only the following scenarios **reject** the Promise:
+
+- Missing URL
+- Missing fingerprint (runtime and config)
+- Invalid URL format
+- Network/timeout errors
+- Internal errors
 
 ```ts
 import { SSLPinning, SSLPinningErrorCode } from '@cap-kit/ssl-pinning';
@@ -571,19 +631,21 @@ try {
   if (err.code === SSLPinningErrorCode.UNAVAILABLE) {
     console.error('No fingerprint provided');
   } else {
-    console.error('SSL pinning failed', err);
+    console.error('SSL pinning operation failed', err);
   }
 }
 ```
 
 ### Error codes
 
-| Code                | Description                                 |
-| ------------------- | ------------------------------------------- |
-| `UNAVAILABLE`       | No fingerprint provided (runtime or config) |
-| `PERMISSION_DENIED` | Required permission denied                  |
-| `INIT_FAILED`       | Runtime or initialization failure           |
-| `UNKNOWN_TYPE`      | Invalid or unsupported input                |
+| Code                      | Description                                                                             |
+| ------------------------- | --------------------------------------------------------------------------------------- |
+| `PINNING_FAILED`          | Certificate fingerprint did not match any expected fingerprint (resolved, not rejected) |
+| `TRUST_EVALUATION_FAILED` | Certificate-based trust evaluation failed                                               |
+| `UNAVAILABLE`             | No fingerprint provided (runtime or config)                                             |
+| `PERMISSION_DENIED`       | Required permission denied                                                              |
+| `INIT_FAILED`             | Runtime or initialization failure                                                       |
+| `UNKNOWN_TYPE`            | Invalid or unsupported input                                                            |
 
 ---
 

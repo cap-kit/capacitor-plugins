@@ -9,6 +9,7 @@ import com.getcapacitor.annotation.CapacitorPlugin
 import com.getcapacitor.annotation.Permission
 import io.capkit.sslpinning.config.SSLPinningConfig
 import io.capkit.sslpinning.error.SSLPinningError
+import io.capkit.sslpinning.error.SSLPinningErrorMessages
 import io.capkit.sslpinning.logger.SSLPinningLogger
 
 /**
@@ -84,8 +85,7 @@ class SSLPinningPlugin : Plugin() {
     implementation = SSLPinningImpl(context)
     implementation.updateConfig(config)
 
-    SSLPinningLogger.verbose = config.verboseLogging
-    SSLPinningLogger.debug("Plugin loaded")
+    SSLPinningLogger.debug("Plugin loaded. Version: ", BuildConfig.PLUGIN_VERSION)
   }
 
   // -----------------------------------------------------------------------------
@@ -93,8 +93,8 @@ class SSLPinningPlugin : Plugin() {
   // -----------------------------------------------------------------------------
 
   /**
-   * Maps native SSLPinningError values
-   * to JavaScript-facing error codes.
+   * Rejects the call with a message and a standardized error code.
+   * Ensure consistency with the JS SSLPinningErrorCode enum.
    */
   private fun reject(
     call: PluginCall,
@@ -103,15 +103,22 @@ class SSLPinningPlugin : Plugin() {
     val code =
       when (error) {
         is SSLPinningError.Unavailable -> "UNAVAILABLE"
+        is SSLPinningError.Cancelled -> "CANCELLED"
         is SSLPinningError.PermissionDenied -> "PERMISSION_DENIED"
         is SSLPinningError.InitFailed -> "INIT_FAILED"
+        is SSLPinningError.InvalidInput -> "INVALID_INPUT"
         is SSLPinningError.UnknownType -> "UNKNOWN_TYPE"
+        is SSLPinningError.NotFound -> "NOT_FOUND"
+        is SSLPinningError.Conflict -> "CONFLICT"
+        is SSLPinningError.Timeout -> "TIMEOUT"
         is SSLPinningError.NoPinningConfig -> "NO_PINNING_CONFIG"
         is SSLPinningError.CertNotFound -> "CERT_NOT_FOUND"
         is SSLPinningError.TrustEvaluationFailed -> "TRUST_EVALUATION_FAILED"
       }
 
-    call.reject(error.message, code)
+    // Always use the message from the SSLPinningError instance
+    val message = error.message ?: "Unknown native error"
+    call.reject(message, code)
   }
 
   // -----------------------------------------------------------------------------
@@ -128,7 +135,7 @@ class SSLPinningPlugin : Plugin() {
     val fingerprint: String? = call.getString("fingerprint")
 
     if (url.isNullOrBlank()) {
-      call.reject("Missing url", "UNKNOWN_TYPE")
+      call.reject(SSLPinningErrorMessages.URL_REQUIRED, "INVALID_INPUT")
       return
     }
 
@@ -151,7 +158,7 @@ class SSLPinningPlugin : Plugin() {
         reject(call, error)
       } catch (error: Exception) {
         call.reject(
-          error.message ?: "SSL pinning failed",
+          error.message ?: SSLPinningErrorMessages.PINNING_FAILED,
           "INIT_FAILED",
         )
       }
@@ -188,7 +195,7 @@ class SSLPinningPlugin : Plugin() {
       }
 
     if (url.isNullOrBlank()) {
-      call.reject("Missing url", "UNKNOWN_TYPE")
+      call.reject(SSLPinningErrorMessages.URL_REQUIRED, "INVALID_INPUT")
       return
     }
 
@@ -210,7 +217,7 @@ class SSLPinningPlugin : Plugin() {
         reject(call, error)
       } catch (error: Exception) {
         call.reject(
-          error.message ?: "SSL pinning failed",
+          error.message ?: SSLPinningErrorMessages.PINNING_FAILED,
           "INIT_FAILED",
         )
       }

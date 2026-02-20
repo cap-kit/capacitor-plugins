@@ -37,24 +37,30 @@ declare module '@capacitor/cli' {
 export enum SSLPinningErrorCode {
   /** Required data is missing or the feature is not available. */
   UNAVAILABLE = 'UNAVAILABLE',
-
+  /** The user cancelled an interactive flow. */
+  CANCELLED = 'CANCELLED',
   /** The user denied a required permission or the feature is disabled. */
   PERMISSION_DENIED = 'PERMISSION_DENIED',
-
   /** The SSL pinning operation failed due to a runtime or initialization error. */
   INIT_FAILED = 'INIT_FAILED',
-
+  /** The input provided to the plugin method is invalid, missing, or malformed. */
+  INVALID_INPUT = 'INVALID_INPUT',
   /** Invalid or unsupported input was provided. */
   UNKNOWN_TYPE = 'UNKNOWN_TYPE',
-
+  /** The requested resource does not exist. */
+  NOT_FOUND = 'NOT_FOUND',
+  /** The operation conflicts with the current state. */
+  CONFLICT = 'CONFLICT',
+  /** The operation did not complete within the expected time. */
+  TIMEOUT = 'TIMEOUT',
   /** No runtime fingerprints, no config fingerprints, and no certificates were configured. */
   NO_PINNING_CONFIG = 'NO_PINNING_CONFIG',
-
   /** Certificate-based pinning was selected, but no valid certificate files were found. */
   CERT_NOT_FOUND = 'CERT_NOT_FOUND',
-
   /** Certificate-based trust evaluation failed at the handshake level. */
   TRUST_EVALUATION_FAILED = 'TRUST_EVALUATION_FAILED',
+  /** The server certificate fingerprint did not match any expected fingerprint. */
+  PINNING_FAILED = 'PINNING_FAILED',
 }
 
 // -----------------------------------------------------------------------------
@@ -174,13 +180,12 @@ export interface SSLPinningMultiOptions {
 /**
  * Result returned by an SSL pinning operation.
  *
- * This object is returned ONLY on success.
- * Failures are delivered via Promise rejection when
- * using strict Promise semantics.
+ * This object is returned for ALL outcomes:
+ * - Success: `fingerprintMatched: true`
+ * - Mismatch: `fingerprintMatched: false` with error info (RESOLVED, not rejected)
  *
- * However, the native layer may return structured
- * error information inside this object when the
- * pinning strategy explicitly reports failure.
+ * Only operation failures (invalid input, config missing, network errors,
+ * timeout, internal errors) reject the Promise.
  */
 export interface SSLPinningResult {
   /**
@@ -220,6 +225,7 @@ export interface SSLPinningResult {
 
   /**
    * Human-readable error message when pinning fails.
+   * Present when `fingerprintMatched: false`.
    */
   error?: string;
 
