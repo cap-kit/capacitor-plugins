@@ -69,6 +69,22 @@ restrictions. All methods will reject with an `Unimplemented` error.
 
 ---
 
+## Permissions
+
+### Android
+
+The plugin declares the `INTERNET` permission in its manifest:
+
+```xml
+<uses-permission android:name="android.permission.INTERNET" />
+```
+
+This is a **normal permission** (no runtime prompt required). The app will
+automatically be granted this permission at install time. No user interaction
+or runtime permission request is needed.
+
+---
+
 ## Install
 
 ```bash
