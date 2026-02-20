@@ -114,6 +114,7 @@ class SSLPinningPlugin : Plugin() {
         is SSLPinningError.NoPinningConfig -> "NO_PINNING_CONFIG"
         is SSLPinningError.CertNotFound -> "CERT_NOT_FOUND"
         is SSLPinningError.TrustEvaluationFailed -> "TRUST_EVALUATION_FAILED"
+        is SSLPinningError.NetworkError -> "NETWORK_ERROR"
       }
 
     // Always use the message from the SSLPinningError instance

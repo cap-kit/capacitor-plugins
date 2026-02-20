@@ -503,6 +503,8 @@ Result returned by the getPluginVersion method.
 | **`CERT_NOT_FOUND`**          | <code>'CERT_NOT_FOUND'</code>          | Certificate-based pinning was selected, but no valid certificate files were found.    |
 | **`TRUST_EVALUATION_FAILED`** | <code>'TRUST_EVALUATION_FAILED'</code> | Certificate-based trust evaluation failed at the handshake level.                     |
 | **`PINNING_FAILED`**          | <code>'PINNING_FAILED'</code>          | The server certificate fingerprint did not match any expected fingerprint.            |
+| **`EXCLUDED_DOMAIN`**         | <code>'EXCLUDED_DOMAIN'</code>         | The request host matched an excluded domain.                                          |
+| **`NETWORK_ERROR`**           | <code>'NETWORK_ERROR'</code>           | Network connectivity or TLS handshake error.                                          |
 
 </docgen-api>
 

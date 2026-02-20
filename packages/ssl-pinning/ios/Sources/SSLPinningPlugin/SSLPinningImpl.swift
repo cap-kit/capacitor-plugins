@@ -186,7 +186,9 @@ public final class SSLPinningImpl: NSObject {
             return [
                 "fingerprintMatched": true,
                 "excludedDomain": true,
-                "mode": "excluded"
+                "mode": "excluded",
+                "errorCode": "EXCLUDED_DOMAIN",
+                "error": SSLPinningErrorMessages.excludedDomain
             ]
         }
 
@@ -233,8 +235,12 @@ public final class SSLPinningImpl: NSObject {
                 verboseLogging: config?.verboseLogging ?? false
             )
 
+            let configuration = URLSessionConfiguration.ephemeral
+            configuration.timeoutIntervalForRequest = 10
+            configuration.timeoutIntervalForResource = 10
+
             let session = URLSession(
-                configuration: .ephemeral,
+                configuration: configuration,
                 delegate: delegate,
                 delegateQueue: nil
             )

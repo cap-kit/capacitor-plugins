@@ -6,6 +6,7 @@ import io.capkit.sslpinning.error.SSLPinningError
 import io.capkit.sslpinning.error.SSLPinningErrorMessages
 import io.capkit.sslpinning.logger.SSLPinningLogger
 import io.capkit.sslpinning.utils.SSLPinningUtils
+import java.net.SocketTimeoutException
 import java.net.URL
 import java.security.cert.Certificate
 import java.security.cert.X509Certificate
@@ -30,6 +31,14 @@ import javax.net.ssl.X509TrustManager
 class SSLPinningImpl(
   private val context: Context,
 ) {
+  // -----------------------------------------------------------------------------
+  // Constants
+  // -----------------------------------------------------------------------------
+
+  companion object {
+    private const val TIMEOUT_MS = 10_000
+  }
+
   // -----------------------------------------------------------------------------
   // Properties
   // -----------------------------------------------------------------------------
@@ -173,7 +182,7 @@ class SSLPinningImpl(
 
     /**
      * If the request host matches an excluded domain,
-     * SSL pinning is bypassed completely.
+     * SSL pinning is bypassed but we still validate using system trust.
      *
      * Matching rules:
      * - Exact match
@@ -188,11 +197,25 @@ class SSLPinningImpl(
     ) {
       SSLPinningLogger.debug("SSLPinning excluded domain:", host)
 
-      return mapOf(
-        "fingerprintMatched" to true,
-        "excludedDomain" to true,
-        "mode" to "excluded",
-      )
+      // Perform actual TLS handshake using system trust
+      try {
+        val certificate = getCertificateWithSystemTrust(url)
+        val actualFingerprint =
+          SSLPinningUtils.normalizeFingerprint(
+            SSLPinningUtils.sha256Fingerprint(certificate),
+          )
+
+        return mapOf(
+          "fingerprintMatched" to true,
+          "excludedDomain" to true,
+          "mode" to "excluded",
+          "actualFingerprint" to actualFingerprint,
+          "errorCode" to "EXCLUDED_DOMAIN",
+          "error" to SSLPinningErrorMessages.EXCLUDED_DOMAIN,
+        )
+      } catch (e: SocketTimeoutException) {
+        throw SSLPinningError.Timeout(SSLPinningErrorMessages.TIMEOUT)
+      }
     }
 
     // -----------------------------------------------------------------------------
@@ -228,7 +251,11 @@ class SSLPinningImpl(
           "fingerprintMatched" to true,
           "actualFingerprint" to actualFingerprint,
           "mode" to "cert",
+          "errorCode" to "",
+          "error" to "",
         )
+      } catch (e: SocketTimeoutException) {
+        throw SSLPinningError.Timeout(SSLPinningErrorMessages.TIMEOUT)
       } catch (e: Exception) {
         throw SSLPinningError.TrustEvaluationFailed(
           SSLPinningErrorMessages.PINNING_FAILED,
@@ -252,7 +279,12 @@ class SSLPinningImpl(
       )
     }
 
-    val certificate = getCertificate(url)
+    val certificate: Certificate
+    try {
+      certificate = getCertificate(url)
+    } catch (e: SocketTimeoutException) {
+      throw SSLPinningError.Timeout(SSLPinningErrorMessages.TIMEOUT)
+    }
 
     val actualFingerprint =
       SSLPinningUtils.normalizeFingerprint(
@@ -336,6 +368,9 @@ class SSLPinningImpl(
     connection.sslSocketFactory =
       sslContext.socketFactory
 
+    connection.connectTimeout = TIMEOUT_MS
+    connection.readTimeout = TIMEOUT_MS
+
     connection.connect()
 
     val certificate =
@@ -389,6 +424,51 @@ class SSLPinningImpl(
 
     connection.sslSocketFactory =
       sslContext.socketFactory
+
+    connection.connectTimeout = TIMEOUT_MS
+    connection.readTimeout = TIMEOUT_MS
+
+    connection.connect()
+
+    val certificate =
+      connection.serverCertificates.first()
+
+    connection.disconnect()
+
+    return certificate
+  }
+
+  /**
+   * Opens a TLS connection using system default trust validation.
+   *
+   * This is used for excluded domains - we bypass pinning
+   * but still validate the certificate chain using system anchors.
+   *
+   * @throws Exception if the TLS handshake fails or certificate is invalid.
+   */
+  @Throws(Exception::class)
+  private fun getCertificateWithSystemTrust(url: URL): Certificate {
+    val tmf =
+      javax.net.ssl.TrustManagerFactory.getInstance(
+        javax.net.ssl.TrustManagerFactory
+          .getDefaultAlgorithm(),
+      )
+
+    tmf.init(null as java.security.KeyStore?)
+
+    val sslContext =
+      SSLContext.getInstance("TLS")
+
+    sslContext.init(null, tmf.trustManagers, null)
+
+    val connection =
+      url.openConnection() as HttpsURLConnection
+
+    connection.sslSocketFactory =
+      sslContext.socketFactory
+
+    connection.connectTimeout = TIMEOUT_MS
+    connection.readTimeout = TIMEOUT_MS
 
     connection.connect()
 

@@ -27,9 +27,15 @@ import Security
  - It is stateless beyond the injected configuration.
  - It must always call the completion handler exactly once.
  */
-final class SSLPinningDelegate: NSObject, URLSessionDelegate {
+final class SSLPinningDelegate: NSObject, URLSessionDelegate, URLSessionTaskDelegate {
 
     // MARK: - Properties
+
+    /**
+     Tracks whether the completion handler has already been called.
+     Used to prevent double-calling on timeout or other terminal errors.
+     */
+    private var hasCompleted = false
 
     /**
      Normalized expected fingerprints.
@@ -149,6 +155,7 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate {
 
         guard let trust = challenge.protectionSpace.serverTrust else {
             completionHandler(.cancelAuthenticationChallenge, nil)
+            hasCompleted = true
             completion([
                 "fingerprintMatched": false,
                 "error": SSLPinningErrorMessages.internalError,
@@ -173,10 +180,13 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate {
 
             SSLPinningLogger.debug("SSLPinning excluded domain:", host)
 
+            hasCompleted = true
             completion([
                 "fingerprintMatched": true,
                 "excludedDomain": true,
-                "mode": "excluded"
+                "mode": "excluded",
+                "errorCode": "EXCLUDED_DOMAIN",
+                "error": SSLPinningErrorMessages.excludedDomain
             ])
 
             completionHandler(.useCredential, URLCredential(trust: trust))
@@ -208,13 +218,17 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate {
             )
 
             if trusted {
+                hasCompleted = true
                 completion([
                     "fingerprintMatched": true,
-                    "mode": "cert"
+                    "mode": "cert",
+                    "errorCode": "",
+                    "error": ""
                 ])
 
                 completionHandler(.useCredential, URLCredential(trust: trust))
             } else {
+                hasCompleted = true
                 completion([
                     "fingerprintMatched": false,
                     "errorCode": "TRUST_EVALUATION_FAILED",
@@ -246,6 +260,7 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate {
                 SSLPinningUtils.leafCertificate(from: trust)
         else {
             completionHandler(.cancelAuthenticationChallenge, nil)
+            hasCompleted = true
             completion([
                 "fingerprintMatched": false,
                 "error": SSLPinningErrorMessages.internalError,
@@ -271,6 +286,7 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate {
             "\(matched)"
         )
 
+        hasCompleted = true
         completion([
             "actualFingerprint": actualFingerprint,
             "fingerprintMatched": matched,
@@ -288,5 +304,42 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate {
                 ? URLCredential(trust: trust)
                 : nil
         )
+    }
+
+    // MARK: - URLSessionTaskDelegate
+
+    /**
+     Handles task-level events including timeouts.
+
+     This method is called when the task completes, allowing us
+     to detect and handle timeout errors that may occur before
+     or during the authentication challenge.
+     */
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        didCompleteWithError error: Error?
+    ) {
+        guard !hasCompleted else { return }
+
+        if let error = error {
+            let nsError = error as NSError
+
+            if nsError.code == NSURLErrorTimedOut {
+                hasCompleted = true
+                completion([
+                    "fingerprintMatched": false,
+                    "errorCode": "TIMEOUT",
+                    "error": SSLPinningErrorMessages.timeout
+                ])
+            } else if nsError.code == NSURLErrorCancelled {
+                hasCompleted = true
+                completion([
+                    "fingerprintMatched": false,
+                    "errorCode": "NETWORK_ERROR",
+                    "error": SSLPinningErrorMessages.networkError
+                ])
+            }
+        }
     }
 }

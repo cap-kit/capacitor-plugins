@@ -112,4 +112,12 @@ sealed class SSLPinningError(
   class TrustEvaluationFailed(
     message: String,
   ) : SSLPinningError(message)
+
+  /**
+   * Network connectivity or TLS handshake error.
+   * Maps to the 'NETWORK_ERROR' error code in JavaScript.
+   */
+  class NetworkError(
+    message: String,
+  ) : SSLPinningError(message)
 }

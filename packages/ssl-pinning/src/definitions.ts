@@ -61,6 +61,10 @@ export enum SSLPinningErrorCode {
   TRUST_EVALUATION_FAILED = 'TRUST_EVALUATION_FAILED',
   /** The server certificate fingerprint did not match any expected fingerprint. */
   PINNING_FAILED = 'PINNING_FAILED',
+  /** The request host matched an excluded domain. */
+  EXCLUDED_DOMAIN = 'EXCLUDED_DOMAIN',
+  /** Network connectivity or TLS handshake error. */
+  NETWORK_ERROR = 'NETWORK_ERROR',
 }
 
 // -----------------------------------------------------------------------------
