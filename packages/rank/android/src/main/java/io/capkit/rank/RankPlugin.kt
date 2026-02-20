@@ -6,7 +6,7 @@ import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 import io.capkit.rank.error.RankErrorMessages
-import io.capkit.rank.utils.RankLogger
+import io.capkit.rank.logger.RankLogger
 import io.capkit.rank.utils.RankValidators
 
 /**
@@ -46,8 +46,10 @@ class RankPlugin : Plugin() {
   /**
    * Called once when the plugin is loaded by the Capacitor bridge.
    *
-   * This method initializes the configuration container and the native
-   * implementation layer, ensuring all dependencies are injected.
+   * This is the correct place to:
+   * - read static configuration
+   * - initialize native resources
+   * - inject configuration into the implementation
    */
   override fun load() {
     super.load()
@@ -56,8 +58,7 @@ class RankPlugin : Plugin() {
     implementation = RankImpl(context)
     implementation.updateConfig(config)
 
-    RankLogger.verbose = config.verboseLogging
-    RankLogger.debug("Plugin loaded")
+    RankLogger.debug("Plugin loaded. Version: ", BuildConfig.PLUGIN_VERSION)
 
     // RULE: Perform pre-warm of native resources to improve UX
     implementation.preloadReviewInfo()

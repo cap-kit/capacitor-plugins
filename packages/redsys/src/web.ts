@@ -7,6 +7,7 @@ import {
   RedsysWebPaymentInitResult,
   HashResult,
 } from './definitions';
+import { PLUGIN_VERSION } from './version';
 
 /**
  * Web implementation of the Redsys plugin.
@@ -60,6 +61,6 @@ export class RedsysWeb extends WebPlugin implements RedsysPlugin {
    * rather than a native implementation.
    */
   async getPluginVersion(): Promise<PluginVersionResult> {
-    return { version: 'web' };
+    return { version: PLUGIN_VERSION };
   }
 }

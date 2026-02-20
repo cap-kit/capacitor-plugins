@@ -8,7 +8,7 @@ import com.google.android.play.core.review.ReviewException
 import com.google.android.play.core.review.ReviewManagerFactory
 import com.google.android.play.core.review.model.ReviewErrorCode
 import io.capkit.rank.error.RankErrorMessages
-import io.capkit.rank.utils.RankLogger
+import io.capkit.rank.logger.RankLogger
 import io.capkit.rank.utils.RankUtils
 import java.util.concurrent.atomic.AtomicBoolean
 

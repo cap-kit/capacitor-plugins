@@ -129,8 +129,7 @@ class IntegrityPlugin : Plugin() {
     implementation = IntegrityImpl(context)
     implementation.updateConfig(config)
 
-    IntegrityLogger.verbose = config.verboseLogging
-    IntegrityLogger.debug("Plugin loaded")
+    IntegrityLogger.debug("Plugin loaded. Version: ", BuildConfig.PLUGIN_VERSION)
 
     registerEventReceiver()
   }

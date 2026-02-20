@@ -76,10 +76,13 @@ public class PeoplePlugin: CAPPlugin, CAPBridgedPlugin, CNContactPickerDelegate 
     // MARK: - Lifecycle
 
     /**
-     * Plugin lifecycle entry point.
-     *
-     * Called once when the plugin is loaded. This method initializes the configuration
-     * and prepares the native implementation.
+     Plugin lifecycle entry point.
+
+     Called once when the plugin is loaded by the Capacitor bridge.
+     This is the correct place to:
+     - read configuration values
+     - initialize native resources
+     - configure the implementation instance
      */
     override public func load() {
         // Initialize PeopleConfig with the correct type
@@ -88,7 +91,7 @@ public class PeoplePlugin: CAPPlugin, CAPBridgedPlugin, CNContactPickerDelegate 
         implementation.applyConfig(cfg)
 
         // Log if verbose logging is enabled
-        PeopleLogger.debug("Plugin loaded.")
+        PeopleLogger.debug("Plugin loaded. Version: ", PluginVersion.number)
     }
 
     deinit {
