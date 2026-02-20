@@ -12,6 +12,9 @@ import io.capkit.sslpinning.error.SSLPinningError
 import io.capkit.sslpinning.error.SSLPinningErrorMessages
 import io.capkit.sslpinning.logger.SSLPinningLogger
 import io.capkit.sslpinning.model.SSLPinningResultModel
+import io.capkit.sslpinning.utils.SSLPinningUtils
+import java.net.UnknownHostException
+import javax.net.ssl.SSLException
 
 /**
  * Capacitor bridge for the SSLPinning plugin (Android).
@@ -154,12 +157,9 @@ class SSLPinningPlugin : Plugin() {
       return
     }
 
-    if (fingerprint != null) {
-      val normalized = fingerprint.replace(":", "").lowercase()
-      if (normalized.length != 64 || !normalized.matches(Regex("^[a-f0-9]+$"))) {
-        call.reject(SSLPinningErrorMessages.INVALID_FINGERPRINT_FORMAT, "INVALID_INPUT")
-        return
-      }
+    if (fingerprint != null && !SSLPinningUtils.isValidFingerprintFormat(fingerprint)) {
+      call.reject(SSLPinningErrorMessages.INVALID_FINGERPRINT_FORMAT, "INVALID_INPUT")
+      return
     }
 
     try {
@@ -183,6 +183,21 @@ class SSLPinningPlugin : Plugin() {
           call.resolve(jsResult)
         } catch (error: SSLPinningError) {
           reject(call, error)
+        } catch (error: IllegalArgumentException) {
+          call.reject(
+            error.message ?: "Invalid input",
+            "INVALID_INPUT",
+          )
+        } catch (error: SSLException) {
+          call.reject(
+            error.message ?: "SSL/TLS error",
+            "SSL_ERROR",
+          )
+        } catch (error: UnknownHostException) {
+          call.reject(
+            error.message ?: "Unknown host",
+            "NETWORK_ERROR",
+          )
         } catch (error: Exception) {
           call.reject(
             error.message ?: SSLPinningErrorMessages.INTERNAL_ERROR,
@@ -190,6 +205,11 @@ class SSLPinningPlugin : Plugin() {
           )
         }
       }
+    } catch (error: IllegalArgumentException) {
+      call.reject(
+        error.message ?: "Invalid input",
+        "INVALID_INPUT",
+      )
     } catch (error: Exception) {
       call.reject(
         error.message ?: SSLPinningErrorMessages.INTERNAL_ERROR,
@@ -246,8 +266,7 @@ class SSLPinningPlugin : Plugin() {
     }
 
     fingerprints?.forEach { fp ->
-      val normalized = fp.replace(":", "").lowercase()
-      if (normalized.length != 64 || !normalized.matches(Regex("^[a-f0-9]+$"))) {
+      if (!SSLPinningUtils.isValidFingerprintFormat(fp)) {
         call.reject(SSLPinningErrorMessages.INVALID_FINGERPRINT_FORMAT, "INVALID_INPUT")
         return
       }
@@ -274,6 +293,21 @@ class SSLPinningPlugin : Plugin() {
           call.resolve(jsResult)
         } catch (error: SSLPinningError) {
           reject(call, error)
+        } catch (error: IllegalArgumentException) {
+          call.reject(
+            error.message ?: "Invalid input",
+            "INVALID_INPUT",
+          )
+        } catch (error: SSLException) {
+          call.reject(
+            error.message ?: "SSL/TLS error",
+            "SSL_ERROR",
+          )
+        } catch (error: UnknownHostException) {
+          call.reject(
+            error.message ?: "Unknown host",
+            "NETWORK_ERROR",
+          )
         } catch (error: Exception) {
           call.reject(
             error.message ?: SSLPinningErrorMessages.INTERNAL_ERROR,
@@ -281,6 +315,11 @@ class SSLPinningPlugin : Plugin() {
           )
         }
       }
+    } catch (error: IllegalArgumentException) {
+      call.reject(
+        error.message ?: "Invalid input",
+        "INVALID_INPUT",
+      )
     } catch (error: Exception) {
       call.reject(
         error.message ?: SSLPinningErrorMessages.INTERNAL_ERROR,

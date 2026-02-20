@@ -241,6 +241,9 @@ public final class SSLPinningImpl: NSObject {
 
          The continuation bridges delegate callbacks
          into Swift async/await.
+
+         Defensive timeout: ensures continuation cannot hang forever
+         if delegate completion is never called (edge cases).
          */
         return try await withCheckedThrowingContinuation { continuation in
 
@@ -265,6 +268,19 @@ public final class SSLPinningImpl: NSObject {
             )
 
             delegate.setSession(session)
+
+            let timeoutWorkItem = DispatchWorkItem {
+                if !delegate.hasCompleted {
+                    session.invalidateAndCancel()
+                    continuation.resume(returning: [
+                        "fingerprintMatched": false,
+                        "errorCode": "TIMEOUT",
+                        "error": SSLPinningErrorMessages.timeout
+                    ])
+                }
+            }
+
+            DispatchQueue.global().asyncAfter(deadline: .now() + 15, execute: timeoutWorkItem)
 
             session.dataTask(with: url).resume()
         }

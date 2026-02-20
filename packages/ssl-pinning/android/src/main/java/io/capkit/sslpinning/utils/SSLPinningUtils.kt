@@ -33,15 +33,29 @@ object SSLPinningUtils {
   /**
    * Normalizes a fingerprint string by:
    * - Removing colon separators
+   * - Removing all whitespace
    * - Converting to lowercase
    *
    * Example:
    * "AA:BB:CC" → "aabbcc"
+   * "AA BB CC" → "aabbcc"
    */
   fun normalizeFingerprint(value: String): String =
     value
       .replace(":", "")
+      .replace(" ", "")
       .lowercase()
+
+  /**
+   * Validates that a fingerprint string is a valid SHA-256 hex format.
+   *
+   * Valid fingerprint:
+   * - Exactly 64 hexadecimal characters (after normalization)
+   */
+  fun isValidFingerprintFormat(value: String): Boolean {
+    val normalized = normalizeFingerprint(value)
+    return normalized.length == 64 && normalized.matches(Regex("^[a-f0-9]+$"))
+  }
 
   /**
    * Computes the SHA-256 fingerprint of an X.509 certificate.

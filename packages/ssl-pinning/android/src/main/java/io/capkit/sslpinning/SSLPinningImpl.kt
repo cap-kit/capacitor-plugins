@@ -393,20 +393,26 @@ class SSLPinningImpl(
     val connection =
       url.openConnection() as HttpsURLConnection
 
-    connection.sslSocketFactory =
-      sslContext.socketFactory
+    try {
+      connection.sslSocketFactory =
+        sslContext.socketFactory
 
-    connection.connectTimeout = TIMEOUT_MS
-    connection.readTimeout = TIMEOUT_MS
+      connection.connectTimeout = TIMEOUT_MS
+      connection.readTimeout = TIMEOUT_MS
 
-    connection.connect()
+      connection.connect()
 
-    val certificate =
-      connection.serverCertificates.first()
+      val certificate =
+        connection.serverCertificates.first()
 
-    connection.disconnect()
-
-    return certificate
+      return certificate
+    } finally {
+      try {
+        connection.disconnect()
+      } catch (_: Exception) {
+        // Ignore disconnect errors
+      }
+    }
   }
 
   /**
@@ -450,20 +456,26 @@ class SSLPinningImpl(
     val connection =
       url.openConnection() as HttpsURLConnection
 
-    connection.sslSocketFactory =
-      sslContext.socketFactory
+    try {
+      connection.sslSocketFactory =
+        sslContext.socketFactory
 
-    connection.connectTimeout = TIMEOUT_MS
-    connection.readTimeout = TIMEOUT_MS
+      connection.connectTimeout = TIMEOUT_MS
+      connection.readTimeout = TIMEOUT_MS
 
-    connection.connect()
+      connection.connect()
 
-    val certificate =
-      connection.serverCertificates.first()
+      val certificate =
+        connection.serverCertificates.first()
 
-    connection.disconnect()
-
-    return certificate
+      return certificate
+    } finally {
+      try {
+        connection.disconnect()
+      } catch (_: Exception) {
+        // Ignore disconnect errors
+      }
+    }
   }
 
   /**
@@ -492,20 +504,26 @@ class SSLPinningImpl(
     val connection =
       url.openConnection() as HttpsURLConnection
 
-    connection.sslSocketFactory =
-      sslContext.socketFactory
+    try {
+      connection.sslSocketFactory =
+        sslContext.socketFactory
 
-    connection.connectTimeout = TIMEOUT_MS
-    connection.readTimeout = TIMEOUT_MS
+      connection.connectTimeout = TIMEOUT_MS
+      connection.readTimeout = TIMEOUT_MS
 
-    connection.connect()
+      connection.connect()
 
-    val certificate =
-      connection.serverCertificates.first()
+      val certificate =
+        connection.serverCertificates.first()
 
-    connection.disconnect()
-
-    return certificate
+      return certificate
+    } finally {
+      try {
+        connection.disconnect()
+      } catch (_: Exception) {
+        // Ignore disconnect errors
+      }
+    }
   }
 
   /**

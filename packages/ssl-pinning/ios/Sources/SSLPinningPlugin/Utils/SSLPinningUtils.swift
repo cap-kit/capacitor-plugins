@@ -19,6 +19,11 @@ struct SSLPinningUtils {
             .lowercased()
     }
 
+    static func isValidFingerprintFormat(_ fingerprint: String) -> Bool {
+        let normalized = normalizeFingerprint(fingerprint)
+        return normalized.count == 64 && normalized.allSatisfy { $0.isHexDigit }
+    }
+
     // MARK: - Certificate Helpers
 
     static func sha256Fingerprint(from certificate: SecCertificate) -> String {

@@ -113,15 +113,12 @@ public final class SSLPinningPlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        if let fp = fingerprint {
-            let normalized = fp.replacingOccurrences(of: ":", with: "").lowercased()
-            if normalized.count != 64 || !normalized.allSatisfy({ $0.isHexDigit }) {
-                call.reject(
-                    SSLPinningErrorMessages.invalidFingerprintFormat,
-                    "INVALID_INPUT"
-                )
-                return
-            }
+        if let fp = fingerprint, !SSLPinningUtils.isValidFingerprintFormat(fp) {
+            call.reject(
+                SSLPinningErrorMessages.invalidFingerprintFormat,
+                "INVALID_INPUT"
+            )
+            return
         }
 
         Task {
@@ -178,8 +175,7 @@ public final class SSLPinningPlugin: CAPPlugin, CAPBridgedPlugin {
 
         if let fps = fingerprints {
             for fp in fps {
-                let normalized = fp.replacingOccurrences(of: ":", with: "").lowercased()
-                if normalized.count != 64 || !normalized.allSatisfy({ $0.isHexDigit }) {
+                if !SSLPinningUtils.isValidFingerprintFormat(fp) {
                     call.reject(
                         SSLPinningErrorMessages.invalidFingerprintFormat,
                         "INVALID_INPUT"

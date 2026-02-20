@@ -41,7 +41,7 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate, URLSessionTaskDele
      Tracks whether the completion handler has already been called.
      Used to prevent double-calling on timeout or other terminal errors.
      */
-    private var hasCompleted = false
+    var hasCompleted = false
 
     /**
      Normalized expected fingerprints.
@@ -203,7 +203,8 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate, URLSessionTaskDele
 
         /**
          If the current host matches an excluded domain,
-         SSL pinning is bypassed and system trust is used.
+         SSL pinning is bypassed but system trust is used.
+         We still compute and return the actual fingerprint for parity.
          */
         if excludedDomains.contains(where: {
             host == $0 || host.hasSuffix("." + $0)
@@ -211,8 +212,18 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate, URLSessionTaskDele
 
             SSLPinningLogger.debug("SSLPinning excluded domain:", host)
 
+            let actualFingerprint: String?
+            if let certificate = SSLPinningUtils.leafCertificate(from: trust) {
+                actualFingerprint = SSLPinningUtils.normalizeFingerprint(
+                    SSLPinningUtils.sha256Fingerprint(from: certificate)
+                )
+            } else {
+                actualFingerprint = nil
+            }
+
             completionHandler(.useCredential, URLCredential(trust: trust))
             completeWithResult([
+                "actualFingerprint": actualFingerprint as Any,
                 "fingerprintMatched": true,
                 "excludedDomain": true,
                 "mode": "excluded",
