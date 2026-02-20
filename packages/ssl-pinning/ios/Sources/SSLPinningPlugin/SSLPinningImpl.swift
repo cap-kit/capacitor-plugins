@@ -78,9 +78,10 @@ public final class SSLPinningImpl: NSObject {
      Resolution order:
      1. Runtime fingerprint argument
      2. Static configuration fingerprint
+     3. Fall back to cert mode if certificates are configured
 
      - Throws: `SSLPinningError.unavailable`
-     if no fingerprint is available.
+     if no fingerprint is available and no certificates are configured.
      */
     func checkCertificate(
         urlString: String,
@@ -91,15 +92,23 @@ public final class SSLPinningImpl: NSObject {
             fingerprintFromArgs ??
             config?.fingerprint
 
-        guard let expectedFingerprint = fingerprint else {
-            throw SSLPinningError.unavailable(
-                SSLPinningErrorMessages.noFingerprintsProvided
+        if let expectedFingerprint = fingerprint {
+            return try await performCheck(
+                urlString: urlString,
+                fingerprints: [expectedFingerprint]
             )
         }
 
-        return try await performCheck(
-            urlString: urlString,
-            fingerprints: [expectedFingerprint]
+        let hasCerts = !(config?.certs.isEmpty ?? true)
+        if hasCerts {
+            return try await performCheck(
+                urlString: urlString,
+                fingerprints: []
+            )
+        }
+
+        throw SSLPinningError.unavailable(
+            SSLPinningErrorMessages.noFingerprintsProvided
         )
     }
 
@@ -112,8 +121,11 @@ public final class SSLPinningImpl: NSObject {
      A match is considered valid if ANY provided
      fingerprint matches the server certificate.
 
+     Falls back to cert mode if no fingerprints are provided
+     but certificates are configured.
+
      - Throws: `SSLPinningError.unavailable`
-     if no fingerprints are available.
+     if no fingerprints and no certificates are available.
      */
     func checkCertificates(
         urlString: String,
@@ -124,16 +136,23 @@ public final class SSLPinningImpl: NSObject {
             fingerprintsFromArgs ??
             config?.fingerprints
 
-        guard let fingerprints,
-              !fingerprints.isEmpty else {
-            throw SSLPinningError.unavailable(
-                SSLPinningErrorMessages.noFingerprintsProvided
+        if let fps = fingerprints, !fps.isEmpty {
+            return try await performCheck(
+                urlString: urlString,
+                fingerprints: fps
             )
         }
 
-        return try await performCheck(
-            urlString: urlString,
-            fingerprints: fingerprints
+        let hasCerts = !(config?.certs.isEmpty ?? true)
+        if hasCerts {
+            return try await performCheck(
+                urlString: urlString,
+                fingerprints: []
+            )
+        }
+
+        throw SSLPinningError.unavailable(
+            SSLPinningErrorMessages.noFingerprintsProvided
         )
     }
 
@@ -229,12 +248,6 @@ public final class SSLPinningImpl: NSObject {
             configuration.timeoutIntervalForRequest = 10
             configuration.timeoutIntervalForResource = 10
 
-            let pinnedSession = URLSession(
-                configuration: configuration,
-                delegate: nil,
-                delegateQueue: nil
-            )
-
             let delegate = SSLPinningDelegate(
                 expectedFingerprints: fingerprints,
                 pinnedCertificates: pinnedCertificates,
@@ -242,8 +255,7 @@ public final class SSLPinningImpl: NSObject {
                 completion: { result in
                     continuation.resume(returning: result)
                 },
-                verboseLogging: config?.verboseLogging ?? false,
-                session: pinnedSession
+                verboseLogging: config?.verboseLogging ?? false
             )
 
             let session = URLSession(
@@ -251,6 +263,8 @@ public final class SSLPinningImpl: NSObject {
                 delegate: delegate,
                 delegateQueue: nil
             )
+
+            delegate.setSession(session)
 
             session.dataTask(with: url).resume()
         }

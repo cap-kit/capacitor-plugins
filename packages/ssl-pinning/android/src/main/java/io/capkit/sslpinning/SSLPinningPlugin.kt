@@ -141,7 +141,14 @@ class SSLPinningPlugin : Plugin() {
       return
     }
 
-    val parsedUrl = java.net.URL(url)
+    val parsedUrl =
+      try {
+        java.net.URL(url)
+      } catch (e: java.net.MalformedURLException) {
+        call.reject(SSLPinningErrorMessages.INVALID_URL, "INVALID_INPUT")
+        return
+      }
+
     if (parsedUrl.host.isNullOrBlank()) {
       call.reject(SSLPinningErrorMessages.NO_HOST_FOUND_IN_URL, "INVALID_INPUT")
       return
@@ -225,7 +232,14 @@ class SSLPinningPlugin : Plugin() {
       return
     }
 
-    val parsedUrl = java.net.URL(url)
+    val parsedUrl =
+      try {
+        java.net.URL(url)
+      } catch (e: java.net.MalformedURLException) {
+        call.reject(SSLPinningErrorMessages.INVALID_URL, "INVALID_INPUT")
+        return
+      }
+
     if (parsedUrl.host.isNullOrBlank()) {
       call.reject(SSLPinningErrorMessages.NO_HOST_FOUND_IN_URL, "INVALID_INPUT")
       return

@@ -32,6 +32,12 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate, URLSessionTaskDele
     // MARK: - Properties
 
     /**
+     The URLSession that owns this delegate and executes the request.
+     Set via setSession() after delegate initialization.
+     */
+    private var session: URLSession?
+
+    /**
      Tracks whether the completion handler has already been called.
      Used to prevent double-calling on timeout or other terminal errors.
      */
@@ -96,14 +102,14 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate, URLSessionTaskDele
      Design notes:
      - All inputs are normalized and stored.
      - No external configuration access is performed.
+     - Session must be set via setSession() before use.
      */
     init(
         expectedFingerprints: [String],
         pinnedCertificates: [SecCertificate]? = nil,
         excludedDomains: [String] = [],
         completion: @escaping ([String: Any]) -> Void,
-        verboseLogging: Bool,
-        session: URLSession
+        verboseLogging: Bool
     ) {
         self.expectedFingerprints =
             expectedFingerprints.map {
@@ -116,12 +122,31 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate, URLSessionTaskDele
 
         self.verboseLogging = verboseLogging
 
-        let sessionRef = session
-        self.completion = { result in
-            sessionRef.invalidateAndCancel()
-            completion(result)
-        }
+        self.completion = completion
         super.init()
+    }
+
+    /**
+     Sets the URLSession that owns this delegate.
+
+     Must be called before the session executes any task.
+     The session will be invalidated when completion is called.
+     */
+    func setSession(_ session: URLSession) {
+        self.session = session
+    }
+
+    // MARK: - Completion Handler
+
+    /**
+     Helper method to complete the request and invalidate the session.
+     Ensures session is invalidated exactly once.
+     */
+    private func completeWithResult(_ result: [String: Any]) {
+        guard !hasCompleted else { return }
+        hasCompleted = true
+        session?.invalidateAndCancel()
+        completion(result)
     }
 
     // MARK: - URLSessionDelegate
@@ -162,8 +187,7 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate, URLSessionTaskDele
 
         guard let trust = challenge.protectionSpace.serverTrust else {
             completionHandler(.cancelAuthenticationChallenge, nil)
-            hasCompleted = true
-            completion([
+            completeWithResult([
                 "fingerprintMatched": false,
                 "error": SSLPinningErrorMessages.internalError,
                 "errorCode": "INIT_FAILED"
@@ -187,16 +211,14 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate, URLSessionTaskDele
 
             SSLPinningLogger.debug("SSLPinning excluded domain:", host)
 
-            hasCompleted = true
-            completion([
+            completionHandler(.useCredential, URLCredential(trust: trust))
+            completeWithResult([
                 "fingerprintMatched": true,
                 "excludedDomain": true,
                 "mode": "excluded",
                 "errorCode": "EXCLUDED_DOMAIN",
                 "error": SSLPinningErrorMessages.excludedDomain
             ])
-
-            completionHandler(.useCredential, URLCredential(trust: trust))
             return
         }
 
@@ -225,24 +247,20 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate, URLSessionTaskDele
             )
 
             if trusted {
-                hasCompleted = true
-                completion([
+                completionHandler(.useCredential, URLCredential(trust: trust))
+                completeWithResult([
                     "fingerprintMatched": true,
                     "mode": "cert",
                     "errorCode": "",
                     "error": ""
                 ])
-
-                completionHandler(.useCredential, URLCredential(trust: trust))
             } else {
-                hasCompleted = true
-                completion([
+                completionHandler(.cancelAuthenticationChallenge, nil)
+                completeWithResult([
                     "fingerprintMatched": false,
                     "errorCode": "TRUST_EVALUATION_FAILED",
                     "error": error?.localizedDescription ?? SSLPinningErrorMessages.pinningFailed
                 ])
-
-                completionHandler(.cancelAuthenticationChallenge, nil)
             }
 
             return
@@ -267,8 +285,7 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate, URLSessionTaskDele
                 SSLPinningUtils.leafCertificate(from: trust)
         else {
             completionHandler(.cancelAuthenticationChallenge, nil)
-            hasCompleted = true
-            completion([
+            completeWithResult([
                 "fingerprintMatched": false,
                 "error": SSLPinningErrorMessages.internalError,
                 "errorCode": "INIT_FAILED"
@@ -293,16 +310,6 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate, URLSessionTaskDele
             "\(matched)"
         )
 
-        hasCompleted = true
-        completion([
-            "actualFingerprint": actualFingerprint,
-            "fingerprintMatched": matched,
-            "matchedFingerprint": matchedFingerprint as Any,
-            "mode": "fingerprint",
-            "errorCode": matched ? "" : "PINNING_FAILED",
-            "error": matched ? "" : SSLPinningErrorMessages.pinningFailed
-        ])
-
         completionHandler(
             matched
                 ? .useCredential
@@ -311,6 +318,15 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate, URLSessionTaskDele
                 ? URLCredential(trust: trust)
                 : nil
         )
+
+        completeWithResult([
+            "actualFingerprint": actualFingerprint,
+            "fingerprintMatched": matched,
+            "matchedFingerprint": matchedFingerprint as Any,
+            "mode": "fingerprint",
+            "errorCode": matched ? "" : "PINNING_FAILED",
+            "error": matched ? "" : SSLPinningErrorMessages.pinningFailed
+        ])
     }
 
     // MARK: - URLSessionTaskDelegate
@@ -334,8 +350,7 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate, URLSessionTaskDele
 
             // Timeout
             if nsError.code == NSURLErrorTimedOut {
-                hasCompleted = true
-                completion([
+                completeWithResult([
                     "fingerprintMatched": false,
                     "errorCode": "TIMEOUT",
                     "error": SSLPinningErrorMessages.timeout
@@ -347,16 +362,14 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate, URLSessionTaskDele
                      NSURLErrorNetworkConnectionLost,
                      NSURLErrorCannotFindHost,
                      NSURLErrorCannotConnectToHost].contains(nsError.code) {
-                hasCompleted = true
-                completion([
+                completeWithResult([
                     "fingerprintMatched": false,
                     "errorCode": "NETWORK_ERROR",
                     "error": SSLPinningErrorMessages.networkError
                 ])
             } else {
                 // Fallback for other errors
-                hasCompleted = true
-                completion([
+                completeWithResult([
                     "fingerprintMatched": false,
                     "errorCode": "NETWORK_ERROR",
                     "error": SSLPinningErrorMessages.networkError

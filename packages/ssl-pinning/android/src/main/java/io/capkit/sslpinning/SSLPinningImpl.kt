@@ -90,8 +90,9 @@ class SSLPinningImpl(
    * Resolution order:
    * 1. Runtime fingerprint argument
    * 2. Static configuration fingerprint
+   * 3. Fall back to cert mode if certificates are configured
    *
-   * @throws SSLPinningError.Unavailable if no fingerprint is available.
+   * @throws SSLPinningError.Unavailable if no fingerprint and no certificates available.
    */
   @Throws(SSLPinningError::class)
   fun checkCertificate(
@@ -101,15 +102,23 @@ class SSLPinningImpl(
     val fingerprint =
       fingerprintFromArgs ?: config.fingerprint
 
-    if (fingerprint == null) {
-      throw SSLPinningError.Unavailable(
-        SSLPinningErrorMessages.NO_FINGERPRINTS_PROVIDED,
+    if (fingerprint != null) {
+      return performCheck(
+        urlString = urlString,
+        fingerprints = listOf(fingerprint),
       )
     }
 
-    return performCheck(
-      urlString = urlString,
-      fingerprints = listOf(fingerprint),
+    val hasCerts = config.certs.isNotEmpty()
+    if (hasCerts) {
+      return performCheck(
+        urlString = urlString,
+        fingerprints = emptyList(),
+      )
+    }
+
+    throw SSLPinningError.Unavailable(
+      SSLPinningErrorMessages.NO_FINGERPRINTS_PROVIDED,
     )
   }
 
@@ -123,7 +132,10 @@ class SSLPinningImpl(
    *
    * A match is considered valid if ANY provided fingerprint matches.
    *
-   * @throws SSLPinningError.Unavailable if no fingerprints are available.
+   * Falls back to cert mode if no fingerprints are provided
+   * but certificates are configured.
+   *
+   * @throws SSLPinningError.Unavailable if no fingerprints and no certificates available.
    */
   @Throws(SSLPinningError::class)
   fun checkCertificates(
@@ -134,15 +146,23 @@ class SSLPinningImpl(
       fingerprintsFromArgs?.takeIf { it.isNotEmpty() }
         ?: config.fingerprints.takeIf { it.isNotEmpty() }
 
-    if (fingerprints == null) {
-      throw SSLPinningError.Unavailable(
-        SSLPinningErrorMessages.NO_FINGERPRINTS_PROVIDED,
+    if (fingerprints != null) {
+      return performCheck(
+        urlString = urlString,
+        fingerprints = fingerprints,
       )
     }
 
-    return performCheck(
-      urlString = urlString,
-      fingerprints = fingerprints,
+    val hasCerts = config.certs.isNotEmpty()
+    if (hasCerts) {
+      return performCheck(
+        urlString = urlString,
+        fingerprints = emptyList(),
+      )
+    }
+
+    throw SSLPinningError.Unavailable(
+      SSLPinningErrorMessages.NO_FINGERPRINTS_PROVIDED,
     )
   }
 
