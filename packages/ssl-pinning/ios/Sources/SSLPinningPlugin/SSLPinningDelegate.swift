@@ -102,7 +102,8 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate, URLSessionTaskDele
         pinnedCertificates: [SecCertificate]? = nil,
         excludedDomains: [String] = [],
         completion: @escaping ([String: Any]) -> Void,
-        verboseLogging: Bool
+        verboseLogging: Bool,
+        session: URLSession
     ) {
         self.expectedFingerprints =
             expectedFingerprints.map {
@@ -113,8 +114,14 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate, URLSessionTaskDele
         self.excludedDomains =
             excludedDomains.map { $0.lowercased() }
 
-        self.completion = completion
         self.verboseLogging = verboseLogging
+
+        let sessionRef = session
+        self.completion = { result in
+            sessionRef.invalidateAndCancel()
+            completion(result)
+        }
+        super.init()
     }
 
     // MARK: - URLSessionDelegate

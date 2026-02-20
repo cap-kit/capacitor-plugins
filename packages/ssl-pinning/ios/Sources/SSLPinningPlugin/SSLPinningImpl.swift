@@ -225,6 +225,16 @@ public final class SSLPinningImpl: NSObject {
          */
         return try await withCheckedThrowingContinuation { continuation in
 
+            let configuration = URLSessionConfiguration.ephemeral
+            configuration.timeoutIntervalForRequest = 10
+            configuration.timeoutIntervalForResource = 10
+
+            let pinnedSession = URLSession(
+                configuration: configuration,
+                delegate: nil,
+                delegateQueue: nil
+            )
+
             let delegate = SSLPinningDelegate(
                 expectedFingerprints: fingerprints,
                 pinnedCertificates: pinnedCertificates,
@@ -232,12 +242,9 @@ public final class SSLPinningImpl: NSObject {
                 completion: { result in
                     continuation.resume(returning: result)
                 },
-                verboseLogging: config?.verboseLogging ?? false
+                verboseLogging: config?.verboseLogging ?? false,
+                session: pinnedSession
             )
-
-            let configuration = URLSessionConfiguration.ephemeral
-            configuration.timeoutIntervalForRequest = 10
-            configuration.timeoutIntervalForResource = 10
 
             let session = URLSession(
                 configuration: configuration,
