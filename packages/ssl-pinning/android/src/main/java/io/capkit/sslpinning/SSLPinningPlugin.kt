@@ -6,6 +6,15 @@ import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
+import com.getcapacitor.annotation.Permission
+import io.capkit.sslpinning.config.SSLPinningConfig
+import io.capkit.sslpinning.error.SSLPinningError
+import io.capkit.sslpinning.error.SSLPinningErrorMessages
+import io.capkit.sslpinning.logger.SSLPinningLogger
+import io.capkit.sslpinning.model.SSLPinningResultModel
+import io.capkit.sslpinning.utils.SSLPinningUtils
+import java.net.UnknownHostException
+import javax.net.ssl.SSLException
 
 /**
  * Capacitor bridge for the SSLPinning plugin (Android).
@@ -16,35 +25,62 @@ import com.getcapacitor.annotation.CapacitorPlugin
  * - Resolve or reject PluginCall
  * - Map native errors to JS-facing error codes
  */
-@CapacitorPlugin(name = "SSLPinning")
+@CapacitorPlugin(
+  name = "SSLPinning",
+  permissions = [
+    Permission(
+      alias = "network",
+      strings = [android.Manifest.permission.INTERNET],
+    ),
+  ],
+)
 class SSLPinningPlugin : Plugin() {
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
   // Properties
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
 
   /**
-   * Immutable plugin configuration.
-   * Parsed once during plugin initialization.
+   * Immutable plugin configuration read from capacitor.config.ts.
+   * * CONTRACT:
+   * - Initialized exactly once in `load()`.
+   * - Treated as read-only afterwards.
    */
   private lateinit var config: SSLPinningConfig
 
   /**
-   * Native implementation containing
-   * platform-specific logic only.
+   * Native implementation layer containing core Android logic.
+   *
+   * CONTRACT:
+   * - Owned by the Plugin layer.
+   * - MUST NOT access PluginCall or Capacitor bridge APIs directly.
    */
   private lateinit var implementation: SSLPinningImpl
 
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
+  // Companion Object
+  // -----------------------------------------------------------------------------
+
+  private companion object {
+    /**
+     * Account type identifier for internal plugin identification.
+     */
+    const val ACCOUNT_TYPE = "io.capkit.sslpinning"
+
+    /**
+     * Human-readable account name for the plugin.
+     */
+    const val ACCOUNT_NAME = "SSLPinning"
+  }
+
+  // -----------------------------------------------------------------------------
   // Lifecycle
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
 
   /**
    * Called once when the plugin is loaded by the Capacitor bridge.
    *
-   * This is the correct place to:
-   * - read static configuration
-   * - initialize native resources
-   * - inject configuration into the implementation
+   * This method initializes the configuration container and the native
+   * implementation layer, ensuring all dependencies are injected.
    */
   override fun load() {
     super.load()
@@ -52,15 +88,17 @@ class SSLPinningPlugin : Plugin() {
     config = SSLPinningConfig(this)
     implementation = SSLPinningImpl(context)
     implementation.updateConfig(config)
+
+    SSLPinningLogger.debug("Plugin loaded. Version: ", BuildConfig.PLUGIN_VERSION)
   }
 
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
   // Error Mapping
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
 
   /**
-   * Maps native SSLPinningError values
-   * to JavaScript-facing error codes.
+   * Rejects the call with a message and a standardized error code.
+   * Ensure consistency with the JS SSLPinningErrorCode enum.
    */
   private fun reject(
     call: PluginCall,
@@ -69,17 +107,29 @@ class SSLPinningPlugin : Plugin() {
     val code =
       when (error) {
         is SSLPinningError.Unavailable -> "UNAVAILABLE"
+        is SSLPinningError.Cancelled -> "CANCELLED"
         is SSLPinningError.PermissionDenied -> "PERMISSION_DENIED"
         is SSLPinningError.InitFailed -> "INIT_FAILED"
+        is SSLPinningError.InvalidInput -> "INVALID_INPUT"
         is SSLPinningError.UnknownType -> "UNKNOWN_TYPE"
+        is SSLPinningError.NotFound -> "NOT_FOUND"
+        is SSLPinningError.Conflict -> "CONFLICT"
+        is SSLPinningError.Timeout -> "TIMEOUT"
+        is SSLPinningError.NoPinningConfig -> "NO_PINNING_CONFIG"
+        is SSLPinningError.CertNotFound -> "CERT_NOT_FOUND"
+        is SSLPinningError.TrustEvaluationFailed -> "TRUST_EVALUATION_FAILED"
+        is SSLPinningError.NetworkError -> "NETWORK_ERROR"
+        is SSLPinningError.InvalidConfig -> "INVALID_INPUT"
       }
 
-    call.reject(error.message, code)
+    // Always use the message from the SSLPinningError instance
+    val message = error.message ?: "Unknown native error"
+    call.reject(message, code)
   }
 
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
   // SSL Pinning (single fingerprint)
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
 
   /**
    * Validates the SSL certificate of a HTTPS endpoint
@@ -91,38 +141,87 @@ class SSLPinningPlugin : Plugin() {
     val fingerprint: String? = call.getString("fingerprint")
 
     if (url.isNullOrBlank()) {
-      call.reject("Missing url", "UNKNOWN_TYPE")
+      call.reject(SSLPinningErrorMessages.URL_REQUIRED, "INVALID_INPUT")
       return
     }
 
-    execute {
+    val parsedUrl =
       try {
-        val result: Map<String, Any> =
-          implementation.checkCertificate(
-            urlString = url,
-            fingerprintFromArgs = fingerprint,
-          )
-
-        val jsResult = JSObject()
-        for ((key, value) in result) {
-          jsResult.put(key, value)
-        }
-
-        call.resolve(jsResult)
-      } catch (error: SSLPinningError) {
-        reject(call, error)
-      } catch (error: Exception) {
-        call.reject(
-          error.message ?: "SSL pinning failed",
-          "INIT_FAILED",
-        )
+        java.net.URL(url)
+      } catch (e: java.net.MalformedURLException) {
+        call.reject(SSLPinningErrorMessages.INVALID_URL, "INVALID_INPUT")
+        return
       }
+
+    if (parsedUrl.host.isNullOrBlank()) {
+      call.reject(SSLPinningErrorMessages.NO_HOST_FOUND_IN_URL, "INVALID_INPUT")
+      return
+    }
+
+    if (fingerprint != null && !SSLPinningUtils.isValidFingerprintFormat(fingerprint)) {
+      call.reject(SSLPinningErrorMessages.INVALID_FINGERPRINT_FORMAT, "INVALID_INPUT")
+      return
+    }
+
+    try {
+      execute {
+        try {
+          val result: SSLPinningResultModel =
+            implementation.checkCertificate(
+              urlString = url ?: "",
+              fingerprintFromArgs = fingerprint,
+            )
+
+          val jsResult = JSObject()
+          jsResult.put("actualFingerprint", result.actualFingerprint)
+          jsResult.put("fingerprintMatched", result.fingerprintMatched)
+          jsResult.put("matchedFingerprint", result.matchedFingerprint)
+          jsResult.put("excludedDomain", result.excludedDomain)
+          jsResult.put("mode", result.mode)
+          jsResult.put("error", result.error)
+          jsResult.put("errorCode", result.errorCode)
+
+          call.resolve(jsResult)
+        } catch (error: SSLPinningError) {
+          reject(call, error)
+        } catch (error: IllegalArgumentException) {
+          call.reject(
+            error.message ?: "Invalid input",
+            "INVALID_INPUT",
+          )
+        } catch (error: SSLException) {
+          call.reject(
+            error.message ?: "SSL/TLS error",
+            "SSL_ERROR",
+          )
+        } catch (error: UnknownHostException) {
+          call.reject(
+            error.message ?: "Unknown host",
+            "NETWORK_ERROR",
+          )
+        } catch (error: Exception) {
+          call.reject(
+            error.message ?: SSLPinningErrorMessages.INTERNAL_ERROR,
+            "INIT_FAILED",
+          )
+        }
+      }
+    } catch (error: IllegalArgumentException) {
+      call.reject(
+        error.message ?: "Invalid input",
+        "INVALID_INPUT",
+      )
+    } catch (error: Exception) {
+      call.reject(
+        error.message ?: SSLPinningErrorMessages.INTERNAL_ERROR,
+        "INIT_FAILED",
+      )
     }
   }
 
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
   // SSL Pinning (multiple fingerprints)
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
 
   /**
    * Validates the SSL certificate of a HTTPS endpoint
@@ -134,6 +233,7 @@ class SSLPinningPlugin : Plugin() {
 
     val jsArray: JSArray? = call.getArray("fingerprints")
 
+    // Parsing JSArray to a clean Kotlin List
     val fingerprints: List<String>? =
       if (jsArray != null && jsArray.length() > 0) {
         val list = ArrayList<String>()
@@ -149,38 +249,89 @@ class SSLPinningPlugin : Plugin() {
       }
 
     if (url.isNullOrBlank()) {
-      call.reject("Missing url", "UNKNOWN_TYPE")
+      call.reject(SSLPinningErrorMessages.URL_REQUIRED, "INVALID_INPUT")
       return
     }
 
-    execute {
+    val parsedUrl =
       try {
-        val result: Map<String, Any> =
-          implementation.checkCertificates(
-            urlString = url,
-            fingerprintsFromArgs = fingerprints,
-          )
-
-        val jsResult = JSObject()
-        for ((key, value) in result) {
-          jsResult.put(key, value)
-        }
-
-        call.resolve(jsResult)
-      } catch (error: SSLPinningError) {
-        reject(call, error)
-      } catch (error: Exception) {
-        call.reject(
-          error.message ?: "SSL pinning failed",
-          "INIT_FAILED",
-        )
+        java.net.URL(url)
+      } catch (e: java.net.MalformedURLException) {
+        call.reject(SSLPinningErrorMessages.INVALID_URL, "INVALID_INPUT")
+        return
       }
+
+    if (parsedUrl.host.isNullOrBlank()) {
+      call.reject(SSLPinningErrorMessages.NO_HOST_FOUND_IN_URL, "INVALID_INPUT")
+      return
+    }
+
+    fingerprints?.forEach { fp ->
+      if (!SSLPinningUtils.isValidFingerprintFormat(fp)) {
+        call.reject(SSLPinningErrorMessages.INVALID_FINGERPRINT_FORMAT, "INVALID_INPUT")
+        return
+      }
+    }
+
+    try {
+      execute {
+        try {
+          val result: SSLPinningResultModel =
+            implementation.checkCertificates(
+              urlString = url ?: "",
+              fingerprintsFromArgs = fingerprints,
+            )
+
+          val jsResult = JSObject()
+          jsResult.put("actualFingerprint", result.actualFingerprint)
+          jsResult.put("fingerprintMatched", result.fingerprintMatched)
+          jsResult.put("matchedFingerprint", result.matchedFingerprint)
+          jsResult.put("excludedDomain", result.excludedDomain)
+          jsResult.put("mode", result.mode)
+          jsResult.put("error", result.error)
+          jsResult.put("errorCode", result.errorCode)
+
+          call.resolve(jsResult)
+        } catch (error: SSLPinningError) {
+          reject(call, error)
+        } catch (error: IllegalArgumentException) {
+          call.reject(
+            error.message ?: "Invalid input",
+            "INVALID_INPUT",
+          )
+        } catch (error: SSLException) {
+          call.reject(
+            error.message ?: "SSL/TLS error",
+            "SSL_ERROR",
+          )
+        } catch (error: UnknownHostException) {
+          call.reject(
+            error.message ?: "Unknown host",
+            "NETWORK_ERROR",
+          )
+        } catch (error: Exception) {
+          call.reject(
+            error.message ?: SSLPinningErrorMessages.INTERNAL_ERROR,
+            "INIT_FAILED",
+          )
+        }
+      }
+    } catch (error: IllegalArgumentException) {
+      call.reject(
+        error.message ?: "Invalid input",
+        "INVALID_INPUT",
+      )
+    } catch (error: Exception) {
+      call.reject(
+        error.message ?: SSLPinningErrorMessages.INTERNAL_ERROR,
+        "INIT_FAILED",
+      )
     }
   }
 
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
   // Version
-  // ---------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
 
   /**
    * Returns the native plugin version.

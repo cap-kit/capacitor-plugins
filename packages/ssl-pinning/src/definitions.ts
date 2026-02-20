@@ -37,15 +37,34 @@ declare module '@capacitor/cli' {
 export enum SSLPinningErrorCode {
   /** Required data is missing or the feature is not available. */
   UNAVAILABLE = 'UNAVAILABLE',
-
+  /** The user cancelled an interactive flow. */
+  CANCELLED = 'CANCELLED',
   /** The user denied a required permission or the feature is disabled. */
   PERMISSION_DENIED = 'PERMISSION_DENIED',
-
   /** The SSL pinning operation failed due to a runtime or initialization error. */
   INIT_FAILED = 'INIT_FAILED',
-
+  /** The input provided to the plugin method is invalid, missing, or malformed. */
+  INVALID_INPUT = 'INVALID_INPUT',
   /** Invalid or unsupported input was provided. */
   UNKNOWN_TYPE = 'UNKNOWN_TYPE',
+  /** The requested resource does not exist. */
+  NOT_FOUND = 'NOT_FOUND',
+  /** The operation conflicts with the current state. */
+  CONFLICT = 'CONFLICT',
+  /** The operation did not complete within the expected time. */
+  TIMEOUT = 'TIMEOUT',
+  /** No runtime fingerprints, no config fingerprints, and no certificates were configured. */
+  NO_PINNING_CONFIG = 'NO_PINNING_CONFIG',
+  /** Certificate-based pinning was selected, but no valid certificate files were found. */
+  CERT_NOT_FOUND = 'CERT_NOT_FOUND',
+  /** Certificate-based trust evaluation failed at the handshake level. */
+  TRUST_EVALUATION_FAILED = 'TRUST_EVALUATION_FAILED',
+  /** The server certificate fingerprint did not match any expected fingerprint. */
+  PINNING_FAILED = 'PINNING_FAILED',
+  /** The request host matched an excluded domain. */
+  EXCLUDED_DOMAIN = 'EXCLUDED_DOMAIN',
+  /** Network connectivity or TLS handshake error. */
+  NETWORK_ERROR = 'NETWORK_ERROR',
 }
 
 // -----------------------------------------------------------------------------
@@ -84,6 +103,72 @@ export interface SSLPinningConfig {
    * @since 0.0.15
    */
   fingerprints?: string[];
+
+  /**
+   * Local certificate filenames (e.g., ["mycert.cer"]).
+   * Files must be in 'assets/certs' (Android) or main bundle 'certs' (iOS).
+   *
+   * This is the global fallback used when no domain-specific
+   * certificates are configured via `certsByDomain`.
+   *
+   * @since 8.0.3
+   */
+  certs?: string[];
+
+  /**
+   * Per-domain certificate configuration.
+   *
+   * Maps a domain (or subdomain pattern) to a list of
+   * certificate filenames to use for that domain.
+   *
+   * Matching rules:
+   * - First, try exact domain match (e.g., "api.example.com")
+   * - Then, try subdomain match (e.g., "example.com" matches "api.example.com")
+   * - If multiple subdomain keys match, the MOST SPECIFIC (longest) wins
+   * - If no match found, fallback to global `certs`
+   *
+   * @example
+   * ```ts
+   * {
+   *   "api.example.com": ["api-cert.cer"],
+   *   "example.com": ["wildcard.cer"],
+   *   "other.com": ["other-cert.cer"]
+   * }
+   * ```
+   *
+   * @since 8.0.4
+   */
+  certsByDomain?: Record<string, string[]>;
+
+  /**
+   * Optional manifest file for certificate auto-discovery.
+   *
+   * The manifest is a JSON file containing either:
+   * - `{ "certs": ["a.cer", "b.cer"] }`
+   * - `{ "certsByDomain": { "example.com": ["cert.cer"] } }`
+   * - Both, which extend/override the explicit config values
+   *
+   * Location:
+   * - Android: assets/certs/<path>
+   * - iOS: main bundle <path>
+   *
+   * Precedence (later overrides earlier):
+   * 1. Explicit config values (certs, certsByDomain)
+   * 2. Manifest values
+   *
+   * @example "certs/index.json"
+   *
+   * @since 8.0.4
+   */
+  certsManifest?: string;
+
+  /**
+   * Domains to bypass. Matches exact domain or subdomains.
+   * Do not include schemes or paths.
+   *
+   * @since 8.0.3
+   */
+  excludedDomains?: string[];
 }
 
 // -----------------------------------------------------------------------------
@@ -147,19 +232,28 @@ export interface SSLPinningMultiOptions {
 // -----------------------------------------------------------------------------
 
 /**
- * Result returned by a successful SSL certificate check.
+ * Result returned by an SSL pinning operation.
  *
- * This object is returned ONLY on success.
- * Failures are delivered via Promise rejection.
+ * This object is returned for ALL outcomes:
+ * - Success: `fingerprintMatched: true`
+ * - Mismatch: `fingerprintMatched: false` with error info (RESOLVED, not rejected)
+ *
+ * Only operation failures (invalid input, config missing, network errors,
+ * timeout, internal errors) reject the Promise.
  */
 export interface SSLPinningResult {
   /**
-   * Actual SHA-256 fingerprint of the server certificate.
+   * The actual SHA-256 fingerprint of the server certificate.
+   *
+   * Present in fingerprint mode.
    */
-  actualFingerprint: string;
+  actualFingerprint?: string;
 
   /**
-   * Indicates whether the certificate fingerprint matched.
+   * Indicates whether the certificate validation succeeded.
+   *
+   * - true  → Pinning passed
+   * - false → Pinning failed
    */
   fingerprintMatched: boolean;
 
@@ -167,6 +261,32 @@ export interface SSLPinningResult {
    * The fingerprint that successfully matched, if any.
    */
   matchedFingerprint?: string;
+
+  /**
+   * Indicates that SSL pinning was skipped because
+   * the request host matched an excluded domain.
+   */
+  excludedDomain?: boolean;
+
+  /**
+   * Indicates which pinning mode was used.
+   *
+   * - "fingerprint"
+   * - "cert"
+   * - "excluded"
+   */
+  mode?: 'fingerprint' | 'cert' | 'excluded';
+
+  /**
+   * Human-readable error message when pinning fails.
+   * Present when `fingerprintMatched: false`.
+   */
+  error?: string;
+
+  /**
+   * Standardized error code aligned with SSLPinningErrorCode.
+   */
+  errorCode?: SSLPinningErrorCode;
 }
 
 /**

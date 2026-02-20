@@ -69,26 +69,23 @@ restrictions. All methods will reject with an `Unimplemented` error.
 
 ---
 
-## Future Directions (Informational)
+## Permissions
 
-In addition to runtime fingerprint-based SSL pinning, the long-term vision
-for this plugin includes exploring additional trust models and configuration
-strategies.
+### Android
 
-Potential future enhancements may include:
+The plugin declares the `INTERNET` permission in its manifest:
 
-- **Loading trusted certificates from the application bundle**, for example
-  from a dedicated `certs/` directory, allowing certificate-based pinning
-  without hardcoding fingerprints.
-- **Domain-based exclusions**, enabling developers to explicitly bypass
-  SSL pinning for selected hosts (e.g. analytics, third-party services, or
-  development environments).
+```xml
+<uses-permission android:name="android.permission.INTERNET" />
+```
 
-These ideas are provided for informational purposes only.
+This is a **normal permission** (no runtime prompt required). The app will
+automatically be granted this permission at install time. No user interaction
+or runtime permission request is needed.
 
-They are **not part of the current API**, **not guaranteed to be implemented**,
-and **may change or be discarded** based on platform constraints, security
-considerations, and real-world usage feedback.
+### iOS
+
+No special permissions are required. The plugin uses standard URLSession APIs.
 
 ---
 
@@ -144,6 +141,9 @@ Example output:
 ```bash
 SHA256 Fingerprint=EF:BA:26:D8:C1:CE:37:79:AC:77:63:0A:90:F8:21:63:A3:D6:89:2E:D6:AF:EE:40:86:72:CF:19:EB:A7:A3:62
 ```
+
+> **Canonical format**: The plugin normalizes fingerprints to lowercase hex with no separators.
+> For example, `EF:BA:26:...` becomes `efba26...`. Use this format when configuring fingerprints.
 
 ---
 
@@ -299,11 +299,15 @@ These values are:
 
 Configuration options for the SSLPinning plugin.
 
-| Prop                 | Type                  | Description                                                                                                | Default            | Since  |
-| -------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------ | ------ |
-| **`verboseLogging`** | <code>boolean</code>  | Enables verbose native logging (Logcat / Xcode console).                                                   | <code>false</code> | 0.0.15 |
-| **`fingerprint`**    | <code>string</code>   | Default fingerprint used by `checkCertificate()` when `options.fingerprint` is not provided at runtime.    |                    | 0.0.14 |
-| **`fingerprints`**   | <code>string[]</code> | Default fingerprints used by `checkCertificates()` when `options.fingerprints` is not provided at runtime. |                    | 0.0.15 |
+| Prop                  | Type                                        | Description                                                                                                                                                                                                                                                                                                                                                                                                                                          | Default            | Since  |
+| --------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ------ |
+| **`verboseLogging`**  | <code>boolean</code>                        | Enables verbose native logging (Logcat / Xcode console).                                                                                                                                                                                                                                                                                                                                                                                             | <code>false</code> | 0.0.15 |
+| **`fingerprint`**     | <code>string</code>                         | Default fingerprint used by `checkCertificate()` when `options.fingerprint` is not provided at runtime.                                                                                                                                                                                                                                                                                                                                              |                    | 0.0.14 |
+| **`fingerprints`**    | <code>string[]</code>                       | Default fingerprints used by `checkCertificates()` when `options.fingerprints` is not provided at runtime.                                                                                                                                                                                                                                                                                                                                           |                    | 0.0.15 |
+| **`certs`**           | <code>string[]</code>                       | Local certificate filenames (e.g., ["mycert.cer"]). Files must be in 'assets/certs' (Android) or main bundle 'certs' (iOS). This is the global fallback used when no domain-specific certificates are configured via `certsByDomain`.                                                                                                                                                                                                                |                    | 8.0.3  |
+| **`certsByDomain`**   | <code>Record&lt;string, string[]&gt;</code> | Per-domain certificate configuration. Maps a domain (or subdomain pattern) to a list of certificate filenames to use for that domain. Matching rules: - First, try exact domain match (e.g., "api.example.com") - Then, try subdomain match (e.g., "example.com" matches "api.example.com") - If multiple subdomain keys match, the MOST SPECIFIC (longest) wins - If no match found, fallback to global `certs`                                     |                    | 8.0.4  |
+| **`certsManifest`**   | <code>string</code>                         | Optional manifest file for certificate auto-discovery. The manifest is a JSON file containing either: - `{ "certs": ["a.cer", "b.cer"] }` - `{ "certsByDomain": { "example.com": ["cert.cer"] } }` - Both, which extend/override the explicit config values Location: - Android: assets/certs/&lt;path&gt; - iOS: main bundle &lt;path&gt; Precedence (later overrides earlier): 1. Explicit config values (certs, certsByDomain) 2. Manifest values |                    | 8.0.4  |
+| **`excludedDomains`** | <code>string[]</code>                       | Domains to bypass. Matches exact domain or subdomains. Do not include schemes or paths.                                                                                                                                                                                                                                                                                                                                                              |                    | 8.0.3  |
 
 ### Examples
 
@@ -317,7 +321,8 @@ In `capacitor.config.json`:
       "fingerprint": "50:4B:A1:B5:48:96:71:F3:9F:87:7E:0A:09:FD:3E:1B:C0:4F:AA:9F:FC:83:3E:A9:3A:00:78:88:F8:BA:60:26",
       "fingerprints": [
         "50:4B:A1:B5:48:96:71:F3:9F:87:7E:0A:09:FD:3E:1B:C0:4F:AA:9F:FC:83:3E:A9:3A:00:78:88:F8:BA:60:26"
-      ]
+      ],
+      "certsManifest": "certs/index.json"
     }
   }
 }
@@ -336,6 +341,7 @@ const config: CapacitorConfig = {
       verboseLogging: false,
       fingerprint: '50:4B:A1:B5:48:96:71:F3:9F:87:7E:0A:09:FD:3E:1B:C0:4F:AA:9F:FC:83:3E:A9:3A:00:78:88:F8:BA:60:26',
       fingerprints: ['50:4B:A1:B5:48:96:71:F3:9F:87:7E:0A:09:FD:3E:1B:C0:4F:AA:9F:FC:83:3E:A9:3A:00:78:88:F8:BA:60:26'],
+      certsManifest: 'certs/index.json',
     },
   },
 };
@@ -356,6 +362,137 @@ If no fingerprint is available from either source, the call will fail.
 
 ---
 
+### Per-Domain Certificates (`certsByDomain`)
+
+The plugin supports **per-domain certificate pinning** via the `certsByDomain` configuration option. This allows you to specify different certificates for different domains.
+
+#### Matching Rules
+
+The effective certificate list for a request is determined as follows:
+
+1. **Exact match**: The request host is matched against domain keys exactly (e.g., `"api.example.com"` matches key `"api.example.com"`)
+
+2. **Subdomain match**: If no exact match, the host is matched against parent domains (e.g., `"api.example.com"` matches key `"example.com"`). If multiple subdomain keys match, the **most specific** (longest) key wins.
+
+3. **Global fallback**: If no domain match is found, the global `certs` list is used.
+
+#### Example
+
+```ts
+// capacitor.config.ts
+{
+  plugins: {
+    SSLPinning: {
+      // Global fallback (used for any domain not matched below)
+      certs: ['default.cer'],
+
+      // Per-domain certificates
+      certsByDomain: {
+        'api.example.com': ['api-cert.cer'],
+        'example.com': ['wildcard.cer'],
+        'other-service.com': ['other-cert.cer'],
+      },
+    }
+  }
+}
+```
+
+For a request to `https://api.example.com`:
+
+- First tries exact match: `"api.example.com"` → uses `['api-cert.cer']`
+- For `https://sub.example.com`: matches `"example.com"` → uses `['wildcard.cer']`
+- For `https://unknown.com`: no match → uses global `['default.cer']`
+
+---
+
+### Certificate Manifest (`certsManifest`)
+
+For easier certificate management, you can use a **manifest file** to define certificates. This is especially useful when certificates are updated frequently.
+
+#### Manifest File Format
+
+Create a JSON file (e.g., `assets/certs/index.json` on Android, or copy to bundle on iOS):
+
+```json
+{
+  "certs": ["default.cer"],
+  "certsByDomain": {
+    "api.example.com": ["api-cert.cer"],
+    "example.com": ["wildcard.cer"]
+  }
+}
+```
+
+#### Configuration
+
+```ts
+// capacitor.config.ts
+{
+  plugins: {
+    SSLPinning: {
+      // Point to the manifest file
+      certsManifest: 'index.json',
+    }
+  }
+}
+```
+
+#### Precedence
+
+When both explicit config and manifest are provided:
+
+- **Explicit config values take precedence** over manifest values
+- Manifest values serve as defaults that can be overridden
+
+```ts
+{
+  certs: ['explicit.cer'],           // This wins over manifest
+  certsManifest: 'index.json'        // Manifest values used as fallback
+}
+```
+
+#### Certificate Validation
+
+Certificate files are validated at **plugin load time**. If any configured certificate file is missing or invalid:
+
+- The plugin logs an error with the filename
+- The operation will fail at runtime with `CERT_NOT_FOUND` or `INVALID_INPUT`
+
+This fail-fast behavior ensures misconfigured certificates are detected early rather than silently ignored.
+
+---
+
+### Excluded Domains
+
+When a domain is listed in `excludedDomains`, the plugin:
+
+- **Bypasses SSL pinning** for that domain
+- **Performs a real TLS handshake** using the device's system trust store
+- **Returns a resolved result** with:
+  - `fingerprintMatched: true`
+  - `excludedDomain: true`
+  - `mode: "excluded"`
+  - `actualFingerprint: "..."` (the server's real certificate fingerprint)
+  - `errorCode: "EXCLUDED_DOMAIN"`
+  - `error: "Excluded domain"`
+
+This allows trusted system CAs to validate the connection while still logging the actual certificate in use.
+
+Example:
+
+```ts
+const result = await SSLPinning.checkCertificate({
+  url: 'https://analytics.example.com',
+});
+
+if (result.excludedDomain) {
+  console.log('Domain excluded, using system trust');
+  console.log('Server fingerprint:', result.actualFingerprint);
+}
+```
+
+---
+
 ## API
 
 <docgen-index>
@@ -364,6 +501,7 @@ If no fingerprint is available from either source, the call will fail.
 - [`checkCertificates(...)`](#checkcertificates)
 - [`getPluginVersion()`](#getpluginversion)
 - [Interfaces](#interfaces)
+- [Enums](#enums)
 
 </docgen-index>
 
@@ -435,16 +573,25 @@ const { version } = await SSLPinning.getPluginVersion();
 
 #### SSLPinningResult
 
-Result returned by a successful SSL certificate check.
+Result returned by an SSL pinning operation.
 
-This object is returned ONLY on success.
-Failures are delivered via Promise rejection.
+This object is returned for ALL outcomes:
 
-| Prop                     | Type                 | Description                                            |
-| ------------------------ | -------------------- | ------------------------------------------------------ |
-| **`actualFingerprint`**  | <code>string</code>  | Actual SHA-256 fingerprint of the server certificate.  |
-| **`fingerprintMatched`** | <code>boolean</code> | Indicates whether the certificate fingerprint matched. |
-| **`matchedFingerprint`** | <code>string</code>  | The fingerprint that successfully matched, if any.     |
+- Success: `fingerprintMatched: true`
+- Mismatch: `fingerprintMatched: false` with error info (RESOLVED, not rejected)
+
+Only operation failures (invalid input, config missing, network errors,
+timeout, internal errors) reject the Promise.
+
+| Prop                     | Type                                                                | Description                                                                                              |
+| ------------------------ | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **`actualFingerprint`**  | <code>string</code>                                                 | The actual SHA-256 fingerprint of the server certificate. Present in fingerprint mode.                   |
+| **`fingerprintMatched`** | <code>boolean</code>                                                | Indicates whether the certificate validation succeeded. - true → Pinning passed - false → Pinning failed |
+| **`matchedFingerprint`** | <code>string</code>                                                 | The fingerprint that successfully matched, if any.                                                       |
+| **`excludedDomain`**     | <code>boolean</code>                                                | Indicates that SSL pinning was skipped because the request host matched an excluded domain.              |
+| **`mode`**               | <code>'fingerprint' \| 'cert' \| 'excluded'</code>                  | Indicates which pinning mode was used. - "fingerprint" - "cert" - "excluded"                             |
+| **`error`**              | <code>string</code>                                                 | Human-readable error message when pinning fails. Present when `fingerprintMatched: false`.               |
+| **`errorCode`**          | <code><a href="#sslpinningerrorcode">SSLPinningErrorCode</a></code> | Standardized error code aligned with <a href="#sslpinningerrorcode">SSLPinningErrorCode</a>.             |
 
 #### SSLPinningOptions
 
@@ -472,6 +619,28 @@ Result returned by the getPluginVersion method.
 | ------------- | ------------------- | ---------------------------------------- |
 | **`version`** | <code>string</code> | The native version string of the plugin. |
 
+### Enums
+
+#### SSLPinningErrorCode
+
+| Members                       | Value                                  | Description                                                                           |
+| ----------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------- |
+| **`UNAVAILABLE`**             | <code>'UNAVAILABLE'</code>             | Required data is missing or the feature is not available.                             |
+| **`CANCELLED`**               | <code>'CANCELLED'</code>               | The user cancelled an interactive flow.                                               |
+| **`PERMISSION_DENIED`**       | <code>'PERMISSION_DENIED'</code>       | The user denied a required permission or the feature is disabled.                     |
+| **`INIT_FAILED`**             | <code>'INIT_FAILED'</code>             | The SSL pinning operation failed due to a runtime or initialization error.            |
+| **`INVALID_INPUT`**           | <code>'INVALID_INPUT'</code>           | The input provided to the plugin method is invalid, missing, or malformed.            |
+| **`UNKNOWN_TYPE`**            | <code>'UNKNOWN_TYPE'</code>            | Invalid or unsupported input was provided.                                            |
+| **`NOT_FOUND`**               | <code>'NOT_FOUND'</code>               | The requested resource does not exist.                                                |
+| **`CONFLICT`**                | <code>'CONFLICT'</code>                | The operation conflicts with the current state.                                       |
+| **`TIMEOUT`**                 | <code>'TIMEOUT'</code>                 | The operation did not complete within the expected time.                              |
+| **`NO_PINNING_CONFIG`**       | <code>'NO_PINNING_CONFIG'</code>       | No runtime fingerprints, no config fingerprints, and no certificates were configured. |
+| **`CERT_NOT_FOUND`**          | <code>'CERT_NOT_FOUND'</code>          | Certificate-based pinning was selected, but no valid certificate files were found.    |
+| **`TRUST_EVALUATION_FAILED`** | <code>'TRUST_EVALUATION_FAILED'</code> | Certificate-based trust evaluation failed at the handshake level.                     |
+| **`PINNING_FAILED`**          | <code>'PINNING_FAILED'</code>          | The server certificate fingerprint did not match any expected fingerprint.            |
+| **`EXCLUDED_DOMAIN`**         | <code>'EXCLUDED_DOMAIN'</code>         | The request host matched an excluded domain.                                          |
+| **`NETWORK_ERROR`**           | <code>'NETWORK_ERROR'</code>           | Network connectivity or TLS handshake error.                                          |
+
 </docgen-api>
 
 ---
@@ -490,6 +659,9 @@ const result = await SSLPinning.checkCertificate({
 
 if (result.fingerprintMatched) {
   console.log('Certificate is trusted');
+} else {
+  // Fingerprint mismatch - Promise resolved with details
+  console.log('Pinning failed:', result.errorCode, result.error);
 }
 ```
 
@@ -505,6 +677,9 @@ const result = await SSLPinning.checkCertificates({
 
 if (result.fingerprintMatched) {
   console.log('Certificate matched:', result.matchedFingerprint);
+} else {
+  // Fingerprint mismatch - Promise resolved with details
+  console.log('Pinning failed:', result.errorCode, result.error);
 }
 ```
 
@@ -512,13 +687,24 @@ if (result.fingerprintMatched) {
 
 ## Result Object
 
-On success, the Promise resolves with the following object:
+The Promise always resolves with an `SSLPinningResult` object:
 
 ```ts
 interface SSLPinningResult {
-  actualFingerprint: string;
+  // Always present
   fingerprintMatched: boolean;
+
+  // Present on success or mismatch
+  actualFingerprint?: string;
   matchedFingerprint?: string;
+  mode?: 'fingerprint' | 'cert' | 'excluded';
+
+  // Present when fingerprintMatched is false
+  error?: string;
+  errorCode?: 'PINNING_FAILED' | 'TRUST_EVALUATION_FAILED';
+
+  // Present when domain is excluded
+  excludedDomain?: boolean;
 }
 ```
 
@@ -526,13 +712,50 @@ interface SSLPinningResult {
 
 ## Error Handling Model (Important)
 
-This plugin uses a **Promise rejection–based error model**.
+This plugin uses a **hybrid error model**:
 
-- Successful calls always resolve with `SSLPinningResult`
-- Failures always reject with `CapacitorException`
-- Error codes are exposed via `err.code`
+- **Fingerprint mismatch**: Promise resolves with `fingerprintMatched: false` and error details
+- **Operation failures**: Promise rejects with `CapacitorException`
 
-### Example
+### Fingerprint Mismatch (Resolved)
+
+When the server certificate fingerprint does not match any expected fingerprint,
+the Promise **resolves** (not rejects) with:
+
+```ts
+{
+  fingerprintMatched: false,
+  error: "Pinning failed",
+  errorCode: "PINNING_FAILED",
+  actualFingerprint: "...",
+  mode: "fingerprint"
+}
+```
+
+This allows you to handle the mismatch gracefully without try/catch:
+
+```ts
+const result = await SSLPinning.checkCertificate({
+  url: 'https://example.com',
+  fingerprint: 'AA:BB:CC:DD:...',
+});
+
+if (result.fingerprintMatched) {
+  console.log('Certificate is trusted');
+} else {
+  console.log('Pinning failed:', result.errorCode, result.error);
+}
+```
+
+### Operation Failures (Rejected)
+
+Only the following scenarios **reject** the Promise:
+
+- Missing URL
+- Missing fingerprint (runtime and config)
+- Invalid URL format
+- Network/timeout errors
+- Internal errors
 
 ```ts
 import { SSLPinning, SSLPinningErrorCode } from '@cap-kit/ssl-pinning';
@@ -545,28 +768,58 @@ try {
   if (err.code === SSLPinningErrorCode.UNAVAILABLE) {
     console.error('No fingerprint provided');
   } else {
-    console.error('SSL pinning failed', err);
+    console.error('SSL pinning operation failed', err);
   }
 }
 ```
 
 ### Error codes
 
-| Code                | Description                                 |
-| ------------------- | ------------------------------------------- |
-| `UNAVAILABLE`       | No fingerprint provided (runtime or config) |
-| `PERMISSION_DENIED` | Required permission denied                  |
-| `INIT_FAILED`       | Runtime or initialization failure           |
-| `UNKNOWN_TYPE`      | Invalid or unsupported input                |
+| Code                      | Description                                                                             |
+| ------------------------- | --------------------------------------------------------------------------------------- |
+| `PINNING_FAILED`          | Certificate fingerprint did not match any expected fingerprint (resolved, not rejected) |
+| `EXCLUDED_DOMAIN`         | Request matched an excluded domain; pinning bypassed, system trust used (resolved)      |
+| `TRUST_EVALUATION_FAILED` | Certificate-based trust evaluation failed                                               |
+| `TIMEOUT`                 | Connection timed out                                                                    |
+| `NETWORK_ERROR`           | Network connectivity or IO error                                                        |
+| `UNAVAILABLE`             | No fingerprint provided (runtime or config)                                             |
+| `PERMISSION_DENIED`       | Required permission denied                                                              |
+| `INIT_FAILED`             | Runtime or initialization failure                                                       |
+| `UNKNOWN_TYPE`            | Invalid or unsupported input                                                            |
 
 ---
 
 ## Security Notes
 
-- Only HTTPS URLs are accepted.
-- The system trust chain is **not** evaluated.
-- Certificate acceptance is based **solely on fingerprint matching**.
+### Security Model
 
+The plugin supports two pinning modes with different security properties:
+
+#### Fingerprint Mode
+
+- **Only the leaf certificate fingerprint is compared**
+- The system trust chain is **NOT evaluated**
+- Validation is performed manually via fingerprint comparison
+- A permissive TrustManager is used intentionally to bypass system trust
+
+This mode is useful when you want to pin to a specific certificate fingerprint without relying on the system's CA certificates.
+
+#### Certificate Mode (`cert`)
+
+- **Full certificate chain validation** against pinned X.509 certificates
+- The system trust chain is **replaced** with pinned anchors
+- The TLS handshake succeeds **only if** the server chain can be validated against pinned certificates
+- More secure than fingerprint mode as it validates the entire chain
+
+#### Excluded Domains
+
+- SSL pinning is bypassed
+- System trust is still validated (device's CA certificates)
+- Useful for debugging or trusted internal services
+
+### General Security Considerations
+
+- Only HTTPS URLs are accepted.
 - SSL pinning **requires ongoing maintenance**.
   Certificates that expire or are rotated **must be updated** before they become invalid.
 - Incorrect configuration may result in **loss of network connectivity**.
@@ -574,6 +827,64 @@ try {
 - This plugin is provided **as-is**, without warranty.
 
 Always test thoroughly in your target environment.
+
+---
+
+## Cross-Platform Nominal Payload
+
+This section documents the nominal payload that the bridges return on both Android and iOS after the Task 7 changes. It is intended for developers integrating the plugin from JavaScript and should remain free of autogenerated docgen blocks.
+
+- Payload shape (fields present on both platforms):
+- actualFingerprint: string | null
+- fingerprintMatched: boolean
+- matchedFingerprint: string | null
+- excludedDomain: boolean | null
+- mode: "fingerprint" | "cert" | "excluded" | null
+- error: string | null
+- errorCode: string | null
+
+- Semantics:
+- Excluded Domain: resolved result with excludedDomain = true and fingerprintMatched = true; errorCode = EXCLUDED_DOMAIN; error = "Excluded domain"; not rejected.
+- Fingerprint/Cert: results return fingerprintMatched = true with actualFingerprint; errorCode/error empty on success, or PINNING_FAILED on mismatch.
+- Failures: non-excluded errors are delivered via rejection with canonical error codes (TIMEOUT, NETWORK_ERROR, INVALID_INPUT, INIT_FAILED, TRUST_EVALUATION_FAILED, etc.).
+
+- Examples:
+
+```ts
+// Successful fingerprint check
+{
+  actualFingerprint: "AB:CD:...",
+  fingerprintMatched: true,
+  mode: "fingerprint",
+  error: "",
+  errorCode: ""
+}
+```
+
+```ts
+// Excluded domain, system trust handshake
+{
+  actualFingerprint: "AB:CD:...",
+  fingerprintMatched: true,
+  excludedDomain: true,
+  mode: "excluded",
+  errorCode: "EXCLUDED_DOMAIN",
+  error: "Excluded domain"
+}
+```
+
+```ts
+// Timeout
+{
+  fingerprintMatched: false,
+  errorCode: "TIMEOUT",
+  error: "Timeout"
+}
+```
+
+- Implementation notes:
+- Android bridge returns SSLPinningResultModel mapped to a JSObject with the fields above.
+- iOS payload keys align with the same fields and canonical error messages.
 
 ---
 

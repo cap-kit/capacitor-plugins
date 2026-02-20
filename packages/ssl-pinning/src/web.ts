@@ -1,14 +1,7 @@
-/**
- * This module provides a web implementation of the SSLPinningPlugin.
- * The functionality is limited in a web context due to the lack of SSL certificate inspection capabilities in browsers.
- *
- * The implementation adheres to the SSLPinningPlugin interface but provides fallback behavior
- * because browsers do not allow direct inspection of SSL certificate details.
- */
-
-import { CapacitorException, ExceptionCode, WebPlugin } from '@capacitor/core';
+import { WebPlugin } from '@capacitor/core';
 
 import { PluginVersionResult, SSLPinningPlugin, SSLPinningResult } from './definitions';
+import { PLUGIN_VERSION } from './version';
 
 /**
  * Web implementation of the SSLPinning plugin.
@@ -17,13 +10,17 @@ import { PluginVersionResult, SSLPinningPlugin, SSLPinningResult } from './defin
  * therefore all SSL pinning methods are unimplemented.
  */
 export class SSLPinningWeb extends WebPlugin implements SSLPinningPlugin {
+  constructor() {
+    super();
+  }
+
   /**
    * Checks a single SSL certificate against the expected fingerprint.
    * @return A promise that resolves to the result of the certificate check.
    * @throws CapacitorException indicating unimplemented functionality.
    */
   async checkCertificate(): Promise<SSLPinningResult> {
-    throw this.createUnimplementedError();
+    throw this.unimplemented();
   }
 
   /**
@@ -32,10 +29,12 @@ export class SSLPinningWeb extends WebPlugin implements SSLPinningPlugin {
    * @throws CapacitorException indicating unimplemented functionality.
    */
   async checkCertificates(): Promise<SSLPinningResult> {
-    throw this.createUnimplementedError();
+    throw this.unimplemented();
   }
 
-  // --- Plugin Info ---
+  // -----------------------------------------------------------------------------
+  // Plugin Info
+  // -----------------------------------------------------------------------------
 
   /**
    * Returns the plugin version.
@@ -44,21 +43,6 @@ export class SSLPinningWeb extends WebPlugin implements SSLPinningPlugin {
    * rather than a native implementation.
    */
   async getPluginVersion(): Promise<PluginVersionResult> {
-    return { version: 'web' };
-  }
-
-  /**
-   * Creates a standardized exception for unimplemented methods.
-   *
-   * This utility method centralizes the creation of exceptions for functionality that is not supported
-   * on the current platform, ensuring consistency in error reporting.
-   *
-   * @returns {CapacitorException} An exception with the code `Unimplemented` and a descriptive message.
-   */
-  private createUnimplementedError(): CapacitorException {
-    return new CapacitorException(
-      'This plugin method is not implemented on this platform.',
-      ExceptionCode.Unimplemented,
-    );
+    return { version: PLUGIN_VERSION };
   }
 }

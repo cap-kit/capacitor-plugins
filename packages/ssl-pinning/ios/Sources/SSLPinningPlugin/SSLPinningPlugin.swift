@@ -59,33 +59,28 @@ public final class SSLPinningPlugin: CAPPlugin, CAPBridgedPlugin {
         implementation.applyConfig(cfg)
 
         // Log if verbose logging is enabled
-        SSLPinningLogger.debug("SSLPinning plugin loaded")
+        SSLPinningLogger.debug("Plugin loaded. Version: ", PluginVersion.number)
     }
 
     // MARK: - Error Mapping
 
     /**
-     Maps native SSLPinningError values
-     to JavaScript-facing error codes.
+     * Rejects the call using standardized error codes from the native SSLPinningError enum.
      */
     private func reject(
         _ call: CAPPluginCall,
         error: SSLPinningError
     ) {
-        let code: String
+        // Use the centralized errorCode and message defined in SSLPinningError.swift
+        call.reject(error.message, error.errorCode)
+    }
 
-        switch error {
-        case .unavailable:
-            code = "UNAVAILABLE"
-        case .permissionDenied:
-            code = "PERMISSION_DENIED"
-        case .initFailed:
-            code = "INIT_FAILED"
-        case .unknownType:
-            code = "UNKNOWN_TYPE"
+    private func handleError(_ call: CAPPluginCall, _ error: Error) {
+        if let SSLPinningError = error as? SSLPinningError {
+            call.reject(SSLPinningError.message, SSLPinningError.errorCode)
+        } else {
+            reject(call, error: .initFailed(error.localizedDescription))
         }
-
-        call.reject(error.message, code)
     }
 
     // MARK: - SSL Pinning (single fingerprint)
@@ -104,8 +99,24 @@ public final class SSLPinningPlugin: CAPPlugin, CAPBridgedPlugin {
 
         guard !url.isEmpty else {
             call.reject(
-                "Missing url",
-                "UNKNOWN_TYPE"
+                SSLPinningErrorMessages.urlRequired,
+                "INVALID_INPUT"
+            )
+            return
+        }
+
+        guard let urlObj = URL(string: url), let host = urlObj.host, !host.isEmpty else {
+            call.reject(
+                SSLPinningErrorMessages.noHostFoundInUrl,
+                "INVALID_INPUT"
+            )
+            return
+        }
+
+        if let fp = fingerprint, !SSLPinningUtils.isValidFingerprintFormat(fp) {
+            call.reject(
+                SSLPinningErrorMessages.invalidFingerprintFormat,
+                "INVALID_INPUT"
             )
             return
         }
@@ -118,6 +129,7 @@ public final class SSLPinningPlugin: CAPPlugin, CAPBridgedPlugin {
                         fingerprintFromArgs: fingerprint
                     )
 
+                // Converting Swift Dictionary to JSObject
                 call.resolve(result)
             } catch let error as SSLPinningError {
                 self.reject(call, error: error)
@@ -139,6 +151,7 @@ public final class SSLPinningPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func checkCertificates(_ call: CAPPluginCall) {
         let url = call.getString("url", "")
 
+        // Extraction and filtering of optional fingerprints
         let fingerprints =
             call.getArray("fingerprints")?
             .compactMap { $0 as? String }
@@ -146,10 +159,30 @@ public final class SSLPinningPlugin: CAPPlugin, CAPBridgedPlugin {
 
         guard !url.isEmpty else {
             call.reject(
-                "Missing url",
-                "UNKNOWN_TYPE"
+                SSLPinningErrorMessages.urlRequired,
+                "INVALID_INPUT"
             )
             return
+        }
+
+        guard let urlObj = URL(string: url), let host = urlObj.host, !host.isEmpty else {
+            call.reject(
+                SSLPinningErrorMessages.noHostFoundInUrl,
+                "INVALID_INPUT"
+            )
+            return
+        }
+
+        if let fps = fingerprints {
+            for fp in fps {
+                if !SSLPinningUtils.isValidFingerprintFormat(fp) {
+                    call.reject(
+                        SSLPinningErrorMessages.invalidFingerprintFormat,
+                        "INVALID_INPUT"
+                    )
+                    return
+                }
+            }
         }
 
         Task {
