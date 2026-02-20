@@ -22,6 +22,7 @@ import {
   MergeContactsOptions,
   MergeContactsResult,
 } from './definitions';
+import { PLUGIN_VERSION } from './version';
 
 type WebContact = {
   name?: string[];
@@ -298,7 +299,7 @@ export class PeopleWeb extends WebPlugin implements PeoplePlugin {
    * rather than a native implementation.
    */
   async getPluginVersion(): Promise<PluginVersionResult> {
-    return { version: 'web' };
+    return { version: PLUGIN_VERSION };
   }
 
   // -----------------------------------------------------------------------------
