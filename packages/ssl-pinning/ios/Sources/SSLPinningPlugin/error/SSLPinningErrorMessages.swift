@@ -12,6 +12,7 @@ enum SSLPinningErrorMessages {
     static let noFingerprintsProvided = "No fingerprints provided"
     static let noCertsProvided = "No certs provided"
     static let noHostFoundInUrl = "No host found in URL"
+    static let invalidFingerprintFormat = "Invalid fingerprint format"
     static let unsupportedHost = "Unsupported host: %@"
     static let pinningFailed = "Pinning failed"
     static let excludedDomain = "Excluded domain"

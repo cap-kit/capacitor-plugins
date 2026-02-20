@@ -11,6 +11,7 @@ object SSLPinningErrorMessages {
   const val NO_FINGERPRINTS_PROVIDED = "No fingerprints provided"
   const val NO_CERTS_PROVIDED = "No certs provided"
   const val NO_HOST_FOUND_IN_URL = "No host found in URL"
+  const val INVALID_FINGERPRINT_FORMAT = "Invalid fingerprint format"
   const val UNSUPPORTED_HOST = "Unsupported host: %s"
   const val PINNING_FAILED = "Pinning failed"
   const val EXCLUDED_DOMAIN = "Excluded domain"

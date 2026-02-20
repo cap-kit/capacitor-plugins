@@ -141,6 +141,20 @@ class SSLPinningPlugin : Plugin() {
       return
     }
 
+    val parsedUrl = java.net.URL(url)
+    if (parsedUrl.host.isNullOrBlank()) {
+      call.reject(SSLPinningErrorMessages.NO_HOST_FOUND_IN_URL, "INVALID_INPUT")
+      return
+    }
+
+    if (fingerprint != null) {
+      val normalized = fingerprint.replace(":", "").lowercase()
+      if (normalized.length != 64 || !normalized.matches(Regex("^[a-f0-9]+$"))) {
+        call.reject(SSLPinningErrorMessages.INVALID_FINGERPRINT_FORMAT, "INVALID_INPUT")
+        return
+      }
+    }
+
     try {
       execute {
         try {
@@ -209,6 +223,20 @@ class SSLPinningPlugin : Plugin() {
     if (url.isNullOrBlank()) {
       call.reject(SSLPinningErrorMessages.URL_REQUIRED, "INVALID_INPUT")
       return
+    }
+
+    val parsedUrl = java.net.URL(url)
+    if (parsedUrl.host.isNullOrBlank()) {
+      call.reject(SSLPinningErrorMessages.NO_HOST_FOUND_IN_URL, "INVALID_INPUT")
+      return
+    }
+
+    fingerprints?.forEach { fp ->
+      val normalized = fp.replace(":", "").lowercase()
+      if (normalized.length != 64 || !normalized.matches(Regex("^[a-f0-9]+$"))) {
+        call.reject(SSLPinningErrorMessages.INVALID_FINGERPRINT_FORMAT, "INVALID_INPUT")
+        return
+      }
     }
 
     try {

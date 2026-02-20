@@ -105,6 +105,25 @@ public final class SSLPinningPlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
+        guard let urlObj = URL(string: url), let host = urlObj.host, !host.isEmpty else {
+            call.reject(
+                SSLPinningErrorMessages.noHostFoundInUrl,
+                "INVALID_INPUT"
+            )
+            return
+        }
+
+        if let fp = fingerprint {
+            let normalized = fp.replacingOccurrences(of: ":", with: "").lowercased()
+            if normalized.count != 64 || !normalized.allSatisfy({ $0.isHexDigit }) {
+                call.reject(
+                    SSLPinningErrorMessages.invalidFingerprintFormat,
+                    "INVALID_INPUT"
+                )
+                return
+            }
+        }
+
         Task {
             do {
                 let result =
@@ -147,6 +166,27 @@ public final class SSLPinningPlugin: CAPPlugin, CAPBridgedPlugin {
                 "INVALID_INPUT"
             )
             return
+        }
+
+        guard let urlObj = URL(string: url), let host = urlObj.host, !host.isEmpty else {
+            call.reject(
+                SSLPinningErrorMessages.noHostFoundInUrl,
+                "INVALID_INPUT"
+            )
+            return
+        }
+
+        if let fps = fingerprints {
+            for fp in fps {
+                let normalized = fp.replacingOccurrences(of: ":", with: "").lowercased()
+                if normalized.count != 64 || !normalized.allSatisfy({ $0.isHexDigit }) {
+                    call.reject(
+                        SSLPinningErrorMessages.invalidFingerprintFormat,
+                        "INVALID_INPUT"
+                    )
+                    return
+                }
+            }
         }
 
         Task {
