@@ -1,6 +1,6 @@
 {
   "name": "@cap-kit/people",
-  "version": "8.0.0",
+  "version": "8.0.1",
   "description": "Unified, high-performance contact management for Capacitor with zero-permission picking and capability-based access.",
   "type": "module",
   "private": false,

@@ -1,5 +1,11 @@
 # @cap-kit/rank
 
+## 8.1.3
+
+### Patch Changes
+
+- 6a7a6e2: chore: Update internal and external dependencies to latest stable versions
+
 ## 8.1.2
 
 ### Patch Changes
