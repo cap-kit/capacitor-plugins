@@ -143,17 +143,17 @@ Capacitor plugin to open app and system settings on iOS and Android.
 
 <td align="center" width="33%" valign="top">
 
-### <a href="./packages/ssl-pinning">🔒 Ssl Pinning</a>
+### <a href="./packages/tls-fingerprint">🔒 Tls Fingerprint</a>
 
-<a href="https://www.npmjs.com/package/@cap-kit/ssl-pinning"><code>@cap-kit/ssl-pinning</code></a>
+<a href="https://www.npmjs.com/package/@cap-kit/tls-fingerprint"><code>@cap-kit/tls-fingerprint</code></a>
 
-<a href="https://www.npmjs.com/package/@cap-kit/ssl-pinning"><img src="https://img.shields.io/npm/v/@cap-kit/ssl-pinning?style=flat-square&label=npm&logo=npm" alt="npm version" /></a>
-<a href="https://www.npmjs.com/package/@cap-kit/ssl-pinning"><img src="https://img.shields.io/npm/dm/@cap-kit/ssl-pinning?style=flat-square&label=downloads&logo=npm&color=orange" alt="downloads" /></a>
+<a href="https://www.npmjs.com/package/@cap-kit/tls-fingerprint"><img src="https://img.shields.io/npm/v/@cap-kit/tls-fingerprint?style=flat-square&label=npm&logo=npm" alt="npm version" /></a>
+<a href="https://www.npmjs.com/package/@cap-kit/tls-fingerprint"><img src="https://img.shields.io/npm/dm/@cap-kit/tls-fingerprint?style=flat-square&label=downloads&logo=npm&color=orange" alt="downloads" /></a>
 
-Capacitor plugin for runtime SSL certificate fingerprint pinning on iOS and Android
+Runtime TLS leaf certificate SHA-256 fingerprint validation plugin for Capacitor (iOS & Android)
 
-<a href="./packages/ssl-pinning"><strong>Docs</strong></a> • 
-<a href="https://www.npmjs.com/package/@cap-kit/ssl-pinning"><strong>NPM</strong></a>
+<a href="./packages/tls-fingerprint"><strong>Docs</strong></a> • 
+<a href="https://www.npmjs.com/package/@cap-kit/tls-fingerprint"><strong>NPM</strong></a>
 
 </td>
 </tr>
@@ -223,15 +223,15 @@ Capacitor plugin to open app and system settings on iOS and Android.
 
 ---
 
-### 🔒 Ssl Pinning
+### 🔒 Tls Fingerprint
 
-`@cap-kit/ssl-pinning`
+`@cap-kit/tls-fingerprint`
 
-![npm](https://img.shields.io/npm/v/@cap-kit/ssl-pinning?style=flat-square&label=npm&logo=npm) ![downloads](https://img.shields.io/npm/dm/@cap-kit/ssl-pinning?style=flat-square&label=downloads&logo=npm&color=orange)
+![npm](https://img.shields.io/npm/v/@cap-kit/tls-fingerprint?style=flat-square&label=npm&logo=npm) ![downloads](https://img.shields.io/npm/dm/@cap-kit/tls-fingerprint?style=flat-square&label=downloads&logo=npm&color=orange)
 
-Capacitor plugin for runtime SSL certificate fingerprint pinning on iOS and Android
+Runtime TLS leaf certificate SHA-256 fingerprint validation plugin for Capacitor (iOS & Android)
 
-[Docs](./packages/ssl-pinning) • [NPM](https://www.npmjs.com/package/@cap-kit/ssl-pinning)
+[Docs](./packages/tls-fingerprint) • [NPM](https://www.npmjs.com/package/@cap-kit/tls-fingerprint)
 
 ---
 
