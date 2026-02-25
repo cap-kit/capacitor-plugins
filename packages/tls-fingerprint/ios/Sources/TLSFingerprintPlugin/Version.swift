@@ -10,7 +10,7 @@ import Foundation
 public enum PluginVersion {
     /**
       The semantic version string of the plugin.
-      Value synchronized from package.json: "8.0.0-next.0"
+      Value synchronized from package.json: "8.0.0"
      */
-    public static let number = "8.0.0-next.0"
+    public static let number = "8.0.0"
 }
