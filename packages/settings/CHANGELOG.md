@@ -1,5 +1,11 @@
 # @cap-kit/settings
 
+## 8.1.5
+
+### Patch Changes
+
+- 6a7a6e2: chore: Update internal and external dependencies to latest stable versions
+
 ## 8.1.4
 
 ### Patch Changes
