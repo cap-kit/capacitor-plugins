@@ -13,11 +13,12 @@ import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 import com.getcapacitor.annotation.Permission
-import io.capkit.integrity.config.IntegrityConfig
-import io.capkit.integrity.error.IntegrityError
-import io.capkit.integrity.models.IntegrityCheckOptions
-import io.capkit.integrity.utils.IntegrityLogger
-import io.capkit.integrity.utils.IntegrityUtils
+import io.capkit.integrity.config.Config
+import io.capkit.integrity.error.ErrorMessages
+import io.capkit.integrity.error.NativeError
+import io.capkit.integrity.logger.Logger
+import io.capkit.integrity.models.CheckOptions
+import io.capkit.integrity.utils.Utils
 
 /**
  * Capacitor bridge for the Integrity plugin (Android).
@@ -30,7 +31,7 @@ import io.capkit.integrity.utils.IntegrityUtils
  * - Parse JavaScript input
  * - Invoke the native implementation
  * - Resolve or reject PluginCall exactly once
- * - Map native IntegrityError to JS-facing error codes
+ * - Map native NativeError to JS-facing error codes
  *
  * Forbidden:
  * - Platform-specific business logic
@@ -56,11 +57,11 @@ class IntegrityPlugin : Plugin() {
    *
    * CONTRACT:
    * - Initialized exactly once in `load()`
-   * - Treated as read-only afterwards
+   * - Treated as read-only afterward
    * - MUST NOT be mutated at runtime
    * - MUST NOT be accessed by the Impl layer
    */
-  private lateinit var config: IntegrityConfig
+  private lateinit var config: Config
 
   /**
    * Native implementation layer.
@@ -71,7 +72,7 @@ class IntegrityPlugin : Plugin() {
    * - MUST NOT access PluginCall or Capacitor APIs
    * - MUST NOT perform UI operations
    */
-  private lateinit var implementation: IntegrityImpl
+  private lateinit var implementation: Integrity
 
   // ---------------------------------------------------------------------------
   // Event-related properties
@@ -125,11 +126,11 @@ class IntegrityPlugin : Plugin() {
   override fun load() {
     super.load()
 
-    config = IntegrityConfig(this)
-    implementation = IntegrityImpl(context)
+    config = Config(this)
+    implementation = Integrity(context)
     implementation.updateConfig(config)
 
-    IntegrityLogger.debug("Plugin loaded. Version: ", BuildConfig.PLUGIN_VERSION)
+    Logger.debug("Plugin loaded. Version: ", BuildConfig.PLUGIN_VERSION)
 
     registerEventReceiver()
   }
@@ -166,14 +167,14 @@ class IntegrityPlugin : Plugin() {
 
     // Immediate check for debugger attachment upon resume (Real-time monitor)
     if (android.os.Debug.isDebuggerConnected()) {
-      val options = IntegrityCheckOptions(level = "standard", includeDebugInfo = false)
+      val options = CheckOptions(level = "standard", includeDebugInfo = false)
       execute {
         try {
           val result = implementation.performCheck(options)
-          val jsResult = IntegrityUtils.toJSObject(result)
+          val jsResult = Utils.toJSObject(result)
           emitOrBufferSignal(jsResult)
         } catch (e: Exception) {
-          IntegrityLogger.error("Real-time monitor: Debugger check failed: ${e.message}")
+          Logger.error("Real-time monitor: Debugger check failed: ${e.message}")
         }
       }
     }
@@ -190,7 +191,7 @@ class IntegrityPlugin : Plugin() {
   private fun flushBufferedSignals() {
     synchronized(bufferedSignals) {
       if (hasListeners(EVENT_INTEGRITY_SIGNAL) && bufferedSignals.isNotEmpty()) {
-        IntegrityLogger.debug("Flushing ${bufferedSignals.size} buffered signals to JS")
+        Logger.debug("Flushing ${bufferedSignals.size} buffered signals to JS")
         val iterator = bufferedSignals.iterator()
         while (iterator.hasNext()) {
           val signal = iterator.next()
@@ -280,7 +281,7 @@ class IntegrityPlugin : Plugin() {
     // It's safe to call unregisterReceiver even if the receiver was never registered
     try {
       context.unregisterReceiver(eventReceiver)
-    } catch (e: IllegalArgumentException) {
+    } catch (_: IllegalArgumentException) {
       // Receiver wasn't registered, ignore
     }
   }
@@ -290,7 +291,7 @@ class IntegrityPlugin : Plugin() {
   // ---------------------------------------------------------------------------
 
   /**
-   * Maps native IntegrityError values to JavaScript-facing error codes.
+   * Maps native NativeError values to JavaScript-facing error codes.
    *
    * CONTRACT:
    * - This method is the ONLY place where native errors
@@ -302,17 +303,22 @@ class IntegrityPlugin : Plugin() {
    */
   private fun reject(
     call: PluginCall,
-    error: IntegrityError,
+    error: NativeError,
   ) {
-    val code =
-      when (error) {
-        is IntegrityError.Unavailable -> "UNAVAILABLE"
-        is IntegrityError.PermissionDenied -> "PERMISSION_DENIED"
-        is IntegrityError.InitFailed -> "INIT_FAILED"
-        is IntegrityError.UnknownType -> "UNKNOWN_TYPE"
-      }
+    val message = error.message ?: ErrorMessages.INTERNAL_ERROR
+    call.reject(message, error.errorCode)
+  }
 
-    call.reject(error.message, code)
+  private fun handleError(
+    call: PluginCall,
+    throwable: Throwable,
+  ) {
+    if (throwable is NativeError) {
+      reject(call, throwable)
+    } else {
+      val message = throwable.message ?: ErrorMessages.UNEXPECTED_NATIVE_ERROR
+      reject(call, NativeError.InitFailed(message))
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -334,7 +340,7 @@ class IntegrityPlugin : Plugin() {
   @PluginMethod
   fun check(call: PluginCall) {
     val options =
-      IntegrityCheckOptions(
+      CheckOptions(
         level = call.getString("level") ?: "basic",
         includeDebugInfo = call.getBoolean("includeDebugInfo") ?: false,
       )
@@ -343,15 +349,12 @@ class IntegrityPlugin : Plugin() {
     execute {
       try {
         val result = implementation.performCheck(options)
-        val jsResult = IntegrityUtils.toJSObject(result)
+        val jsResult = Utils.toJSObject(result)
         call.resolve(jsResult)
-      } catch (e: IntegrityError) {
-        reject(call, e)
+      } catch (e: NativeError) {
+        handleError(call, e)
       } catch (e: Exception) {
-        call.reject(
-          "Unexpected native error during integrity check.",
-          "INIT_FAILED",
-        )
+        handleError(call, e)
       }
     }
   }
@@ -377,28 +380,59 @@ class IntegrityPlugin : Plugin() {
    */
   @PluginMethod
   fun presentBlockPage(call: PluginCall) {
-    if (!config.blockPageEnabled || config.blockPageUrl == null) {
+    val blockPage = config.blockPage
+    if (blockPage == null || !blockPage.enabled || blockPage.url == null) {
       call.resolve(JSObject().put("presented", false))
       return
     }
 
     val reason = call.getString("reason")
     val dismissible = call.getBoolean("dismissible") ?: false
+    val customUrl = call.getString("customUrl")
 
-    val url =
-      if (reason != null) {
-        "${config.blockPageUrl}?reason=${Uri.encode(reason)}"
+    // Apply URL limit validation
+    if (customUrl != null && customUrl.length > 2048) {
+      handleError(call, NativeError.InvalidInput("customUrl exceeds maximum length of 2048 characters"))
+      return
+    }
+
+    // Determine final URL: customUrl takes precedence over config
+    val urlBase = customUrl ?: blockPage.url
+
+    // Build query string with reason and context
+    val queryParams = mutableListOf<String>()
+
+    if (reason != null) {
+      queryParams.add("reason=${Uri.encode(reason)}")
+    }
+
+    val contextObj = call.getObject("context")
+    if (contextObj != null && contextObj.length() > 0) {
+      val contextJson = contextObj.toString()
+      queryParams.add("context=${Uri.encode(contextJson)}")
+    }
+
+    val finalUrl: String
+    finalUrl =
+      if (queryParams.isEmpty()) {
+        urlBase
       } else {
-        config.blockPageUrl
+        val queryString = queryParams.joinToString("&")
+        if (urlBase.contains("?")) {
+          "$urlBase&$queryString"
+        } else {
+          "$urlBase?$queryString"
+        }
       }
 
     val intent =
       Intent(
         context,
-        io.capkit.integrity.ui.IntegrityBlockActivity::class.java,
+        io.capkit.integrity.ui.BlockActivity::class.java,
       ).apply {
-        putExtra("url", url)
+        putExtra("url", finalUrl)
         putExtra("dismissible", dismissible)
+        putExtra("preventTapJacking", blockPage.preventTapJacking)
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
         // If not dismissible, clear the back stack
@@ -455,7 +489,7 @@ class IntegrityPlugin : Plugin() {
       when (intent?.action) {
         Intent.ACTION_PACKAGE_ADDED, Intent.ACTION_PACKAGE_REPLACED -> {
           val options =
-            IntegrityCheckOptions(
+            CheckOptions(
               level = "standard",
               includeDebugInfo = false,
             )
@@ -464,14 +498,14 @@ class IntegrityPlugin : Plugin() {
           execute {
             try {
               val result = implementation.performCheck(options)
-              val jsResult = IntegrityUtils.toJSObject(result)
+              val jsResult = Utils.toJSObject(result)
               onSignalDetected(jsResult)
-            } catch (e: IntegrityError) {
-              IntegrityLogger.error(
+            } catch (e: NativeError) {
+              Logger.error(
                 "IntegrityEventReceiver: Error during package change check: ${e.message}",
               )
             } catch (e: Exception) {
-              IntegrityLogger.error(
+              Logger.error(
                 "IntegrityEventReceiver: Unexpected error during package change check: ${e.message}",
               )
             }

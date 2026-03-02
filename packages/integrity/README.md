@@ -156,7 +156,7 @@ You do NOT need this integration if:
 
 ### Android Integration
 
-In your `MainActivity.kt`, call `IntegrityImpl.onApplicationCreate(context)` inside the `onCreate` method:
+In your `MainActivity.kt`, call `Integrity.onApplicationCreate(context)` inside the `onCreate` method:
 
 ```diff
 
@@ -164,12 +164,12 @@ package io.ionic.starter // Use your actual package name
 
 import android.os.Bundle
 import com.getcapacitor.BridgeActivity
-+ import io.capkit.integrity.IntegrityImpl
++ import io.capkit.integrity.Integrity
 
 class MainActivity : BridgeActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
 +         // Capture security signals during early boot
-+         IntegrityImpl.onApplicationCreate(this)
++         Integrity.onApplicationCreate(this)
 
         super.onCreate(savedInstanceState)
     }
@@ -179,7 +179,7 @@ class MainActivity : BridgeActivity() {
 
 ### iOS Integration
 
-In your `AppDelegate.swift`, call `IntegrityImpl.onAppLaunch()` inside the `application(_:didFinishLaunchingWithOptions:)` method:
+In your `AppDelegate.swift`, call `Integrity.onAppLaunch()` inside the `application(_:didFinishLaunchingWithOptions:)` method:
 
 ```diff
 
@@ -187,13 +187,13 @@ import UIKit
 import Capacitor
 + import IntegrityPlugin // Import the plugin module
 
-@UIApplicationMain
+@main
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
 
 +        // Capture security signals at the earliest stage possible
-+        IntegrityImpl.onAppLaunch()
++        Integrity.onAppLaunch()
 
         return true
     }
@@ -273,7 +273,8 @@ In `capacitor.config.json`:
       "verboseLogging": true,
       "blockPage": {
         "enabled": true,
-        "url": "public/integrity-block.html"
+        "url": "public/integrity-block.html",
+        "preventTapJacking": true
       },
       "jailbreakUrlSchemes": {
         "enabled": true,
@@ -298,6 +299,7 @@ const config: CapacitorConfig = {
       blockPage: {
         enabled: true,
         url: 'public/integrity-block.html',
+        preventTapJacking: true,
       },
       jailbreakUrlSchemes: {
         enabled: true,
@@ -759,10 +761,12 @@ Result object returned by `presentBlockPage()`.
 
 Options for presenting the integrity block page.
 
-| Prop              | Type                 | Description                                                                                                                                | Default            | Since |
-| ----------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------ | ----- |
-| **`reason`**      | <code>string</code>  | Optional reason code passed to the block page. This value may be used for analytics, localization, or user messaging.                      |                    | 8.0.0 |
-| **`dismissible`** | <code>boolean</code> | Whether the block page can be dismissed by the user. Defaults to false. In production environments, this should typically remain disabled. | <code>false</code> | 8.0.0 |
+| Prop              | Type                                       | Description                                                                                                                                | Default            | Since |
+| ----------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------ | ----- |
+| **`reason`**      | <code>string</code>                        | Optional reason code passed to the block page. This value may be used for analytics, localization, or user messaging.                      |                    | 8.0.0 |
+| **`dismissible`** | <code>boolean</code>                       | Whether the block page can be dismissed by the user. Defaults to false. In production environments, this should typically remain disabled. | <code>false</code> | 8.0.0 |
+| **`customUrl`**   | <code>string</code>                        | Optional override for the block page URL. Takes precedence over the static configuration. Maximum length: 2048 characters.                 |                    | 8.0.5 |
+| **`context`**     | <code>Record&lt;string, unknown&gt;</code> | Optional context data to pass to the block page. This value is encoded as a JSON string and appended to the URL as a query parameter.      |                    | 8.0.5 |
 
 #### PluginVersionResult
 

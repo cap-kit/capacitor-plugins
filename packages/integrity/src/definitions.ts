@@ -56,7 +56,7 @@ export type IntegritySignalEvent = IntegritySignal;
  * Standardized error codes used by the Integrity plugin.
  *
  * Errors are delivered via Promise rejection with a structured
- * `{ message, code }` object matching `IntegrityError`.
+ * `{ message, code }` object matching `NativeError`.
  *
  * @since 8.0.0
  */
@@ -72,6 +72,21 @@ export enum IntegrityErrorCode {
 
   /** Invalid or unsupported input was provided. */
   UNKNOWN_TYPE = 'UNKNOWN_TYPE',
+
+  /** Invalid input provided (e.g., exceeds max length). */
+  INVALID_INPUT = 'INVALID_INPUT',
+
+  /** The operation timed out. */
+  TIMEOUT = 'TIMEOUT',
+
+  /** A network error occurred. */
+  NETWORK_ERROR = 'NETWORK_ERROR',
+
+  /** An internal error occurred. */
+  INTERNAL_ERROR = 'INTERNAL_ERROR',
+
+  /** An unexpected native error occurred. */
+  UNEXPECTED_NATIVE_ERROR = 'UNEXPECTED_NATIVE_ERROR',
 }
 
 /**
@@ -187,7 +202,26 @@ export interface IntegrityBlockPageConfig {
    * @example 'https://example.com/integrity.html'
    * @since 8.0.0
    */
-  url: string;
+  url?: string;
+
+  /**
+   * Enables tap-jacking prevention on the block page (Android only).
+   *
+   * When enabled, the WebView will filter obscured touches
+   * to prevent tap-jacking attacks on the block page.
+   *
+   * This uses:
+   * - `setFilterTouchesWhenObscured(true)` on Android 11 and below
+   * - `setHideOverlayWindows(true)` on Android 12+
+   *
+   * iOS: This setting has no effect as iOS does not support
+   * tap-jacking protection (already sandboxed).
+   *
+   * @default false
+   * @example true
+   * @since 8.0.5
+   */
+  preventTapJacking?: boolean;
 }
 
 /**
@@ -485,6 +519,27 @@ export interface PresentBlockPageOptions {
    * @since 8.0.0
    */
   dismissible?: boolean;
+
+  /**
+   * Optional override for the block page URL.
+   *
+   * Takes precedence over the static configuration.
+   * Maximum length: 2048 characters.
+   *
+   * @maxLength 2048
+   * @since 8.0.5
+   */
+  customUrl?: string;
+
+  /**
+   * Optional context data to pass to the block page.
+   *
+   * This value is encoded as a JSON string and appended
+   * to the URL as a query parameter.
+   *
+   * @since 8.0.5
+   */
+  context?: Record<string, unknown>;
 }
 
 // -----------------------------------------------------------------------------
@@ -519,7 +574,7 @@ export interface PluginVersionResult {
  *
  * @since 8.0.0
  */
-export interface IntegrityError {
+export interface NativeError {
   /**
    * Human-readable error description.
    */
