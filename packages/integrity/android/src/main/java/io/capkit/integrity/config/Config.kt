@@ -33,6 +33,7 @@ class Config(
     const val BLOCK_PAGE = "blockPage"
     const val BLOCK_PAGE_ENABLED = "enabled"
     const val BLOCK_PAGE_URL = "url"
+    const val BLOCK_PAGE_PREVENT_TAP_JACKING = "preventTapJacking"
   }
 
   // -----------------------------------------------------------------------------
@@ -88,6 +89,12 @@ class Config(
             } else {
               null
             },
+          preventTapJacking =
+            if (blockPageConfig.has(Keys.BLOCK_PAGE_PREVENT_TAP_JACKING)) {
+              blockPageConfig.getBoolean(Keys.BLOCK_PAGE_PREVENT_TAP_JACKING)
+            } else {
+              false
+            },
         )
       } else {
         null
@@ -108,8 +115,10 @@ class Config(
  *
  * @property enabled Enables the block page feature.
  * @property url URL or local path of the HTML page to present.
+ * @property preventTapJacking Enables tap-jacking prevention (Android only).
  */
 data class BlockPageConfig(
   val enabled: Boolean,
   val url: String?,
+  val preventTapJacking: Boolean,
 )

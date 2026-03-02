@@ -273,7 +273,8 @@ In `capacitor.config.json`:
       "verboseLogging": true,
       "blockPage": {
         "enabled": true,
-        "url": "public/integrity-block.html"
+        "url": "public/integrity-block.html",
+        "preventTapJacking": true
       },
       "jailbreakUrlSchemes": {
         "enabled": true,
@@ -298,6 +299,7 @@ const config: CapacitorConfig = {
       blockPage: {
         enabled: true,
         url: 'public/integrity-block.html',
+        preventTapJacking: true,
       },
       jailbreakUrlSchemes: {
         enabled: true,

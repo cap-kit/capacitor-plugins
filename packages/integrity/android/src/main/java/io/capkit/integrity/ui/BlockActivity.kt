@@ -7,6 +7,7 @@ import android.webkit.WebView
 import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
+import io.capkit.integrity.logger.Logger
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
@@ -17,6 +18,7 @@ import java.io.InputStreamReader
  * - Display a developer-provided HTML block page
  * - Support query parameters (e.g. "reason")
  * - Optionally allow dismissal via native UI controls
+ * - Monitor for overlay attacks via Window.Callback
  *
  * Security note:
  * - The block page is NOT dismissible by default
@@ -30,6 +32,19 @@ class BlockActivity : AppCompatActivity() {
    */
   private var dismissible: Boolean = false
 
+  /**
+   * Whether to enable tap-jacking prevention.
+   *
+   * Defaults to false (disabled).
+   */
+  private var preventTapJacking: Boolean = false
+
+  /**
+   * Window callback for overlay detection.
+   * Set in onCreate and cleared in onDestroy to avoid memory leaks.
+   */
+  private var overlayCallback: OverlayWindowCallback? = null
+
   @SuppressLint("SetJavaScriptEnabled")
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -39,6 +54,7 @@ class BlockActivity : AppCompatActivity() {
     // -------------------------------------------------------------------------
 
     dismissible = intent.getBooleanExtra("dismissible", false)
+    preventTapJacking = intent.getBooleanExtra("preventTapJacking", false)
 
     // -------------------------------------------------------------------------
     // Back button handling (modern API)
@@ -95,6 +111,25 @@ class BlockActivity : AppCompatActivity() {
         settings.domStorageEnabled = false
       }
 
+    // -------------------------------------------------------------------------
+    // Tap-jacking prevention (Android only)
+    // -------------------------------------------------------------------------
+
+    if (preventTapJacking) {
+      try {
+        // Android 11 and below: filter obscured touches
+        webView.setFilterTouchesWhenObscured(true)
+
+        // Android 12+: hide overlay windows at window level
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+          window.setHideOverlayWindows(true)
+        }
+      } catch (e: Exception) {
+        // Graceful degradation: don't crash if setting fails
+        Logger.error("Failed to enable tap-jacking prevention: ${e.message}")
+      }
+    }
+
     // Fill remaining space
     val webViewParams =
       LinearLayout.LayoutParams(
@@ -105,6 +140,12 @@ class BlockActivity : AppCompatActivity() {
     root.addView(webView, webViewParams)
 
     setContentView(root)
+
+    // -------------------------------------------------------------------------
+    // Window callback registration for overlay detection
+    // -------------------------------------------------------------------------
+
+    registerOverlayCallback()
 
     // -------------------------------------------------------------------------
     // URL handling
@@ -153,6 +194,55 @@ class BlockActivity : AppCompatActivity() {
       ) {
         // Intentionally disabled
       }
+    }
+  }
+
+  override fun onDestroy() {
+    unregisterOverlayCallback()
+    super.onDestroy()
+  }
+
+  /**
+   * Registers the OverlayWindowCallback to detect tapjacking/overlay attacks.
+   * Called in onCreate.
+   */
+  @Suppress("DEPRECATION")
+  private fun registerOverlayCallback() {
+    try {
+      val window = window ?: return
+
+      // Graceful degradation: check if setCallback is available
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val originalCallback = window.callback
+        if (originalCallback != null) {
+          overlayCallback =
+            OverlayWindowCallback(originalCallback) { eventType, flags ->
+              // Signal overlay detection - could be logged or emitted as event
+              Logger.warn("Overlay detected via Window.Callback: event=$eventType, flags=$flags")
+            }
+          window.callback = overlayCallback
+        }
+      } else {
+        // Fallback for older APIs - just log that detection is limited
+        Logger.debug("Window.Callback overlay detection not available on API < 33")
+      }
+    } catch (e: Exception) {
+      // Graceful degradation: don't crash if callback registration fails
+      Logger.error("Failed to register overlay callback: ${e.message}")
+    }
+  }
+
+  /**
+   * Unregisters the OverlayWindowCallback to avoid memory leaks.
+   * Called in onDestroy.
+   */
+  private fun unregisterOverlayCallback() {
+    try {
+      overlayCallback = null
+      // Note: We cannot restore the original callback here safely,
+      // as the window may already be detached.
+    } catch (e: Exception) {
+      // Graceful degradation
     }
   }
 

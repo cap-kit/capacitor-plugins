@@ -53,6 +53,18 @@ object Logger {
   }
 
   /**
+   * Prints a warning log message.
+   *
+   * Warning logs are always printed regardless of [verbose] state.
+   * Used for potentially problematic conditions.
+   *
+   * @param message Human-readable warning description.
+   */
+  fun warn(message: String) {
+    log(TAG, Log.WARN, message)
+  }
+
+  /**
    * Prints an error log message.
    *
    * Error logs are always printed regardless of [verbose] state.

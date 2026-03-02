@@ -432,6 +432,7 @@ class IntegrityPlugin : Plugin() {
       ).apply {
         putExtra("url", finalUrl)
         putExtra("dismissible", dismissible)
+        putExtra("preventTapJacking", blockPage.preventTapJacking)
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
         // If not dismissible, clear the back stack

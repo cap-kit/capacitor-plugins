@@ -203,6 +203,25 @@ export interface IntegrityBlockPageConfig {
    * @since 8.0.0
    */
   url?: string;
+
+  /**
+   * Enables tap-jacking prevention on the block page (Android only).
+   *
+   * When enabled, the WebView will filter obscured touches
+   * to prevent tap-jacking attacks on the block page.
+   *
+   * This uses:
+   * - `setFilterTouchesWhenObscured(true)` on Android 11 and below
+   * - `setHideOverlayWindows(true)` on Android 12+
+   *
+   * iOS: This setting has no effect as iOS does not support
+   * tap-jacking protection (already sandboxed).
+   *
+   * @default false
+   * @example true
+   * @since 8.0.5
+   */
+  preventTapJacking?: boolean;
 }
 
 /**

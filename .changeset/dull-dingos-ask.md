@@ -12,3 +12,8 @@ refactor(integrity): Normalize native naming, centralize error handling, and ali
 - Removed legacy and undocumented configuration keys in Android.
 - Added `customUrl` and `context` options to `presentBlockPage()` for dynamic block page content.
 - Added `INVALID_INPUT` error code for URL validation (max 2048 chars).
+- Added Android Window.Callback overlay detection in BlockActivity.
+- Added tap-jacking prevention via `setFilterTouchesWhenObscured` (API < 31) and `setHideOverlayWindows` (API >= 31).
+- Added `preventTapJacking` configuration option for block page.
+- Added `warn()` method to Android Logger.
+- Replaced direct `android.util.Log` calls with centralized `Logger` usage.
