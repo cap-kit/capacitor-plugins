@@ -9,7 +9,7 @@ import UIKit
  - Parse JavaScript input
  - Invoke the native implementation
  - Resolve or reject CAPPluginCall exactly once
- - Map native IntegrityError to JS-facing error codes
+ - Map native NativeError to JS-facing error codes
 
  Forbidden:
  - Platform-specific business logic
@@ -60,10 +60,10 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
     // MARK: - Properties
 
     /// Native implementation instance.
-    private let implementation = IntegrityImpl()
+    private let implementation = Integrity()
 
     // Configuration instance
-    private var config: IntegrityConfig?
+    private var config: Config?
 
     // MARK: - Event-related properties
 
@@ -82,7 +82,7 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
      - Called exactly once by Capacitor
      - This is the ONLY valid place to:
      - read plugin configuration
-     - create IntegrityConfig
+     - create Config
      - inject configuration into the Impl layer
      - register system event observers (NotificationCenter)
 
@@ -91,13 +91,14 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
      - Observers registered here MUST be detached in `deinit`
      */
     override public func load() {
-        // Initialize IntegrityConfig
-        let cfg = IntegrityConfig(plugin: self)
+        // Initialize Config
+        let cfg = Config(plugin: self)
         self.config = cfg
-        implementation.applyConfig(cfg)
 
-        // Log if verbose logging is enabled
-        IntegrityLogger.debug("Plugin loaded. Version: ", PluginVersion.number)
+        // Log plugin loaded first (before config) - use info since verbose may not be set yet
+        Logger.info("Plugin loaded. Version: ", PluginVersion.number)
+
+        implementation.applyConfig(cfg)
 
         // Register passive system observers
         addEventObservers()
@@ -114,7 +115,7 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
         // Ensure we match the canonical event name used in the plugin
         if eventName == "onIntegritySignal" {
             // Trigger a flush of early boot signals
-            let options = IntegrityCheckOptions(level: "standard", includeDebugInfo: false)
+            let options = CheckOptions(level: "standard", includeDebugInfo: false)
             do {
                 // This will internally call mergeBootSignals to clear the volatile queue
                 let report = try implementation.performCheck(options: options)
@@ -122,7 +123,7 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
                     emitOrBufferSignal(report)
                 }
             } catch {
-                IntegrityLogger.error("Failed to flush boot signals on listener registration")
+                Logger.error("Failed to flush boot signals on listener registration")
             }
         }
     }
@@ -197,7 +198,7 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
     // MARK: - Error mapping
 
     /**
-     Maps native `IntegrityError` values to JS-facing error codes.
+     Maps native `NativeError` values to JS-facing error codes.
 
      CONTRACT:
      - Error codes MUST be stable and documented
@@ -206,22 +207,20 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
      */
     private func reject(
         _ call: CAPPluginCall,
-        error: IntegrityError
+        error: NativeError
     ) {
-        let code: String
+        call.reject(error.message, error.errorCode)
+    }
 
-        switch error {
-        case .unavailable:
-            code = "UNAVAILABLE"
-        case .permissionDenied:
-            code = "PERMISSION_DENIED"
-        case .initFailed:
-            code = "INIT_FAILED"
-        case .unknownType:
-            code = "UNKNOWN_TYPE"
+    private func handleError(_ call: CAPPluginCall, _ error: Error) {
+        if let nativeError = error as? NativeError {
+            reject(call, error: nativeError)
+        } else {
+            let message = error.localizedDescription.isEmpty
+                ? ErrorMessages.unexpectedNativeError
+                : error.localizedDescription
+            reject(call, error: .initFailed(message))
         }
-
-        call.reject(error.message, code)
     }
 
     // MARK: - Integrity check
@@ -232,9 +231,9 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func check(_ call: CAPPluginCall) {
         do {
             let options =
-                try call.decode(IntegrityCheckOptions.self)
+                try call.decode(CheckOptions.self)
 
-            let normalizedOptions = IntegrityCheckOptions(
+            let normalizedOptions = CheckOptions(
                 level: options.level ?? "basic",
                 includeDebugInfo: options.includeDebugInfo ?? false
             )
@@ -246,13 +245,10 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
 
             call.resolve(result)
 
-        } catch let error as IntegrityError {
+        } catch let error as NativeError {
             reject(call, error: error)
         } catch {
-            call.reject(
-                "Unexpected native error during integrity check.",
-                "INIT_FAILED"
-            )
+            handleError(call, error)
         }
     }
 
@@ -283,14 +279,11 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
             // CONTRACT:
             // All UIKit interactions MUST occur on the main thread.
             guard let rootVC = self.bridge?.viewController else {
-                call.reject(
-                    "View controller not available",
-                    "UNAVAILABLE"
-                )
+                self.reject(call, error: .unavailable(ErrorMessages.viewControllerUnavailable))
                 return
             }
 
-            let blockVC = IntegrityBlockViewController(
+            let blockVC = BlockViewController(
                 url: finalURL,
                 dismissible: dismissible
             )
@@ -324,7 +317,7 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc private func handleDidBecomeActiveNotification(_ notification: Notification) {
         // Targeted options for real-time monitoring.
         // Using explicit labels to satisfy Swift compiler and struct definition.
-        let options = IntegrityCheckOptions(
+        let options = CheckOptions(
             level: "standard",
             includeDebugInfo: false
         )
@@ -338,10 +331,10 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
                 emitOrBufferSignal(report)
 
                 // Logging for internal audit
-                IntegrityLogger.debug("Real-time signal detected and emitted to JS")
+                Logger.debug("Real-time signal detected and emitted to JS")
             }
         } catch {
-            IntegrityLogger.error("Real-time monitor failed during app activation:", error.localizedDescription)
+            Logger.error("Real-time monitor failed during app activation:", error.localizedDescription)
         }
     }
 }

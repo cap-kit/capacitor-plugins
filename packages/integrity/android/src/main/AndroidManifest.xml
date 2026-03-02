@@ -14,8 +14,8 @@
 
     <application>
         <activity
-            android:name=".ui.IntegrityBlockActivity"
+            android:name=".ui.BlockActivity"
             android:exported="false"
-            android:theme="@style/IntegrityBlockTheme" />
+            android:theme="@style/BlockTheme" />
     </application>
 </manifest>

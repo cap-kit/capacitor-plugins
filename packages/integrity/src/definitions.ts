@@ -56,7 +56,7 @@ export type IntegritySignalEvent = IntegritySignal;
  * Standardized error codes used by the Integrity plugin.
  *
  * Errors are delivered via Promise rejection with a structured
- * `{ message, code }` object matching `IntegrityError`.
+ * `{ message, code }` object matching `NativeError`.
  *
  * @since 8.0.0
  */
@@ -72,6 +72,18 @@ export enum IntegrityErrorCode {
 
   /** Invalid or unsupported input was provided. */
   UNKNOWN_TYPE = 'UNKNOWN_TYPE',
+
+  /** The operation timed out. */
+  TIMEOUT = 'TIMEOUT',
+
+  /** A network error occurred. */
+  NETWORK_ERROR = 'NETWORK_ERROR',
+
+  /** An internal error occurred. */
+  INTERNAL_ERROR = 'INTERNAL_ERROR',
+
+  /** An unexpected native error occurred. */
+  UNEXPECTED_NATIVE_ERROR = 'UNEXPECTED_NATIVE_ERROR',
 }
 
 /**
@@ -187,7 +199,7 @@ export interface IntegrityBlockPageConfig {
    * @example 'https://example.com/integrity.html'
    * @since 8.0.0
    */
-  url: string;
+  url?: string;
 }
 
 /**
@@ -519,7 +531,7 @@ export interface PluginVersionResult {
  *
  * @since 8.0.0
  */
-export interface IntegrityError {
+export interface NativeError {
   /**
    * Human-readable error description.
    */

@@ -9,6 +9,7 @@ export default [
     ignores: [
       '**/dist/**',
       '**/build/**',
+      '**/.build/**',
       '**/android/**', // Ignore Android native code
       '**/ios/**',     // Ignore iOS native code
       '**/node_modules/**',

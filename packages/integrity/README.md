@@ -156,7 +156,7 @@ You do NOT need this integration if:
 
 ### Android Integration
 
-In your `MainActivity.kt`, call `IntegrityImpl.onApplicationCreate(context)` inside the `onCreate` method:
+In your `MainActivity.kt`, call `Integrity.onApplicationCreate(context)` inside the `onCreate` method:
 
 ```diff
 
@@ -164,12 +164,12 @@ package io.ionic.starter // Use your actual package name
 
 import android.os.Bundle
 import com.getcapacitor.BridgeActivity
-+ import io.capkit.integrity.IntegrityImpl
++ import io.capkit.integrity.Integrity
 
 class MainActivity : BridgeActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
 +         // Capture security signals during early boot
-+         IntegrityImpl.onApplicationCreate(this)
++         Integrity.onApplicationCreate(this)
 
         super.onCreate(savedInstanceState)
     }
@@ -179,7 +179,7 @@ class MainActivity : BridgeActivity() {
 
 ### iOS Integration
 
-In your `AppDelegate.swift`, call `IntegrityImpl.onAppLaunch()` inside the `application(_:didFinishLaunchingWithOptions:)` method:
+In your `AppDelegate.swift`, call `Integrity.onAppLaunch()` inside the `application(_:didFinishLaunchingWithOptions:)` method:
 
 ```diff
 
@@ -187,13 +187,13 @@ import UIKit
 import Capacitor
 + import IntegrityPlugin // Import the plugin module
 
-@UIApplicationMain
+@main
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
 
 +        // Capture security signals at the earliest stage possible
-+        IntegrityImpl.onAppLaunch()
++        Integrity.onAppLaunch()
 
         return true
     }
