@@ -61,14 +61,28 @@ export interface FortressConfig {
  * @since 8.0.0
  */
 export enum FortressErrorCode {
-  /** The device does not have the requested hardware. */
+  /** The device does not have the requested hardware or the security policy restricts access. */
   UNAVAILABLE = 'UNAVAILABLE',
+  /** The user explicitly cancelled the biometric prompt or the interactive authentication flow. */
+  CANCELLED = 'CANCELLED',
   /** The user denied the permission or the feature is disabled in Fortress plugin. */
   PERMISSION_DENIED = 'PERMISSION_DENIED',
-  /** The Fortress plugin failed to initialize (e.g., runtime error or Looper failure). */
+  /** The Fortress plugin failed to initialize (e.g., runtime error, Keychain/Keystore failure, or Looper failure). */
   INIT_FAILED = 'INIT_FAILED',
+  /** The input provided to the plugin method is invalid, malformed, or exceeds constraints. */
+  INVALID_INPUT = 'INVALID_INPUT',
   /** The requested Fortress plugin type is not valid or not supported by the plugin. */
   UNKNOWN_TYPE = 'UNKNOWN_TYPE',
+  /** The requested resource or key does not exist in the secure or standard storage. */
+  NOT_FOUND = 'NOT_FOUND',
+  /** The operation conflicts with the current state of the plugin (e.g., re-initializing an active session). */
+  CONFLICT = 'CONFLICT',
+  /** The operation did not complete within the expected time frame. */
+  TIMEOUT = 'TIMEOUT',
+  /** A network connectivity or TLS handshake error occurred during a challenge-based flow. */
+  NETWORK_ERROR = 'NETWORK_ERROR',
+  /** The provided plugin configuration in capacitor.config.ts is invalid or malformed. */
+  INVALID_CONFIG = 'INVALID_CONFIG',
 }
 
 /**
