@@ -73,6 +73,9 @@ export enum IntegrityErrorCode {
   /** Invalid or unsupported input was provided. */
   UNKNOWN_TYPE = 'UNKNOWN_TYPE',
 
+  /** Invalid input provided (e.g., exceeds max length). */
+  INVALID_INPUT = 'INVALID_INPUT',
+
   /** The operation timed out. */
   TIMEOUT = 'TIMEOUT',
 
@@ -497,6 +500,27 @@ export interface PresentBlockPageOptions {
    * @since 8.0.0
    */
   dismissible?: boolean;
+
+  /**
+   * Optional override for the block page URL.
+   *
+   * Takes precedence over the static configuration.
+   * Maximum length: 2048 characters.
+   *
+   * @maxLength 2048
+   * @since 8.0.5
+   */
+  customUrl?: string;
+
+  /**
+   * Optional context data to pass to the block page.
+   *
+   * This value is encoded as a JSON string and appended
+   * to the URL as a query parameter.
+   *
+   * @since 8.0.5
+   */
+  context?: Record<string, unknown>;
 }
 
 // -----------------------------------------------------------------------------

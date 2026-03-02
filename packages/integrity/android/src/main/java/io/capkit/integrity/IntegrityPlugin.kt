@@ -388,12 +388,41 @@ class IntegrityPlugin : Plugin() {
 
     val reason = call.getString("reason")
     val dismissible = call.getBoolean("dismissible") ?: false
+    val customUrl = call.getString("customUrl")
 
-    val url =
-      if (reason != null) {
-        "${blockPage.url}?reason=${Uri.encode(reason)}"
+    // Apply URL limit validation
+    if (customUrl != null && customUrl.length > 2048) {
+      handleError(call, NativeError.InvalidInput("customUrl exceeds maximum length of 2048 characters"))
+      return
+    }
+
+    // Determine final URL: customUrl takes precedence over config
+    val urlBase = customUrl ?: blockPage.url
+
+    // Build query string with reason and context
+    val queryParams = mutableListOf<String>()
+
+    if (reason != null) {
+      queryParams.add("reason=${Uri.encode(reason)}")
+    }
+
+    val contextObj = call.getObject("context")
+    if (contextObj != null && contextObj.length() > 0) {
+      val contextJson = contextObj.toString()
+      queryParams.add("context=${Uri.encode(contextJson)}")
+    }
+
+    val finalUrl: String
+    finalUrl =
+      if (queryParams.isEmpty()) {
+        urlBase
       } else {
-        blockPage.url
+        val queryString = queryParams.joinToString("&")
+        if (urlBase.contains("?")) {
+          "$urlBase&$queryString"
+        } else {
+          "$urlBase?$queryString"
+        }
       }
 
     val intent =
@@ -401,7 +430,7 @@ class IntegrityPlugin : Plugin() {
         context,
         io.capkit.integrity.ui.BlockActivity::class.java,
       ).apply {
-        putExtra("url", url)
+        putExtra("url", finalUrl)
         putExtra("dismissible", dismissible)
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 

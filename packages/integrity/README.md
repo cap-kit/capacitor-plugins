@@ -759,10 +759,12 @@ Result object returned by `presentBlockPage()`.
 
 Options for presenting the integrity block page.
 
-| Prop              | Type                 | Description                                                                                                                                | Default            | Since |
-| ----------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------ | ----- |
-| **`reason`**      | <code>string</code>  | Optional reason code passed to the block page. This value may be used for analytics, localization, or user messaging.                      |                    | 8.0.0 |
-| **`dismissible`** | <code>boolean</code> | Whether the block page can be dismissed by the user. Defaults to false. In production environments, this should typically remain disabled. | <code>false</code> | 8.0.0 |
+| Prop              | Type                                       | Description                                                                                                                                | Default            | Since |
+| ----------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------ | ----- |
+| **`reason`**      | <code>string</code>                        | Optional reason code passed to the block page. This value may be used for analytics, localization, or user messaging.                      |                    | 8.0.0 |
+| **`dismissible`** | <code>boolean</code>                       | Whether the block page can be dismissed by the user. Defaults to false. In production environments, this should typically remain disabled. | <code>false</code> | 8.0.0 |
+| **`customUrl`**   | <code>string</code>                        | Optional override for the block page URL. Takes precedence over the static configuration. Maximum length: 2048 characters.                 |                    | 8.0.5 |
+| **`context`**     | <code>Record&lt;string, unknown&gt;</code> | Optional context data to pass to the block page. This value is encoded as a JSON string and appended to the URL as a query parameter.      |                    | 8.0.5 |
 
 #### PluginVersionResult
 

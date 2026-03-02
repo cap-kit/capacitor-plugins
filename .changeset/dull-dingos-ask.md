@@ -10,3 +10,5 @@ refactor(integrity): Normalize native naming, centralize error handling, and ali
 - Added `TIMEOUT`, `NETWORK_ERROR`, and `INTERNAL_ERROR` to `IntegrityErrorCode`.
 - Aligned `blockPage` configuration to a nested structure `{ enabled, url }` across all platforms.
 - Removed legacy and undocumented configuration keys in Android.
+- Added `customUrl` and `context` options to `presentBlockPage()` for dynamic block page content.
+- Added `INVALID_INPUT` error code for URL validation (max 2048 chars).

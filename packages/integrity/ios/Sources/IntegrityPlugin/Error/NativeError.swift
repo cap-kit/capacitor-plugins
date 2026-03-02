@@ -26,6 +26,9 @@ enum NativeError: Swift.Error {
     /// Invalid or unsupported input was provided
     case unknownType(String)
 
+    /// Invalid input provided (e.g., exceeds max length)
+    case invalidInput(String)
+
     // MARK: - Human-readable message
 
     /**
@@ -44,6 +47,8 @@ enum NativeError: Swift.Error {
             return message
         case .unknownType(let message):
             return message
+        case .invalidInput(let message):
+            return message
         }
     }
 
@@ -58,6 +63,8 @@ enum NativeError: Swift.Error {
             return "INIT_FAILED"
         case .unknownType:
             return "UNKNOWN_TYPE"
+        case .invalidInput:
+            return "INVALID_INPUT"
         }
     }
 }

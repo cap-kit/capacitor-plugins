@@ -42,4 +42,11 @@ sealed class NativeError(
   class UnknownType(
     message: String,
   ) : NativeError(message, "UNKNOWN_TYPE")
+
+  /**
+   * Invalid input provided (e.g., exceeds max length).
+   */
+  class InvalidInput(
+    message: String,
+  ) : NativeError(message, "INVALID_INPUT")
 }

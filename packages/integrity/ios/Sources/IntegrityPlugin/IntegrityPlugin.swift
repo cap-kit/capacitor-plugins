@@ -269,11 +269,43 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
 
         let reason = call.getString("reason")
         let dismissible = call.getBool("dismissible") ?? false
+        let customURL = call.getString("customUrl")
 
-        let finalURL =
-            reason != nil
-            ? "\(baseURL)?reason=\(reason!)"
-            : baseURL
+        // Apply URL limit validation
+        if let custom = customURL, custom.count > 2048 {
+            reject(call, error: .invalidInput("customUrl exceeds maximum length of 2048 characters"))
+            return
+        }
+
+        // Determine final URL: customUrl takes precedence over config
+        let urlBase = customURL ?? baseURL
+
+        // Build query string with reason and context
+        var queryParams: [String] = []
+
+        if let reason = reason {
+            if let encoded = reason.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+                queryParams.append("reason=\(encoded)")
+            }
+        }
+
+        if let contextObj = call.getObject("context"), !contextObj.isEmpty {
+            if let contextData = try? JSONSerialization.data(withJSONObject: contextObj),
+               let contextString = String(data: contextData, encoding: .utf8),
+               let encoded = contextString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+                queryParams.append("context=\(encoded)")
+            }
+        }
+
+        let finalURL: String
+        if queryParams.isEmpty {
+            finalURL = urlBase
+        } else {
+            let queryString = queryParams.joined(separator: "&")
+            finalURL = urlBase.contains("?")
+                ? "\(urlBase)&\(queryString)"
+                : "\(urlBase)?\(queryString)"
+        }
 
         DispatchQueue.main.async {
             // CONTRACT:
