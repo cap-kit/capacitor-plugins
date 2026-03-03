@@ -1,4 +1,4 @@
-package io.capkit.fortress
+package io.capkit.fortress.config
 
 import com.getcapacitor.Plugin
 
@@ -7,7 +7,7 @@ import com.getcapacitor.Plugin
  *
  * This class is responsible for reading and exposing
  * static configuration values defined under the
- * `Integrity` key in capacitor.config.ts.
+ * `Fortress` key in capacitor.config.ts.
  *
  * Configuration rules:
  * - Read once during plugin initialization
@@ -15,7 +15,6 @@ import com.getcapacitor.Plugin
  * - Accessible only from native code
  *
  * @property verboseLogging Enables verbose native logging.
- * @property blockPage Optional block page configuration.
  */
 class Config(
   plugin: Plugin,
@@ -30,6 +29,9 @@ class Config(
    */
   private object Keys {
     const val VERBOSE_LOGGING = "verboseLogging"
+    const val LOCK_AFTER_MS = "lockAfterMs"
+    const val ENABLE_PRIVACY_SCREEN = "enablePrivacyScreen"
+    const val OBFUSCATION_PREFIX = "obfuscationPrefix"
   }
 
   // -----------------------------------------------------------------------------
@@ -45,6 +47,9 @@ class Config(
    * @default false
    */
   val verboseLogging: Boolean
+  val lockAfterMs: Int
+  val enablePrivacyScreen: Boolean
+  val obfuscationPrefix: String
 
   // ---------------------------------------------------------------------------
   // Initialization
@@ -56,5 +61,14 @@ class Config(
     // Verbose logging flag
     verboseLogging =
       config.getBoolean(Keys.VERBOSE_LOGGING, false)
+
+    lockAfterMs =
+      config.getInt(Keys.LOCK_AFTER_MS, 60000)
+
+    enablePrivacyScreen =
+      config.getBoolean(Keys.ENABLE_PRIVACY_SCREEN, true)
+
+    obfuscationPrefix =
+      config.getString(Keys.OBFUSCATION_PREFIX, "ftrss_")
   }
 }

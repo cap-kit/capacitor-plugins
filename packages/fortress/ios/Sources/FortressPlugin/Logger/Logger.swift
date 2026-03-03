@@ -1,4 +1,5 @@
 import Capacitor
+import Foundation
 
 /**
  Centralized native logger for the Fortress plugin.
@@ -14,13 +15,28 @@ import Capacitor
  */
 enum Logger {
 
+    private static let lock = NSLock()
+
+    nonisolated(unsafe) private static var rawVerbose: Bool = false
+
     /**
      Controls whether debug logs are printed.
 
      This value MUST be set once during plugin initialization
      based on static configuration.
      */
-    static var verbose: Bool = false
+    static var verbose: Bool {
+        get {
+            lock.lock()
+            defer { lock.unlock() }
+            return rawVerbose
+        }
+        set {
+            lock.lock()
+            rawVerbose = newValue
+            lock.unlock()
+        }
+    }
 
     /**
      Prints a verbose / debug log message.

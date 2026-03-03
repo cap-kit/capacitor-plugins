@@ -8,18 +8,15 @@ import Foundation
  */
 enum ErrorMessages {
     static let unavailable = "Feature is unavailable on this device or configuration."
-    static let permissionDenied = "Required permission is denied or not granted."
+    static let cancelled = "Operation was cancelled by the user."
+    static let permissionDenied = "Required permission is denied."
     static let initFailed = "Native initialization failed."
-    static let unknownType = "Unsupported or invalid input type."
-
-    static let timeout = "Timeout."
-    static let networkError = "Network error."
+    static let invalidInput = "Invalid input provided."
+    static let notFound = "Requested resource not found."
+    static let conflict = "Operation conflicts with current vault state."
+    static let timeout = "Operation timed out."
+    static let securityViolation = "Security validation failed."
+    static let vaultLocked = "Vault is locked."
     static let internalError = "Internal error."
     static let unexpectedNativeError = "Unexpected native error."
-    static let viewControllerUnavailable = "View controller not available."
-    static let invalidConfig = "Invalid configuration: %@"
-
-    static func invalidConfig(_ value: String) -> String {
-        return String(format: invalidConfig, value)
-    }
 }

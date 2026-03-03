@@ -1,7 +1,7 @@
 ---
-"@cap-kit/fortress": patch
+"@cap-kit/fortress": minor
 ---
 
-Establish a stable Android-compilable baseline for the Fortress plugin by fixing native wiring and error-model consistency.
+Deliver the first functional Fortress cross-platform security baseline with secure storage, biometric unlock, and WebAuthn support.
 
-This change restores logger/config references, aligns native error codes for bridge rejection mapping, and keeps the plugin scaffold ready for incremental feature expansion in upcoming iterations.
+This release implements iOS Keychain + LocalAuthentication, Android Keystore/StrongBox + BiometricPrompt, and Web storage with hardened WebAuthn flows (including optional backend-attested mode). It also harmonizes error-code behavior across iOS/Android/Web, completes standard storage/key obfuscation plumbing, and validates strict-concurrency/lint/build checks through plugin-local verification scripts.

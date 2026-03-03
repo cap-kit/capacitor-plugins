@@ -1,10 +1,12 @@
 package io.capkit.fortress
 
+import androidx.fragment.app.FragmentActivity
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
+import io.capkit.fortress.config.Config
 import io.capkit.fortress.error.ErrorMessages
 import io.capkit.fortress.error.NativeError
 import io.capkit.fortress.logger.Logger
@@ -137,7 +139,6 @@ class FortressPlugin : Plugin() {
    *
    * NOTE:
    * - This method is guaranteed not to fail
-   * - Therefore it does NOT use TestError
    * - Version is injected at build time from package.json
    */
   @PluginMethod
@@ -145,5 +146,189 @@ class FortressPlugin : Plugin() {
     val ret = JSObject()
     ret.put("version", BuildConfig.PLUGIN_VERSION)
     call.resolve(ret)
+  }
+
+  @PluginMethod
+  fun configure(call: PluginCall) {
+    try {
+      implementation.configure(config)
+      call.resolve()
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  @PluginMethod
+  fun setValue(call: PluginCall) {
+    try {
+      val key = call.getString("key") ?: throw NativeError.InvalidInput(ErrorMessages.INVALID_INPUT)
+      val value = call.getString("value") ?: throw NativeError.InvalidInput(ErrorMessages.INVALID_INPUT)
+      implementation.setValue(key, value)
+      call.resolve()
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  @PluginMethod
+  fun getValue(call: PluginCall) {
+    try {
+      val key = call.getString("key") ?: throw NativeError.InvalidInput(ErrorMessages.INVALID_INPUT)
+      val value = implementation.getValue(key)
+      call.resolve(JSObject().apply { put("value", value) })
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  @PluginMethod
+  fun removeValue(call: PluginCall) {
+    try {
+      val key = call.getString("key") ?: throw NativeError.InvalidInput(ErrorMessages.INVALID_INPUT)
+      implementation.removeValue(key)
+      call.resolve()
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  @PluginMethod
+  fun clearAll(call: PluginCall) {
+    try {
+      implementation.clearAll()
+      call.resolve()
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  @PluginMethod
+  fun unlock(call: PluginCall) {
+    val hostActivity = activity as? FragmentActivity
+    if (hostActivity == null) {
+      reject(call, NativeError.Unavailable(ErrorMessages.UNAVAILABLE))
+      return
+    }
+
+    implementation.unlock(hostActivity) { result ->
+      result
+        .onSuccess {
+          call.resolve()
+        }.onFailure { error ->
+          handleError(call, error)
+        }
+    }
+  }
+
+  @PluginMethod
+  fun lock(call: PluginCall) {
+    try {
+      implementation.lock()
+      call.resolve()
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  @PluginMethod
+  fun isLocked(call: PluginCall) {
+    try {
+      val isLocked = implementation.isLocked()
+      call.resolve(JSObject().apply { put("isLocked", isLocked) })
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  @PluginMethod
+  fun getSession(call: PluginCall) {
+    try {
+      val session = implementation.getSession()
+      call.resolve(
+        JSObject().apply {
+          put("isLocked", session.isLocked)
+          put("lastActiveAt", session.lastActiveAt)
+        },
+      )
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  @PluginMethod
+  fun resetSession(call: PluginCall) {
+    try {
+      implementation.resetSession()
+      call.resolve()
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  @PluginMethod
+  fun touchSession(call: PluginCall) {
+    try {
+      implementation.touchSession()
+      call.resolve()
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  @PluginMethod
+  fun setInsecureValue(call: PluginCall) {
+    try {
+      val key = call.getString("key") ?: throw NativeError.InvalidInput(ErrorMessages.INVALID_INPUT)
+      val value = call.getString("value") ?: throw NativeError.InvalidInput(ErrorMessages.INVALID_INPUT)
+      implementation.setInsecureValue(key, value)
+      call.resolve()
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  @PluginMethod
+  fun getInsecureValue(call: PluginCall) {
+    try {
+      val key = call.getString("key") ?: throw NativeError.InvalidInput(ErrorMessages.INVALID_INPUT)
+      val value = implementation.getInsecureValue(key)
+      call.resolve(JSObject().apply { put("value", value) })
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  @PluginMethod
+  fun removeInsecureValue(call: PluginCall) {
+    try {
+      val key = call.getString("key") ?: throw NativeError.InvalidInput(ErrorMessages.INVALID_INPUT)
+      implementation.removeInsecureValue(key)
+      call.resolve()
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  @PluginMethod
+  fun getObfuscatedKey(call: PluginCall) {
+    try {
+      val key = call.getString("key") ?: throw NativeError.InvalidInput(ErrorMessages.INVALID_INPUT)
+      val obfuscated = implementation.getObfuscatedKey(key)
+      call.resolve(JSObject().apply { put("obfuscated", obfuscated) })
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  @PluginMethod
+  fun hasKey(call: PluginCall) {
+    try {
+      val key = call.getString("key") ?: throw NativeError.InvalidInput(ErrorMessages.INVALID_INPUT)
+      val secure = call.getBoolean("secure", true) ?: true
+      val exists = implementation.hasKey(key, secure)
+      call.resolve(JSObject().apply { put("exists", exists) })
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
   }
 }

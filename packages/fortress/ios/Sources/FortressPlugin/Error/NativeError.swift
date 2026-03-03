@@ -29,9 +29,6 @@ enum NativeError: Swift.Error {
     /// The input provided to the plugin method is invalid or malformed
     case invalidInput(String)
 
-    /// Invalid or unsupported input was provided
-    case unknownType(String)
-
     /// The requested resource does not exist
     case notFound(String)
 
@@ -41,8 +38,11 @@ enum NativeError: Swift.Error {
     /// The operation did not complete within the expected time
     case timeout(String)
 
-    /// Invalid or malformed configuration
-    case invalidConfig(String)
+    /// Security validation failed (integrity or cryptographic failure)
+    case securityViolation(String)
+
+    /// Secure operation requested while vault is locked
+    case vaultLocked(String)
 
     // MARK: - Human-readable message
 
@@ -64,15 +64,15 @@ enum NativeError: Swift.Error {
             return message
         case .invalidInput(let message):
             return message
-        case .unknownType(let message):
-            return message
         case .notFound(let message):
             return message
         case .conflict(let message):
             return message
         case .timeout(let message):
             return message
-        case .invalidConfig(let message):
+        case .securityViolation(let message):
+            return message
+        case .vaultLocked(let message):
             return message
         }
     }
@@ -85,11 +85,11 @@ enum NativeError: Swift.Error {
         case .permissionDenied: return "PERMISSION_DENIED"
         case .initFailed: return "INIT_FAILED"
         case .invalidInput: return "INVALID_INPUT"
-        case .unknownType: return "UNKNOWN_TYPE"
         case .notFound: return "NOT_FOUND"
         case .conflict: return "CONFLICT"
         case .timeout: return "TIMEOUT"
-        case .invalidConfig: return "INVALID_CONFIG"
+        case .securityViolation: return "SECURITY_VIOLATION"
+        case .vaultLocked: return "VAULT_LOCKED"
         }
     }
 }

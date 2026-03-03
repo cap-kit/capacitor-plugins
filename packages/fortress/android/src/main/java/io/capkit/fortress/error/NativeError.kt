@@ -23,11 +23,11 @@ sealed class NativeError(
     const val PERMISSION_DENIED = "PERMISSION_DENIED"
     const val INIT_FAILED = "INIT_FAILED"
     const val INVALID_INPUT = "INVALID_INPUT"
-    const val UNKNOWN_TYPE = "UNKNOWN_TYPE"
     const val NOT_FOUND = "NOT_FOUND"
     const val CONFLICT = "CONFLICT"
     const val TIMEOUT = "TIMEOUT"
-    const val NETWORK_ERROR = "NETWORK_ERROR"
+    const val SECURITY_VIOLATION = "SECURITY_VIOLATION"
+    const val VAULT_LOCKED = "VAULT_LOCKED"
   }
 
   // -----------------------------------------------------------------------------
@@ -74,13 +74,6 @@ sealed class NativeError(
   ) : NativeError(message, INVALID_INPUT)
 
   /**
-   * Invalid or unsupported input was provided.
-   */
-  class UnknownType(
-    message: String,
-  ) : NativeError(message, UNKNOWN_TYPE)
-
-  /**
    * The requested resource does not exist.
    * Maps to the 'NOT_FOUND' error code in JavaScript.
    */
@@ -105,18 +98,16 @@ sealed class NativeError(
   ) : NativeError(message, TIMEOUT)
 
   /**
-   * Network connectivity or TLS handshake error.
-   * Maps to the 'NETWORK_ERROR' error code in JavaScript.
+   * Security validation failed in cryptographic or integrity checks.
    */
-  class NetworkError(
+  class SecurityViolation(
     message: String,
-  ) : NativeError(message, NETWORK_ERROR)
+  ) : NativeError(message, SECURITY_VIOLATION)
 
   /**
-   * Invalid or malformed configuration.
-   * Maps to the 'INVALID_INPUT' error code in JavaScript.
+   * Secure operation requested while vault is locked.
    */
-  class InvalidConfig(
+  class VaultLocked(
     message: String,
-  ) : NativeError(message, INVALID_INPUT)
+  ) : NativeError(message, VAULT_LOCKED)
 }
