@@ -104,6 +104,9 @@ struct SecureStorage {
         case .itemNotFound:
             return .notFound(ErrorMessages.notFound)
         case .unexpectedError(let status):
+            if status == errSecInteractionNotAllowed {
+                return .vaultLocked(ErrorMessages.vaultLocked)
+            }
             return .initFailed("Unexpected Keychain error: \(status)")
         }
     }

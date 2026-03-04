@@ -125,7 +125,15 @@ export default config;
 
 ### Android
 
+- Android API 23+ (for BiometricPrompt)
+- AndroidX Biometric library (included via Gradle)
+- StrongBox hardware (optional, for enhanced security)
+
 ### iOS
+
+- iOS 13.0+
+- Xcode 16.0+
+- Swift 5.9+
 
 ---
 
@@ -133,7 +141,21 @@ export default config;
 
 ### Android
 
+The plugin automatically adds the following permissions to your app's manifest:
+
+```xml
+<uses-permission android:name="android.permission.USE_BIOMETRIC" />
+<uses-permission android:name="android.permission.USE_FINGERPRINT" />
+```
+
 ### iOS
+
+Add the following to your `Info.plist`:
+
+```xml
+<key>NSFaceIDUsageDescription</key>
+<string>Fortress uses Face ID to secure your data.</string>
+```
 
 ---
 
@@ -144,20 +166,33 @@ export default config;
 - [`configure(...)`](#configure)
 - [`setValue(...)`](#setvalue)
 - [`getValue(...)`](#getvalue)
+- [`setMany(...)`](#setmany)
+- [`checkStatus()`](#checkstatus)
 - [`removeValue(...)`](#removevalue)
 - [`clearAll()`](#clearall)
-- [`unlock()`](#unlock)
+- [`unlock(...)`](#unlock)
 - [`lock()`](#lock)
 - [`isLocked()`](#islocked)
 - [`getSession()`](#getsession)
 - [`resetSession()`](#resetsession)
 - [`touchSession()`](#touchsession)
+- [`biometricKeysExist(...)`](#biometrickeysexist)
+- [`createKeys(...)`](#createkeys)
+- [`deleteKeys(...)`](#deletekeys)
+- [`createSignature(...)`](#createsignature)
+- [`registerWithChallenge(...)`](#registerwithchallenge)
+- [`authenticateWithChallenge(...)`](#authenticatewithchallenge)
+- [`generateChallengePayload(...)`](#generatechallengepayload)
 - [`setInsecureValue(...)`](#setinsecurevalue)
 - [`getInsecureValue(...)`](#getinsecurevalue)
 - [`removeInsecureValue(...)`](#removeinsecurevalue)
 - [`getObfuscatedKey(...)`](#getobfuscatedkey)
 - [`hasKey(...)`](#haskey)
 - [`addListener('sessionLocked' | 'sessionUnlocked', ...)`](#addlistenersessionlocked--sessionunlocked-)
+- [`addListener('onSecurityStateChanged', ...)`](#addlisteneronsecuritystatechanged-)
+- [`addListener('onLockStatusChanged', ...)`](#addlisteneronlockstatuschanged-)
+- [`addListener('onVaultInvalidated', ...)`](#addlisteneronvaultinvalidated-)
+- [`addListener('onAppResume', ...)`](#addlisteneronappresume-)
 - [`getPluginVersion()`](#getpluginversion)
 - [Interfaces](#interfaces)
 - [Type Aliases](#type-aliases)
@@ -211,6 +246,8 @@ Stores a secure value in the encrypted vault.
 Values are encrypted using hardware-backed security
 (Secure Enclave on iOS, Keystore on Android).
 
+The method rejects with `VAULT_LOCKED` when the vault is locked.
+
 | Param       | Type                                                | Description                             |
 | ----------- | --------------------------------------------------- | --------------------------------------- |
 | **`value`** | <code><a href="#securevalue">SecureValue</a></code> | - The key-value pair to store securely. |
@@ -233,6 +270,11 @@ getValue(key: { key: string; }) => Promise<ValueResult>
 
 Reads a secure value from the encrypted vault.
 
+The method rejects with:
+
+- `VAULT_LOCKED` when the vault is locked
+- `SECURITY_VIOLATION` when stored data cannot be decrypted/validated
+
 | Param     | Type                          | Description            |
 | --------- | ----------------------------- | ---------------------- |
 | **`key`** | <code>{ key: string; }</code> | - The key to retrieve. |
@@ -246,6 +288,32 @@ Reads a secure value from the encrypted vault.
 ```ts
 const { value } = await Fortress.getValue({ key: 'auth_token' });
 ```
+
+---
+
+### setMany(...)
+
+```typescript
+setMany(options: { values: SecureValue[]; }) => Promise<void>
+```
+
+| Param         | Type                                    |
+| ------------- | --------------------------------------- |
+| **`options`** | <code>{ values: SecureValue[]; }</code> |
+
+**Since:** 8.0.0
+
+---
+
+### checkStatus()
+
+```typescript
+checkStatus() => Promise<DeviceSecurityStatus>
+```
+
+**Returns:** <code>Promise&lt;<a href="#devicesecuritystatus">DeviceSecurityStatus</a>&gt;</code>
+
+**Since:** 8.0.0
 
 ---
 
@@ -289,16 +357,20 @@ await Fortress.clearAll();
 
 ---
 
-### unlock()
+### unlock(...)
 
 ```typescript
-unlock() => Promise<void>
+unlock(options?: UnlockOptions | undefined) => Promise<void>
 ```
 
 Triggers the secure unlock flow using biometrics or device credentials.
 
 This method initiates authentication via Face ID, Touch ID,
 or the device passcode as a fallback.
+
+| Param         | Type                                                    |
+| ------------- | ------------------------------------------------------- |
+| **`options`** | <code><a href="#unlockoptions">UnlockOptions</a></code> |
 
 **Since:** 8.0.0
 
@@ -418,6 +490,142 @@ document.addEventListener('click', () => {
   Fortress.touchSession();
 });
 ```
+
+---
+
+### biometricKeysExist(...)
+
+```typescript
+biometricKeysExist(options?: KeyAliasOptions | undefined) => Promise<BiometricKeysExistResult>
+```
+
+Checks whether a biometric key pair already exists.
+
+| Param         | Type                                                        | Description                    |
+| ------------- | ----------------------------------------------------------- | ------------------------------ |
+| **`options`** | <code><a href="#keyaliasoptions">KeyAliasOptions</a></code> | - Optional key alias override. |
+
+**Returns:** <code>Promise&lt;<a href="#biometrickeysexistresult">BiometricKeysExistResult</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### createKeys(...)
+
+```typescript
+createKeys(options?: KeyAliasOptions | undefined) => Promise<CreateKeysResult>
+```
+
+Creates (or replaces) a biometric key pair and returns the public key.
+
+| Param         | Type                                                        | Description                    |
+| ------------- | ----------------------------------------------------------- | ------------------------------ |
+| **`options`** | <code><a href="#keyaliasoptions">KeyAliasOptions</a></code> | - Optional key alias override. |
+
+**Returns:** <code>Promise&lt;<a href="#createkeysresult">CreateKeysResult</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### deleteKeys(...)
+
+```typescript
+deleteKeys(options?: KeyAliasOptions | undefined) => Promise<void>
+```
+
+Deletes the biometric key pair if it exists.
+
+| Param         | Type                                                        | Description                    |
+| ------------- | ----------------------------------------------------------- | ------------------------------ |
+| **`options`** | <code><a href="#keyaliasoptions">KeyAliasOptions</a></code> | - Optional key alias override. |
+
+**Since:** 8.0.0
+
+---
+
+### createSignature(...)
+
+```typescript
+createSignature(options: CreateSignatureOptions) => Promise<CreateSignatureResult>
+```
+
+Creates a biometric-protected cryptographic signature.
+
+The method requires the vault to be unlocked and an existing
+biometric key pair in native secure hardware.
+
+Signature encoding note:
+
+- iOS/Android return Base64 (standard).
+- Web (WebAuthn) returns Base64URL (no padding, '-' and '\_').
+  Backend verification must normalize Base64URL → Base64 when verifying WebAuthn assertions.
+
+| Param         | Type                                                                      | Description                  |
+| ------------- | ------------------------------------------------------------------------- | ---------------------------- |
+| **`options`** | <code><a href="#createsignatureoptions">CreateSignatureOptions</a></code> | - Signature request payload. |
+
+**Returns:** <code>Promise&lt;<a href="#createsignatureresult">CreateSignatureResult</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### registerWithChallenge(...)
+
+```typescript
+registerWithChallenge(options: ChallengeAuthOptions) => Promise<RegisterWithChallengeResult>
+```
+
+Creates or replaces keys and signs a backend challenge.
+
+| Param         | Type                                                                  | Description                            |
+| ------------- | --------------------------------------------------------------------- | -------------------------------------- |
+| **`options`** | <code><a href="#challengeauthoptions">ChallengeAuthOptions</a></code> | - Challenge and optional prompt/alias. |
+
+**Returns:** <code>Promise&lt;<a href="#registerwithchallengeresult">RegisterWithChallengeResult</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### authenticateWithChallenge(...)
+
+```typescript
+authenticateWithChallenge(options: ChallengeAuthOptions) => Promise<AuthenticateWithChallengeResult>
+```
+
+Signs a backend challenge with existing biometric keys.
+
+| Param         | Type                                                                  | Description                            |
+| ------------- | --------------------------------------------------------------------- | -------------------------------------- |
+| **`options`** | <code><a href="#challengeauthoptions">ChallengeAuthOptions</a></code> | - Challenge and optional prompt/alias. |
+
+**Returns:** <code>Promise&lt;<a href="#authenticatewithchallengeresult">AuthenticateWithChallengeResult</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### generateChallengePayload(...)
+
+```typescript
+generateChallengePayload(options: GenerateChallengePayloadOptions) => Promise<GenerateChallengePayloadResult>
+```
+
+Generates a canonical payload for backend verification workflows.
+
+The payload includes nonce, timestamp, and a non-PII device identifier hash
+to reduce replay attack risk and keep verification format deterministic.
+
+| Param         | Type                                                                                        | Description                   |
+| ------------- | ------------------------------------------------------------------------------------------- | ----------------------------- |
+| **`options`** | <code><a href="#generatechallengepayloadoptions">GenerateChallengePayloadOptions</a></code> | - Payload generation options. |
+
+**Returns:** <code>Promise&lt;<a href="#generatechallengepayloadresult">GenerateChallengePayloadResult</a>&gt;</code>
+
+**Since:** 8.0.0
 
 ---
 
@@ -577,6 +785,84 @@ await handle.remove();
 
 ---
 
+### addListener('onSecurityStateChanged', ...)
+
+```typescript
+addListener(eventName: 'onSecurityStateChanged', listenerFunc: (status: DeviceSecurityStatus) => void) => Promise<PluginListenerHandle>
+```
+
+Adds a listener for security posture changes.
+
+| Param              | Type                                                                                       |
+| ------------------ | ------------------------------------------------------------------------------------------ |
+| **`eventName`**    | <code>'onSecurityStateChanged'</code>                                                      |
+| **`listenerFunc`** | <code>(status: <a href="#devicesecuritystatus">DeviceSecurityStatus</a>) =&gt; void</code> |
+
+**Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### addListener('onLockStatusChanged', ...)
+
+```typescript
+addListener(eventName: 'onLockStatusChanged', listenerFunc: (state: { isLocked: boolean; }) => void) => Promise<PluginListenerHandle>
+```
+
+Adds a listener for lock-state changes with payload.
+
+| Param              | Type                                                    |
+| ------------------ | ------------------------------------------------------- |
+| **`eventName`**    | <code>'onLockStatusChanged'</code>                      |
+| **`listenerFunc`** | <code>(state: { isLocked: boolean; }) =&gt; void</code> |
+
+**Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### addListener('onVaultInvalidated', ...)
+
+```typescript
+addListener(eventName: 'onVaultInvalidated', listenerFunc: (event: VaultInvalidatedEvent) => void) => Promise<PluginListenerHandle>
+```
+
+Adds a listener for vault invalidation events.
+
+| Param              | Type                                                                                        |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| **`eventName`**    | <code>'onVaultInvalidated'</code>                                                           |
+| **`listenerFunc`** | <code>(event: <a href="#vaultinvalidatedevent">VaultInvalidatedEvent</a>) =&gt; void</code> |
+
+**Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### addListener('onAppResume', ...)
+
+```typescript
+addListener(eventName: 'onAppResume', listenerFunc: () => void) => Promise<PluginListenerHandle>
+```
+
+Adds a listener for app resume events.
+
+This event is emitted when the app/tab becomes active in foreground.
+
+| Param              | Type                       |
+| ------------------ | -------------------------- |
+| **`eventName`**    | <code>'onAppResume'</code> |
+| **`listenerFunc`** | <code>() =&gt; void</code> |
+
+**Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
 ### getPluginVersion()
 
 ```typescript
@@ -615,14 +901,24 @@ Configuration values:
 - do NOT enable/disable methods
 - are applied once during plugin load
 
-| Prop                      | Type                                                                      | Description                                                                                                                                                                                                                              | Default                           | Since |
-| ------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- | ----- |
-| **`verboseLogging`**      | <code>boolean</code>                                                      | Enables verbose native logging. When enabled, additional debug information is printed to the native console (Logcat on Android, Xcode on iOS). This option affects native logging behavior only and has no impact on the JavaScript API. | <code>false</code>                | 8.0.0 |
-| **`lockAfterMs`**         | <code>number</code>                                                       | Global auto-lock timeout in milliseconds.                                                                                                                                                                                                | <code>60000</code>                | 8.0.0 |
-| **`accessControl`**       | <code><a href="#biometricaccesscontrol">BiometricAccessControl</a></code> | Security level for biometric hardware access.                                                                                                                                                                                            | <code>'biometryCurrentSet'</code> | 8.0.0 |
-| **`enablePrivacyScreen`** | <code>boolean</code>                                                      | Enables or disables privacy protection for app snapshots.                                                                                                                                                                                | <code>true</code>                 | 8.0.0 |
-| **`obfuscationPrefix`**   | <code>string</code>                                                       | Prefix used by key obfuscation utilities.                                                                                                                                                                                                | <code>'ftrss\_'</code>            | 8.0.0 |
-| **`webAuthn`**            | <code><a href="#webauthnconfig">WebAuthnConfig</a></code>                 | WebAuthn configuration for Web platform unlock behavior. - `local` mode stores credential metadata only in browser storage. - `server` mode uses backend challenge and assertion verification endpoints.                                 |                                   | 8.0.0 |
+| Prop                                | Type                                                                      | Description                                                                                                                                                                                                                              | Default                           | Since |
+| ----------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- | ----- |
+| **`verboseLogging`**                | <code>boolean</code>                                                      | Enables verbose native logging. When enabled, additional debug information is printed to the native console (Logcat on Android, Xcode on iOS). This option affects native logging behavior only and has no impact on the JavaScript API. | <code>false</code>                | 8.0.0 |
+| **`logLevel`**                      | <code>'debug' \| 'error' \| 'warn' \| 'verbose'</code>                    | Native/Web logging threshold. - `error`: errors only - `warn`: warnings and errors - `debug`: debug/info/warn/error - `verbose`: maximum logging level                                                                                   | <code>'info'</code>               | 8.0.0 |
+| **`lockAfterMs`**                   | <code>number</code>                                                       | Global auto-lock timeout in milliseconds.                                                                                                                                                                                                | <code>60000</code>                | 8.0.0 |
+| **`accessControl`**                 | <code><a href="#biometricaccesscontrol">BiometricAccessControl</a></code> | Security level for biometric hardware access.                                                                                                                                                                                            | <code>'biometryCurrentSet'</code> | 8.0.0 |
+| **`enablePrivacyScreen`**           | <code>boolean</code>                                                      | Enables or disables privacy protection for app snapshots.                                                                                                                                                                                | <code>true</code>                 | 8.0.0 |
+| **`obfuscationPrefix`**             | <code>string</code>                                                       | Prefix used by key obfuscation utilities.                                                                                                                                                                                                | <code>'ftrss\_'</code>            | 8.0.0 |
+| **`webAuthn`**                      | <code><a href="#webauthnconfig">WebAuthnConfig</a></code>                 | WebAuthn configuration for Web platform unlock behavior. - `local` mode stores credential metadata only in browser storage. - `server` mode uses backend challenge and assertion verification endpoints.                                 |                                   | 8.0.0 |
+| **`allowCachedAuthentication`**     | <code>boolean</code>                                                      | Enables in-memory cached authentication for unlock operations. When enabled, repeated `unlock()` calls within `cachedAuthenticationTimeoutMs` can skip the interactive biometric prompt.                                                 | <code>false</code>                | 8.0.0 |
+| **`cachedAuthenticationTimeoutMs`** | <code>number</code>                                                       | Cached authentication validity window in milliseconds. This value is only used when `allowCachedAuthentication` is enabled.                                                                                                              | <code>30000</code>                | 8.0.0 |
+| **`cryptoStrategy`**                | <code>'auto' \| 'ecc' \| 'rsa'</code>                                     | Asymmetric key-pair strategy for cryptographic operations. - `auto`: platform default strategy - `ecc`: force elliptic-curve key generation where supported - `rsa`: force RSA key generation where supported                            | <code>'auto'</code>               | 8.0.0 |
+| **`keySize`**                       | <code>2048 \| 4096</code>                                                 | RSA key size used when `cryptoStrategy` is set to `rsa`.                                                                                                                                                                                 | <code>2048</code>                 | 8.0.0 |
+| **`maxBiometricAttempts`**          | <code>number</code>                                                       | Maximum failed biometric attempts before temporary lockout.                                                                                                                                                                              | <code>5</code>                    | 8.0.0 |
+| **`lockoutDurationMs`**             | <code>number</code>                                                       | Temporary lockout duration in milliseconds after reaching the biometric failure threshold.                                                                                                                                               | <code>30000</code>                | 8.0.0 |
+| **`requireFreshAuthenticationMs`**  | <code>number</code>                                                       | Maximum allowed age in milliseconds for the last successful biometric authentication before requiring a fresh authentication.                                                                                                            | <code>0 (disabled)</code>         | 8.0.0 |
+| **`encryptionAlgorithm`**           | <code>'AES-GCM' \| 'AES-CBC'</code>                                       | Symmetric encryption algorithm used by the Web secure storage layer. Native platforms keep hardware-backed secure defaults.                                                                                                              | <code>'AES-GCM'</code>            | 8.0.0 |
+| **`enableICloudKeychainSync`**      | <code>boolean</code>                                                      | Enables iCloud Keychain synchronization for iOS secure-storage entries. Platform behavior: - iOS: when enabled, generic-password vault items are created as synchronizable - Android/Web: ignored (no-op)                                | <code>false</code>                | 8.0.0 |
 
 #### WebAuthnConfig
 
@@ -641,10 +937,11 @@ WebAuthn behavior and backend integration options (Web platform only).
 
 Generic key/value payload for storage methods.
 
-| Prop        | Type                |
-| ----------- | ------------------- |
-| **`key`**   | <code>string</code> |
-| **`value`** | <code>string</code> |
+| Prop         | Type                 |
+| ------------ | -------------------- |
+| **`key`**    | <code>string</code>  |
+| **`value`**  | <code>string</code>  |
+| **`secure`** | <code>boolean</code> |
 
 #### ValueResult
 
@@ -654,6 +951,42 @@ Result returned by secure and insecure read operations.
 | ----------- | --------------------------- |
 | **`value`** | <code>string \| null</code> |
 
+#### DeviceSecurityStatus
+
+| Prop                        | Type                                                                    |
+| --------------------------- | ----------------------------------------------------------------------- |
+| **`isBiometricsAvailable`** | <code>boolean</code>                                                    |
+| **`isBiometricsEnabled`**   | <code>boolean</code>                                                    |
+| **`isDeviceSecure`**        | <code>boolean</code>                                                    |
+| **`biometryType`**          | <code>'none' \| 'touchId' \| 'faceId' \| 'fingerprint' \| 'iris'</code> |
+
+#### UnlockOptions
+
+Optional input payload for vault unlock.
+
+| Prop                | Type                                                                      |
+| ------------------- | ------------------------------------------------------------------------- |
+| **`promptMessage`** | <code>string</code>                                                       |
+| **`promptOptions`** | <code><a href="#biometricpromptoptions">BiometricPromptOptions</a></code> |
+
+#### BiometricPromptOptions
+
+Prompt customization options for interactive authentication.
+
+Platform note:
+
+- Android uses title/subtitle/description/negativeButtonText directly.
+- iOS uses localized reason + cancel title best-effort mapping.
+- Web keeps this shape for API parity.
+
+| Prop                       | Type                 |
+| -------------------------- | -------------------- |
+| **`title`**                | <code>string</code>  |
+| **`subtitle`**             | <code>string</code>  |
+| **`description`**          | <code>string</code>  |
+| **`negativeButtonText`**   | <code>string</code>  |
+| **`confirmationRequired`** | <code>boolean</code> |
+
 #### FortressSession
 
 Current session status exposed to JavaScript.
@@ -662,6 +995,93 @@ Current session status exposed to JavaScript.
 | ------------------ | -------------------- |
 | **`isLocked`**     | <code>boolean</code> |
 | **`lastActiveAt`** | <code>number</code>  |
+
+#### BiometricKeysExistResult
+
+Result payload returned by key-pair existence checks.
+
+| Prop            | Type                 |
+| --------------- | -------------------- |
+| **`keysExist`** | <code>boolean</code> |
+
+#### KeyAliasOptions
+
+Input payload for key-pair operations.
+
+| Prop           | Type                |
+| -------------- | ------------------- |
+| **`keyAlias`** | <code>string</code> |
+
+#### CreateKeysResult
+
+Result payload returned after creating a biometric key pair.
+
+| Prop            | Type                |
+| --------------- | ------------------- |
+| **`publicKey`** | <code>string</code> |
+
+#### CreateSignatureResult
+
+Result payload returned by biometric signature creation.
+
+| Prop            | Type                |
+| --------------- | ------------------- |
+| **`success`**   | <code>true</code>   |
+| **`signature`** | <code>string</code> |
+
+#### CreateSignatureOptions
+
+Input payload for biometric signature creation.
+
+| Prop                | Type                                                                      |
+| ------------------- | ------------------------------------------------------------------------- |
+| **`payload`**       | <code>string</code>                                                       |
+| **`keyAlias`**      | <code>string</code>                                                       |
+| **`promptMessage`** | <code>string</code>                                                       |
+| **`promptOptions`** | <code><a href="#biometricpromptoptions">BiometricPromptOptions</a></code> |
+
+#### RegisterWithChallengeResult
+
+Result payload returned by challenge registration.
+
+| Prop            | Type                |
+| --------------- | ------------------- |
+| **`publicKey`** | <code>string</code> |
+| **`signature`** | <code>string</code> |
+
+#### ChallengeAuthOptions
+
+Input payload for challenge-based registration/authentication.
+
+| Prop                | Type                                                                      |
+| ------------------- | ------------------------------------------------------------------------- |
+| **`challenge`**     | <code>string</code>                                                       |
+| **`promptMessage`** | <code>string</code>                                                       |
+| **`promptOptions`** | <code><a href="#biometricpromptoptions">BiometricPromptOptions</a></code> |
+
+#### AuthenticateWithChallengeResult
+
+Result payload returned by challenge authentication.
+
+| Prop            | Type                |
+| --------------- | ------------------- |
+| **`signature`** | <code>string</code> |
+
+#### GenerateChallengePayloadResult
+
+Result payload returned by backend challenge payload generation.
+
+| Prop          | Type                |
+| ------------- | ------------------- |
+| **`payload`** | <code>string</code> |
+
+#### GenerateChallengePayloadOptions
+
+Input payload for canonical backend challenge payload generation.
+
+| Prop        | Type                |
+| ----------- | ------------------- |
+| **`nonce`** | <code>string</code> |
 
 #### ObfuscatedKeyResult
 
@@ -693,6 +1113,14 @@ Input payload for key existence checks.
 | Prop         | Type                                      |
 | ------------ | ----------------------------------------- |
 | **`remove`** | <code>() =&gt; Promise&lt;void&gt;</code> |
+
+#### VaultInvalidatedEvent
+
+Payload emitted when the vault is invalidated by security posture changes.
+
+| Prop         | Type                                                                             |
+| ------------ | -------------------------------------------------------------------------------- |
+| **`reason`** | <code>'security_state_changed' \| 'keypair_invalidated' \| 'keys_deleted'</code> |
 
 #### PluginVersionResult
 

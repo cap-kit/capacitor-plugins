@@ -50,6 +50,19 @@ export interface FortressConfig {
   verboseLogging?: boolean;
 
   /**
+   * Native/Web logging threshold.
+   *
+   * - `error`: errors only
+   * - `warn`: warnings and errors
+   * - `debug`: debug/info/warn/error
+   * - `verbose`: maximum logging level
+   *
+   * @default 'info'
+   * @since 8.0.0
+   */
+  logLevel?: 'error' | 'warn' | 'debug' | 'verbose';
+
+  /**
    * Global auto-lock timeout in milliseconds.
    *
    * @default 60000
@@ -90,6 +103,118 @@ export interface FortressConfig {
    * @since 8.0.0
    */
   webAuthn?: WebAuthnConfig;
+
+  /**
+   * Enables in-memory cached authentication for unlock operations.
+   *
+   * When enabled, repeated `unlock()` calls within `cachedAuthenticationTimeoutMs`
+   * can skip the interactive biometric prompt.
+   *
+   * @default false
+   * @since 8.0.0
+   */
+  allowCachedAuthentication?: boolean;
+
+  /**
+   * Cached authentication validity window in milliseconds.
+   *
+   * This value is only used when `allowCachedAuthentication` is enabled.
+   *
+   * @default 30000
+   * @since 8.0.0
+   */
+  cachedAuthenticationTimeoutMs?: number;
+
+  /**
+   * Asymmetric key-pair strategy for cryptographic operations.
+   *
+   * - `auto`: platform default strategy
+   * - `ecc`: force elliptic-curve key generation where supported
+   * - `rsa`: force RSA key generation where supported
+   *
+   * @default 'auto'
+   * @since 8.0.0
+   */
+  cryptoStrategy?: 'auto' | 'ecc' | 'rsa';
+
+  /**
+   * RSA key size used when `cryptoStrategy` is set to `rsa`.
+   *
+   * @default 2048
+   * @since 8.0.0
+   */
+  keySize?: 2048 | 4096;
+
+  /**
+   * Maximum failed biometric attempts before temporary lockout.
+   *
+   * @default 5
+   * @since 8.0.0
+   */
+  maxBiometricAttempts?: number;
+
+  /**
+   * Temporary lockout duration in milliseconds after reaching the
+   * biometric failure threshold.
+   *
+   * @default 30000
+   * @since 8.0.0
+   */
+  lockoutDurationMs?: number;
+
+  /**
+   * Maximum allowed age in milliseconds for the last successful biometric
+   * authentication before requiring a fresh authentication.
+   *
+   * @default 0 (disabled)
+   * @since 8.0.0
+   */
+  requireFreshAuthenticationMs?: number;
+
+  /**
+   * Symmetric encryption algorithm used by the Web secure storage layer.
+   * Native platforms keep hardware-backed secure defaults.
+   *
+   * @default 'AES-GCM'
+   * @since 8.0.0
+   */
+  encryptionAlgorithm?: 'AES-GCM' | 'AES-CBC';
+
+  /**
+   * Enables iCloud Keychain synchronization for iOS secure-storage entries.
+   *
+   * Platform behavior:
+   * - iOS: when enabled, generic-password vault items are created as synchronizable
+   * - Android/Web: ignored (no-op)
+   *
+   * @default false
+   * @since 8.0.0
+   */
+  enableICloudKeychainSync?: boolean;
+}
+
+/**
+ * Prompt customization options for interactive authentication.
+ *
+ * Platform note:
+ * - Android uses title/subtitle/description/negativeButtonText directly.
+ * - iOS uses localized reason + cancel title best-effort mapping.
+ * - Web keeps this shape for API parity.
+ */
+export interface BiometricPromptOptions {
+  title?: string;
+  subtitle?: string;
+  description?: string;
+  negativeButtonText?: string;
+  confirmationRequired?: boolean;
+}
+
+/**
+ * Optional input payload for vault unlock.
+ */
+export interface UnlockOptions {
+  promptMessage?: string;
+  promptOptions?: BiometricPromptOptions;
 }
 
 /**
@@ -145,12 +270,20 @@ export interface WebAuthnConfig {
  */
 export type BiometricAccessControl = 'biometryAny' | 'biometryCurrentSet' | 'passcodeAny' | 'devicePasscode';
 
+export interface DeviceSecurityStatus {
+  isBiometricsAvailable: boolean;
+  isBiometricsEnabled: boolean;
+  isDeviceSecure: boolean;
+  biometryType: 'none' | 'touchId' | 'faceId' | 'fingerprint' | 'iris';
+}
+
 /**
  * Generic key/value payload for storage methods.
  */
 export interface SecureValue {
   key: string;
   value: string;
+  secure?: boolean;
 }
 
 /**
@@ -188,6 +321,90 @@ export interface HasKeyOptions {
  */
 export interface ObfuscatedKeyResult {
   obfuscated: string;
+}
+
+/**
+ * Input payload for biometric signature creation.
+ */
+export interface CreateSignatureOptions {
+  payload: string;
+  keyAlias?: string;
+  promptMessage?: string;
+  promptOptions?: BiometricPromptOptions;
+}
+
+/**
+ * Result payload returned by biometric signature creation.
+ */
+export interface CreateSignatureResult {
+  success: true;
+  signature: string;
+}
+
+/**
+ * Result payload returned by key-pair existence checks.
+ */
+export interface BiometricKeysExistResult {
+  keysExist: boolean;
+}
+
+/**
+ * Result payload returned after creating a biometric key pair.
+ */
+export interface CreateKeysResult {
+  publicKey: string;
+}
+
+/**
+ * Input payload for key-pair operations.
+ */
+export interface KeyAliasOptions {
+  keyAlias?: string;
+}
+
+/**
+ * Input payload for challenge-based registration/authentication.
+ */
+export interface ChallengeAuthOptions extends KeyAliasOptions {
+  challenge: string;
+  promptMessage?: string;
+  promptOptions?: BiometricPromptOptions;
+}
+
+/**
+ * Result payload returned by challenge registration.
+ */
+export interface RegisterWithChallengeResult {
+  publicKey: string;
+  signature: string;
+}
+
+/**
+ * Result payload returned by challenge authentication.
+ */
+export interface AuthenticateWithChallengeResult {
+  signature: string;
+}
+
+/**
+ * Payload emitted when the vault is invalidated by security posture changes.
+ */
+export interface VaultInvalidatedEvent {
+  reason: 'security_state_changed' | 'keypair_invalidated' | 'keys_deleted';
+}
+
+/**
+ * Input payload for canonical backend challenge payload generation.
+ */
+export interface GenerateChallengePayloadOptions {
+  nonce: string;
+}
+
+/**
+ * Result payload returned by backend challenge payload generation.
+ */
+export interface GenerateChallengePayloadResult {
+  payload: string;
 }
 
 /**
@@ -287,6 +504,8 @@ export interface FortressPlugin {
    * Values are encrypted using hardware-backed security
    * (Secure Enclave on iOS, Keystore on Android).
    *
+   * The method rejects with `VAULT_LOCKED` when the vault is locked.
+   *
    * @param value - The key-value pair to store securely.
    * @returns A promise that resolves when the value is stored.
    *
@@ -302,6 +521,10 @@ export interface FortressPlugin {
   /**
    * Reads a secure value from the encrypted vault.
    *
+   * The method rejects with:
+   * - `VAULT_LOCKED` when the vault is locked
+   * - `SECURITY_VIOLATION` when stored data cannot be decrypted/validated
+   *
    * @param key - The key to retrieve.
    * @returns A promise resolving to the stored value or null if not found.
    *
@@ -313,6 +536,18 @@ export interface FortressPlugin {
    * @since 8.0.0
    */
   getValue(key: { key: string }): Promise<ValueResult>;
+
+  /**
+   *
+   * @since 8.0.0
+   */
+  setMany(options: { values: SecureValue[] }): Promise<void>;
+
+  /**
+   *
+   * @since 8.0.0
+   */
+  checkStatus(): Promise<DeviceSecurityStatus>;
 
   /**
    * Removes a secure value from the encrypted vault.
@@ -364,7 +599,7 @@ export interface FortressPlugin {
    *
    * @since 8.0.0
    */
-  unlock(): Promise<void>;
+  unlock(options?: UnlockOptions): Promise<void>;
 
   /**
    * Locks the secure vault immediately.
@@ -447,6 +682,87 @@ export interface FortressPlugin {
    * @since 8.0.0
    */
   touchSession(): Promise<void>;
+
+  /**
+   * Checks whether a biometric key pair already exists.
+   *
+   * @param options - Optional key alias override.
+   * @returns A promise resolving to registration state.
+   *
+   * @since 8.0.0
+   */
+  biometricKeysExist(options?: KeyAliasOptions): Promise<BiometricKeysExistResult>;
+
+  /**
+   * Creates (or replaces) a biometric key pair and returns the public key.
+   *
+   * @param options - Optional key alias override.
+   * @returns A promise resolving to the generated public key.
+   *
+   * @since 8.0.0
+   */
+  createKeys(options?: KeyAliasOptions): Promise<CreateKeysResult>;
+
+  /**
+   * Deletes the biometric key pair if it exists.
+   *
+   * @param options - Optional key alias override.
+   * @returns A promise that resolves when deletion completes.
+   *
+   * @since 8.0.0
+   */
+  deleteKeys(options?: KeyAliasOptions): Promise<void>;
+
+  /**
+   * Creates a biometric-protected cryptographic signature.
+   *
+   * The method requires the vault to be unlocked and an existing
+   * biometric key pair in native secure hardware.
+   *
+   * Signature encoding note:
+   * - iOS/Android return Base64 (standard).
+   * - Web (WebAuthn) returns Base64URL (no padding, '-' and '_').
+   * Backend verification must normalize Base64URL → Base64 when verifying WebAuthn assertions.
+   *
+   * @param options - Signature request payload.
+   * @returns A promise resolving to signature metadata.
+   *
+   * @since 8.0.0
+   */
+  createSignature(options: CreateSignatureOptions): Promise<CreateSignatureResult>;
+
+  /**
+   * Creates or replaces keys and signs a backend challenge.
+   *
+   * @param options - Challenge and optional prompt/alias.
+   * @returns A promise resolving to `{ publicKey, signature }`.
+   *
+   * @since 8.0.0
+   */
+  registerWithChallenge(options: ChallengeAuthOptions): Promise<RegisterWithChallengeResult>;
+
+  /**
+   * Signs a backend challenge with existing biometric keys.
+   *
+   * @param options - Challenge and optional prompt/alias.
+   * @returns A promise resolving to `{ signature }`.
+   *
+   * @since 8.0.0
+   */
+  authenticateWithChallenge(options: ChallengeAuthOptions): Promise<AuthenticateWithChallengeResult>;
+
+  /**
+   * Generates a canonical payload for backend verification workflows.
+   *
+   * The payload includes nonce, timestamp, and a non-PII device identifier hash
+   * to reduce replay attack risk and keep verification format deterministic.
+   *
+   * @param options - Payload generation options.
+   * @returns A promise resolving to the generated payload string.
+   *
+   * @since 8.0.0
+   */
+  generateChallengePayload(options: GenerateChallengePayloadOptions): Promise<GenerateChallengePayloadResult>;
 
   /**
    * Stores a value in standard (insecure) storage.
@@ -553,6 +869,45 @@ export interface FortressPlugin {
    * @since 8.0.0
    */
   addListener(eventName: 'sessionLocked' | 'sessionUnlocked', listenerFunc: () => void): Promise<PluginListenerHandle>;
+
+  /**
+   * Adds a listener for security posture changes.
+   *
+   * @since 8.0.0
+   */
+  addListener(
+    eventName: 'onSecurityStateChanged',
+    listenerFunc: (status: DeviceSecurityStatus) => void,
+  ): Promise<PluginListenerHandle>;
+
+  /**
+   * Adds a listener for lock-state changes with payload.
+   *
+   * @since 8.0.0
+   */
+  addListener(
+    eventName: 'onLockStatusChanged',
+    listenerFunc: (state: { isLocked: boolean }) => void,
+  ): Promise<PluginListenerHandle>;
+
+  /**
+   * Adds a listener for vault invalidation events.
+   *
+   * @since 8.0.0
+   */
+  addListener(
+    eventName: 'onVaultInvalidated',
+    listenerFunc: (event: VaultInvalidatedEvent) => void,
+  ): Promise<PluginListenerHandle>;
+
+  /**
+   * Adds a listener for app resume events.
+   *
+   * This event is emitted when the app/tab becomes active in foreground.
+   *
+   * @since 8.0.0
+   */
+  addListener(eventName: 'onAppResume', listenerFunc: () => void): Promise<PluginListenerHandle>;
 
   /**
    * Returns the native plugin version.

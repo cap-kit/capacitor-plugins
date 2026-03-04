@@ -70,18 +70,23 @@ class StandardStorage(
    * Note: This only clears keys that start with the fortress prefix.
    */
   fun clearAll() {
-    val keysToRemove = mutableListOf<String>()
-
-    prefs.all.forEach { (key, _) ->
-      if (key.startsWith("ftrss_") || key.startsWith("fortress_")) {
-        keysToRemove.add(key)
+    val keysToRemove =
+      prefs.all.keys.filter {
+        it.startsWith("ftrss_") || it.startsWith("fortress_")
       }
-    }
 
-    prefs.edit().apply {
-      keysToRemove.forEach { remove(it) }
-      apply()
-    }
+    if (keysToRemove.isEmpty()) return
+
+    prefs
+      .edit()
+      .apply {
+        keysToRemove.forEach { key ->
+          // Logical improvement: "Wipe-before-delete" to overwrite
+          // data in RAM before removing the disk pointer
+          putString(key, "DELETED")
+          remove(key)
+        }
+      }.apply()
   }
 
   /**

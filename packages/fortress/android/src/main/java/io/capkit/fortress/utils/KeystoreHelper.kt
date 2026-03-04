@@ -3,7 +3,13 @@ package io.capkit.fortress.utils
 import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import android.util.Base64
+import java.security.KeyPairGenerator
 import java.security.KeyStore
+import java.security.PrivateKey
+import java.security.Signature
+import java.security.interfaces.RSAPublicKey
+import java.security.spec.ECGenParameterSpec
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -27,6 +33,11 @@ object KeystoreHelper {
   private const val TRANSFORMATION = "AES/GCM/NoPadding"
   private const val GCM_TAG_LENGTH = 128
   private const val GCM_IV_LENGTH = 12
+
+  // Biometric signature settings (keep deterministic for backend verification)
+  private const val SIGNATURE_ALGORITHM_EC = "SHA256withECDSA"
+  private const val SIGNATURE_ALGORITHM_RSA = "SHA256withRSA"
+  private const val EC_CURVE = "secp256r1" // aka NIST P-256 / prime256v1
 
   // -----------------------------------------------------------------------------
   // Error Types
@@ -171,6 +182,144 @@ object KeystoreHelper {
   }
 
   // -----------------------------------------------------------------------------
+  // Asymmetric Key Pair Management (Phase 3.2)
+  // -----------------------------------------------------------------------------
+
+  /**
+   * Generates or retrieves an asymmetric P-256 key pair in Android Keystore.
+   *
+   * @param alias Unique identifier for the key pair
+   * @param requireStrongBox If true, requests StrongBox-backed generation
+   * @return Public key in PEM format
+   * @throws KeystoreError if generation fails
+   */
+  @Throws(KeystoreError::class)
+  @Suppress("DEPRECATION")
+  fun getOrCreateKeyPair(
+    alias: String,
+    requireStrongBox: Boolean = false,
+    cryptoStrategy: String = "auto",
+    keySize: Int = 2048,
+  ): String {
+    val keyAlias = "$KEY_PREFIX$alias"
+
+    return try {
+      val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
+      keyStore.load(null)
+
+      val existingCertificate = keyStore.getCertificate(keyAlias)
+      if (existingCertificate != null) {
+        return toPem(existingCertificate.publicKey.encoded)
+      }
+
+      val useRsa = cryptoStrategy == "rsa"
+      val keyAlgorithm = if (useRsa) KeyProperties.KEY_ALGORITHM_RSA else KeyProperties.KEY_ALGORITHM_EC
+      val keyPairGenerator = KeyPairGenerator.getInstance(keyAlgorithm, ANDROID_KEYSTORE)
+      val builder =
+        KeyGenParameterSpec
+          .Builder(
+            keyAlias,
+            KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY,
+          ).setDigests(KeyProperties.DIGEST_SHA256)
+          .setUserAuthenticationRequired(false)
+
+      if (useRsa) {
+        builder
+          .setKeySize(if (keySize == 4096) 4096 else 2048)
+          .setSignaturePaddings(KeyProperties.SIGNATURE_PADDING_RSA_PKCS1)
+      } else {
+        builder.setAlgorithmParameterSpec(ECGenParameterSpec(EC_CURVE))
+      }
+
+      if (requireStrongBox) {
+        builder.setIsStrongBoxBacked(true)
+      }
+
+      keyPairGenerator.initialize(builder.build())
+      val keyPair = keyPairGenerator.generateKeyPair()
+
+      val publicKey =
+        if (useRsa) {
+          keyPair.public as? RSAPublicKey
+        } else {
+          keyPair.public
+        } ?: throw KeystoreError.UnableToGenerateKey()
+      toPem(publicKey.encoded)
+    } catch (e: Exception) {
+      throw KeystoreError.UnableToGenerateKey()
+    }
+  }
+
+  /**
+   * Checks whether an asymmetric key pair exists in Android Keystore.
+   *
+   * @param alias Unique identifier for the key pair
+   * @return true if key pair exists
+   */
+  fun hasKeyPair(alias: String): Boolean = hasAlias(alias)
+
+  /**
+   * Deletes an asymmetric key pair from Android Keystore.
+   *
+   * @param alias Unique identifier for the key pair
+   * @throws KeystoreError if deletion fails
+   */
+  @Throws(KeystoreError::class)
+  fun deleteKeyPair(alias: String) {
+    deleteKey(alias)
+  }
+
+  /**
+   * Signs payload data with the private key from the asymmetric key pair.
+   *
+   * @param alias Unique identifier for the key pair
+   * @param payload Raw payload bytes to sign
+   * @return Signature bytes
+   * @throws KeystoreError if signing fails or key pair is missing
+   */
+  @Throws(KeystoreError::class)
+  fun sign(
+    alias: String,
+    payload: ByteArray,
+  ): ByteArray {
+    val keyAlias = "$KEY_PREFIX$alias"
+
+    return try {
+      val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
+      keyStore.load(null)
+
+      val privateKey =
+        keyStore.getKey(keyAlias, null) as? PrivateKey
+          ?: throw KeystoreError.KeyNotFound()
+
+      val signatureAlgorithm =
+        if (privateKey.algorithm.equals(
+            "RSA",
+            ignoreCase = true,
+          )
+        ) {
+          SIGNATURE_ALGORITHM_RSA
+        } else {
+          SIGNATURE_ALGORITHM_EC
+        }
+      val signature =
+        Signature.getInstance(signatureAlgorithm).apply {
+          initSign(privateKey)
+          update(payload)
+        }
+      val result = signature.sign()
+      result
+    } catch (e: KeystoreError) {
+      throw e
+    } catch (e: android.security.keystore.UserNotAuthenticatedException) {
+      // Logic: Specific mapping for biometric timeout/invalidation
+      throw KeystoreError.KeyNotFound()
+    } catch (e: Exception) {
+      throw KeystoreError.UnableToEncrypt()
+    }
+  }
+
+  // -----------------------------------------------------------------------------
   // Encryption/Decryption
   // -----------------------------------------------------------------------------
 
@@ -188,15 +337,17 @@ object KeystoreHelper {
     context: Context,
     alias: String,
     data: ByteArray,
+    requireStrongBox: Boolean = false,
   ): ByteArray =
     try {
-      val key = getOrCreateKey(context, alias, requireStrongBox = false)
+      // Respect the requireStrongBox configuration from the Config layer
+      val key = getOrCreateKey(context, alias, requireStrongBox)
 
       val cipher = Cipher.getInstance(TRANSFORMATION)
       cipher.init(Cipher.ENCRYPT_MODE, key)
 
-      val iv = cipher.iv
       val ciphertext = cipher.doFinal(data)
+      val iv = cipher.iv.copyOf()
 
       // Combine IV + ciphertext
       ByteArray(iv.size + ciphertext.size).apply {
@@ -264,7 +415,8 @@ object KeystoreHelper {
     context: Context,
     alias: String,
     value: String,
-  ): ByteArray = encrypt(context, alias, value.toByteArray(Charsets.UTF_8))
+    requireStrongBox: Boolean = false,
+  ): ByteArray = encrypt(context, alias, value.toByteArray(Charsets.UTF_8), requireStrongBox)
 
   /**
    * Decrypts a string using the Android Keystore.
@@ -305,5 +457,11 @@ object KeystoreHelper {
     } catch (e: Exception) {
       throw KeystoreError.UnableToDelete()
     }
+  }
+
+  private fun toPem(keyBytes: ByteArray): String {
+    val rawBase64 = Base64.encodeToString(keyBytes, Base64.NO_WRAP)
+    val base64 = rawBase64.chunked(64).joinToString("\n")
+    return "-----BEGIN PUBLIC KEY-----\n$base64\n-----END PUBLIC KEY-----"
   }
 }

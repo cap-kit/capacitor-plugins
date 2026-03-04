@@ -29,9 +29,22 @@ class Config(
    */
   private object Keys {
     const val VERBOSE_LOGGING = "verboseLogging"
+    const val LOG_LEVEL = "logLevel"
     const val LOCK_AFTER_MS = "lockAfterMs"
     const val ENABLE_PRIVACY_SCREEN = "enablePrivacyScreen"
     const val OBFUSCATION_PREFIX = "obfuscationPrefix"
+    const val REQUIRE_STRONGBOX = "requireStrongBox"
+    const val ALLOW_DEVICE_PASSCODE = "allowDevicePasscode"
+    const val BIOMETRIC_PROMPT_TEXT = "biometricPromptText"
+    const val PREFIX = "prefix"
+    const val ALLOW_CACHED_AUTHENTICATION = "allowCachedAuthentication"
+    const val CACHED_AUTHENTICATION_TIMEOUT_MS = "cachedAuthenticationTimeoutMs"
+    const val CRYPTO_STRATEGY = "cryptoStrategy"
+    const val KEY_SIZE = "keySize"
+    const val MAX_BIOMETRIC_ATTEMPTS = "maxBiometricAttempts"
+    const val LOCKOUT_DURATION_MS = "lockoutDurationMs"
+    const val REQUIRE_FRESH_AUTHENTICATION_MS = "requireFreshAuthenticationMs"
+    const val ENCRYPTION_ALGORITHM = "encryptionAlgorithm"
   }
 
   // -----------------------------------------------------------------------------
@@ -47,9 +60,22 @@ class Config(
    * @default false
    */
   val verboseLogging: Boolean
+  val logLevel: String
   val lockAfterMs: Int
   val enablePrivacyScreen: Boolean
   val obfuscationPrefix: String
+  val requireStrongBox: Boolean
+  val allowDevicePasscode: Boolean
+  val biometricPromptText: String
+  val prefix: String
+  val allowCachedAuthentication: Boolean
+  val cachedAuthenticationTimeoutMs: Int
+  val cryptoStrategy: String
+  val keySize: Int
+  val maxBiometricAttempts: Int
+  val lockoutDurationMs: Int
+  val requireFreshAuthenticationMs: Int
+  val encryptionAlgorithm: String
 
   // ---------------------------------------------------------------------------
   // Initialization
@@ -62,6 +88,14 @@ class Config(
     verboseLogging =
       config.getBoolean(Keys.VERBOSE_LOGGING, false)
 
+    logLevel =
+      config.getString(Keys.LOG_LEVEL, if (verboseLogging) "debug" else "info")
+        ?: if (verboseLogging) {
+          "debug"
+        } else {
+          "info"
+        }
+
     lockAfterMs =
       config.getInt(Keys.LOCK_AFTER_MS, 60000)
 
@@ -70,5 +104,42 @@ class Config(
 
     obfuscationPrefix =
       config.getString(Keys.OBFUSCATION_PREFIX, "ftrss_")
+
+    // Read requireStrongBox from capacitor.config.ts
+    requireStrongBox =
+      config.getBoolean(Keys.REQUIRE_STRONGBOX, false)
+
+    allowDevicePasscode =
+      config.getBoolean(Keys.ALLOW_DEVICE_PASSCODE, true)
+
+    biometricPromptText =
+      config.getString(Keys.BIOMETRIC_PROMPT_TEXT, "Cancel") ?: "Cancel"
+
+    prefix =
+      config.getString(Keys.PREFIX, "") ?: ""
+
+    allowCachedAuthentication =
+      config.getBoolean(Keys.ALLOW_CACHED_AUTHENTICATION, false)
+
+    cachedAuthenticationTimeoutMs =
+      config.getInt(Keys.CACHED_AUTHENTICATION_TIMEOUT_MS, 30000)
+
+    cryptoStrategy =
+      config.getString(Keys.CRYPTO_STRATEGY, "auto") ?: "auto"
+
+    keySize =
+      config.getInt(Keys.KEY_SIZE, 2048)
+
+    maxBiometricAttempts =
+      config.getInt(Keys.MAX_BIOMETRIC_ATTEMPTS, 5)
+
+    lockoutDurationMs =
+      config.getInt(Keys.LOCKOUT_DURATION_MS, 30000)
+
+    requireFreshAuthenticationMs =
+      config.getInt(Keys.REQUIRE_FRESH_AUTHENTICATION_MS, 0)
+
+    encryptionAlgorithm =
+      config.getString(Keys.ENCRYPTION_ALGORITHM, "AES-GCM") ?: "AES-GCM"
   }
 }

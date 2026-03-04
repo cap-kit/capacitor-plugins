@@ -23,7 +23,7 @@ class SecureStorage(
   private val context: Context,
 ) {
   /**
-   * Stores a secure value in the encrypted vault.
+   * Stores a secure value in the encrypted vault, passing the StrongBox requirement from config.
    *
    * @param key Unique key identifier
    * @param value String value to store securely
@@ -32,9 +32,11 @@ class SecureStorage(
   fun set(
     key: String,
     value: String,
+    requireStrongBox: Boolean = false,
   ) {
     try {
-      val encryptedData = KeystoreHelper.encryptString(context, key, value)
+      // Pass the hardware-security requirement down to the KeystoreHelper
+      val encryptedData = KeystoreHelper.encryptString(context, key, value, requireStrongBox)
       val encodedData = Base64.encodeToString(encryptedData, Base64.NO_WRAP)
       val prefs = getSecurePrefs()
       prefs.edit().putString(key, encodedData).apply()
@@ -59,6 +61,10 @@ class SecureStorage(
       val encryptedData = Base64.decode(encodedData, Base64.NO_WRAP)
       KeystoreHelper.decryptString(context, key, encryptedData)
     } catch (e: KeystoreHelper.KeystoreError) {
+      // If the data is corrupted or the key is lost, we remove the orphaned reference in the Prefs
+      if (e is KeystoreHelper.KeystoreError.UnableToDecrypt || e is KeystoreHelper.KeystoreError.KeyNotFound) {
+        remove(key)
+      }
       throw mapKeystoreError(e)
     } catch (e: Exception) {
       throw NativeError.InitFailed(ErrorMessages.INIT_FAILED)
@@ -73,11 +79,14 @@ class SecureStorage(
    */
   fun remove(key: String) {
     try {
-      val prefs = getSecurePrefs()
-      prefs.edit().remove(key).apply()
       KeystoreHelper.deleteKey(key)
+      getSecurePrefs().edit().remove(key).apply()
     } catch (e: KeystoreHelper.KeystoreError) {
-      throw mapKeystoreError(e)
+      if (e is KeystoreHelper.KeystoreError.KeyNotFound) {
+        getSecurePrefs().edit().remove(key).apply()
+      } else {
+        throw mapKeystoreError(e)
+      }
     } catch (e: Exception) {
       throw NativeError.InitFailed(ErrorMessages.INIT_FAILED)
     }
@@ -109,8 +118,8 @@ class SecureStorage(
    */
   fun hasKey(key: String): Boolean =
     try {
-      val prefs = getSecurePrefs()
-      prefs.contains(key)
+      // Optimization: Check Keystore alias first before opening SharedPreferences
+      KeystoreHelper.hasAlias(key) && getSecurePrefs().contains(key)
     } catch (e: Exception) {
       false
     }

@@ -1,5 +1,9 @@
 package io.capkit.fortress.utils
 
+import android.content.Context
+import android.provider.Settings
+import java.security.MessageDigest
+
 /**
  * Utility helpers for the Fortress plugin.
  *
@@ -10,5 +14,50 @@ package io.capkit.fortress.utils
  * separation between core logic and helper code.
  */
 object Utils {
-  // Utilities will be added here as the plugin evolves
+  fun sha256Hex(value: String): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+    val hash = digest.digest(value.toByteArray(Charsets.UTF_8))
+    return hash.joinToString("") { byte -> "%02x".format(byte) }
+  }
+
+  fun deviceIdentifierHash(context: Context): String {
+    val androidId =
+      Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: "android-unknown-device"
+    return sha256Hex(androidId)
+  }
+
+  /**
+   * Returns a JSON string literal with minimal escaping.
+   *
+   * NOTE:
+   * - Do NOT use for building general JSON documents.
+   * - This helper exists to produce deterministic payload strings for backend verification.
+   */
+  fun jsonString(value: String): String {
+    val escaped =
+      buildString {
+        for (ch in value) {
+          when (ch) {
+            '\\' -> append("\\\\")
+            '"' -> append("\\\"")
+            '\b' -> append("\\b")
+            '\u000C' -> append("\\f")
+            '\n' -> append("\\n")
+            '\r' -> append("\\r")
+            '\t' -> append("\\t")
+            else -> {
+              // Control chars must be escaped
+              if (ch.code < 0x20) {
+                append("\\u")
+                append(ch.code.toString(16).padStart(4, '0'))
+              } else {
+                append(ch)
+              }
+            }
+          }
+        }
+      }
+
+    return "\"$escaped\""
+  }
 }

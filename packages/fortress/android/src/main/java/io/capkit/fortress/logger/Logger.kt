@@ -12,6 +12,16 @@ import android.util.Log
  * business logic and keep logging behavior consistent.
  */
 object Logger {
+  enum class Level(
+    val priority: Int,
+  ) {
+    ERROR(Log.ERROR),
+    WARN(Log.WARN),
+    INFO(Log.INFO),
+    DEBUG(Log.DEBUG),
+    VERBOSE(Log.VERBOSE),
+  }
+
   /**
    * Logcat tag used for all plugin logs.
    * Helps filtering logs during debugging.
@@ -25,6 +35,24 @@ object Logger {
    * based on configuration values.
    */
   var verbose: Boolean = false
+    set(value) {
+      field = value
+      level = if (value) Level.DEBUG else Level.INFO
+    }
+
+  var level: Level = Level.INFO
+
+  fun setLevel(levelName: String?) {
+    val normalized = levelName?.trim()?.lowercase()
+    level =
+      when (normalized) {
+        "error" -> Level.ERROR
+        "warn" -> Level.WARN
+        "debug" -> Level.DEBUG
+        "verbose" -> Level.VERBOSE
+        else -> Level.INFO
+      }
+  }
 
   /**
    * Prints a debug / verbose log message.
@@ -35,7 +63,7 @@ object Logger {
    * @param messages One or more message fragments to be concatenated.
    */
   fun debug(vararg messages: String) {
-    if (verbose) {
+    if (level.priority <= Log.DEBUG) {
       log(TAG, Log.DEBUG, *messages)
     }
   }
@@ -49,7 +77,9 @@ object Logger {
    * @param message Human-readable info description.
    */
   fun info(message: String) {
-    log(TAG, Log.INFO, message)
+    if (level.priority <= Log.INFO) {
+      log(TAG, Log.INFO, message)
+    }
   }
 
   /**
@@ -61,7 +91,9 @@ object Logger {
    * @param message Human-readable warning description.
    */
   fun warn(message: String) {
-    log(TAG, Log.WARN, message)
+    if (level.priority <= Log.WARN) {
+      log(TAG, Log.WARN, message)
+    }
   }
 
   /**
@@ -76,6 +108,10 @@ object Logger {
     message: String,
     e: Throwable? = null,
   ) {
+    if (level.priority > Log.ERROR) {
+      return
+    }
+
     val sb = StringBuilder(message)
     if (e != null) {
       sb.append(" | Error: ").append(e.message)

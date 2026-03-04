@@ -15,9 +15,18 @@ import Foundation
  */
 enum Logger {
 
+    enum Level: Int {
+        case error = 0
+        case warn = 1
+        case info = 2
+        case debug = 3
+        case verbose = 4
+    }
+
     private static let lock = NSLock()
 
     nonisolated(unsafe) private static var rawVerbose: Bool = false
+    nonisolated(unsafe) private static var rawLevel: Level = .info
 
     /**
      Controls whether debug logs are printed.
@@ -34,7 +43,37 @@ enum Logger {
         set {
             lock.lock()
             rawVerbose = newValue
+            rawLevel = newValue ? .debug : .info
             lock.unlock()
+        }
+    }
+
+    static var level: Level {
+        get {
+            lock.lock()
+            defer { lock.unlock() }
+            return rawLevel
+        }
+        set {
+            lock.lock()
+            rawLevel = newValue
+            rawVerbose = newValue.rawValue >= Level.debug.rawValue
+            lock.unlock()
+        }
+    }
+
+    static func setLevel(_ levelName: String?) {
+        switch levelName?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "error":
+            level = .error
+        case "warn":
+            level = .warn
+        case "debug":
+            level = .debug
+        case "verbose":
+            level = .verbose
+        default:
+            level = .info
         }
     }
 
@@ -45,7 +84,7 @@ enum Logger {
      when `verbose` is false.
      */
     static func debug(_ items: Any...) {
-        guard verbose else { return }
+        guard level.rawValue >= Level.debug.rawValue else { return }
         log(items)
     }
 
@@ -56,6 +95,7 @@ enum Logger {
      of the verbose flag.
      */
     static func error(_ items: Any...) {
+        guard level.rawValue >= Level.error.rawValue else { return }
         log(items)
     }
 
@@ -66,6 +106,12 @@ enum Logger {
      of the verbose flag.
      */
     static func info(_ items: Any...) {
+        guard level.rawValue >= Level.info.rawValue else { return }
+        log(items)
+    }
+
+    static func warn(_ items: Any...) {
+        guard level.rawValue >= Level.warn.rawValue else { return }
         log(items)
     }
 }

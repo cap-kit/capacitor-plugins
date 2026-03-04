@@ -1,29 +1,43 @@
 import { WebPlugin } from '@capacitor/core';
 
 import {
+  AuthenticateWithChallengeResult,
+  BiometricKeysExistResult,
+  ChallengeAuthOptions,
+  CreateKeysResult,
+  CreateSignatureOptions,
+  CreateSignatureResult,
+  UnlockOptions,
   FortressErrorCode,
   FortressConfig,
   FortressPlugin,
   FortressSession,
+  GenerateChallengePayloadOptions,
+  GenerateChallengePayloadResult,
   HasKeyOptions,
   HasKeyResult,
+  KeyAliasOptions,
   ObfuscatedKeyResult,
   PluginVersionResult,
+  RegisterWithChallengeResult,
   SecureValue,
   ValueResult,
+  DeviceSecurityStatus,
 } from './definitions';
 import { PLUGIN_VERSION } from './version';
+
+type VaultState = 'LOCKED' | 'UNLOCKING' | 'UNLOCKED' | 'EXPIRED';
 
 /**
  * Web implementation of the Fortress plugin.
  *
  * This implementation provides a best-effort secure storage on the web
- * using localStorage with base64 encoding. Note that web storage
+ * using localStorage with Web Crypto encryption. Note that web storage
  * is NOT hardware-backed and should not be used for highly sensitive data.
  *
  * Security limitations on Web:
  * - No hardware-backed encryption (Secure Enclave/Keystore)
- * - Data is stored in plain localStorage (encoded, not encrypted)
+ * - Encryption key is software-derived and origin-bound (not hardware-protected)
  * - No biometric authentication
  * - Session state is in-memory only (resets on page reload)
  */
@@ -39,6 +53,11 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
   private static readonly WEBAUTHN_USER_NAME = 'fortress-user';
   private static readonly WEBAUTHN_USER_DISPLAY_NAME = 'Fortress User';
   private static readonly WEBAUTHN_TIMEOUT_MS = 60_000;
+  private static readonly WEB_CRYPTO_KEY_CACHE_TTL_MS = 5 * 60_000;
+  private static readonly WEB_CRYPTO_SCHEMA_VERSION = 1;
+  private static readonly VAULT_INVALIDATION_REASON_SECURITY_STATE_CHANGED = 'security_state_changed';
+  private static readonly VAULT_INVALIDATION_REASON_KEYPAIR_INVALIDATED = 'keypair_invalidated';
+  private static readonly VAULT_INVALIDATION_REASON_KEYS_DELETED = 'keys_deleted';
 
   private static readonly ERROR_MESSAGES: Record<FortressErrorCode, string> = {
     [FortressErrorCode.UNAVAILABLE]: 'Feature is unavailable on this device or configuration.',
@@ -53,6 +72,14 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
     [FortressErrorCode.VAULT_LOCKED]: 'Vault is locked.',
   };
 
+  private static readonly LOG_LEVEL_WEIGHT: Record<'error' | 'warn' | 'info' | 'debug' | 'verbose', number> = {
+    error: 0,
+    warn: 1,
+    info: 2,
+    debug: 3,
+    verbose: 4,
+  };
+
   // -----------------------------------------------------------------------------
   // State
   // -----------------------------------------------------------------------------
@@ -62,6 +89,20 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
     isLocked: false,
     lastActiveAt: Date.now(),
   };
+  private lastTouchAt = 0;
+  private webCryptoKeyCache: {
+    key: CryptoKey;
+    expiresAt: number;
+  } | null = null;
+  private lastKnownSecurityStatus: DeviceSecurityStatus | null = null;
+  private lastSuccessfulAuthAt = 0;
+  private failedBiometricAttempts = 0;
+  private lockoutUntilMs = 0;
+  private currentLogLevel: 'error' | 'warn' | 'info' | 'debug' | 'verbose' = 'info';
+  private vaultState: VaultState = 'LOCKED';
+  private readonly visibilityChangeHandler = (): void => {
+    void this.handleVisibilityChange();
+  };
 
   // -----------------------------------------------------------------------------
   // Constructor
@@ -70,6 +111,12 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
   constructor() {
     super();
     this.loadSession();
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', this.visibilityChangeHandler);
+    }
+
+    void this.refreshSecuritySignals(false);
   }
 
   // -----------------------------------------------------------------------------
@@ -78,6 +125,8 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
 
   async configure(config: FortressConfig): Promise<void> {
     this.config = config;
+    this.currentLogLevel = this.resolveLogLevel(config.logLevel, config.verboseLogging);
+    this.logDebug('Configuration applied', `logLevel=${this.currentLogLevel}`);
 
     if (config.lockAfterMs !== undefined && config.lockAfterMs > 0) {
       this.startAutoLockTimer(config.lockAfterMs);
@@ -85,17 +134,19 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
   }
 
   // -----------------------------------------------------------------------------
-  // Secure Storage (Base64 encoded localStorage)
+  // Secure Storage (Encrypted localStorage)
   // -----------------------------------------------------------------------------
 
   async setValue(value: SecureValue): Promise<void> {
+    await this.assertSecureVaultAccess();
     const encodedKey = this.encodeKey(value.key);
-    const encodedValue = this.encodeValue(value.value);
-    localStorage.setItem(encodedKey, encodedValue);
-    this.touchSession();
+    const encryptedPayload = await this.encryptValue(value.value);
+    localStorage.setItem(encodedKey, encryptedPayload);
+    await this.touchSession();
   }
 
   async getValue(key: { key: string }): Promise<ValueResult> {
+    await this.assertSecureVaultAccess();
     const encodedKey = this.encodeKey(key.key);
     const stored = localStorage.getItem(encodedKey);
 
@@ -104,11 +155,53 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
     }
 
     try {
-      const decoded = this.decodeValue(stored);
-      this.touchSession();
+      const decoded = await this.decryptValue(stored);
+      await this.touchSession();
       return { value: decoded };
     } catch {
-      return { value: null };
+      this.throwWebError(FortressErrorCode.SECURITY_VIOLATION);
+    }
+  }
+
+  async setMany(options: { values: SecureValue[] }): Promise<void> {
+    const operations = options.values.map((item) => ({
+      key: item.key,
+      value: item.value,
+      secure: item.secure !== false,
+    }));
+
+    if (operations.some((operation) => operation.secure)) {
+      await this.assertSecureVaultAccess();
+    }
+
+    const snapshot = new Map<string, string | null>();
+    for (const operation of operations) {
+      const storageKey = operation.secure ? this.encodeKey(operation.key) : this.obfuscateKey(operation.key);
+      if (!snapshot.has(storageKey)) {
+        snapshot.set(storageKey, localStorage.getItem(storageKey));
+      }
+    }
+
+    try {
+      for (const operation of operations) {
+        if (operation.secure) {
+          const storageKey = this.encodeKey(operation.key);
+          const encryptedPayload = await this.encryptValue(operation.value);
+          localStorage.setItem(storageKey, encryptedPayload);
+        } else {
+          localStorage.setItem(this.obfuscateKey(operation.key), operation.value);
+        }
+      }
+      await this.touchSession();
+    } catch (error) {
+      for (const [storageKey, previousValue] of snapshot) {
+        if (previousValue === null) {
+          localStorage.removeItem(storageKey);
+        } else {
+          localStorage.setItem(storageKey, previousValue);
+        }
+      }
+      throw error;
     }
   }
 
@@ -129,6 +222,8 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
     }
 
     keysToRemove.forEach((key) => localStorage.removeItem(key));
+    // Logic: Also clear WebAuthn enrollment state during a full wipe
+    localStorage.removeItem(FortressWeb.WEBAUTHN_STATE_KEY);
     this.touchSession();
   }
 
@@ -176,7 +271,26 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
   // Session Management (In-memory only - resets on reload)
   // -----------------------------------------------------------------------------
 
-  async unlock(): Promise<void> {
+  async unlock(options?: UnlockOptions): Promise<void> {
+    void options;
+    this.assertNotBiometricLockedOut();
+
+    if (this.shouldUseCachedAuthentication()) {
+      const wasLocked = this.session.isLocked;
+      this.transitionToVaultState('UNLOCKING');
+      this.transitionToVaultState('UNLOCKED');
+      this.session.lastActiveAt = Date.now();
+      this.lastTouchAt = this.session.lastActiveAt;
+      this.saveSession();
+
+      if (wasLocked) {
+        this.notifyListeners('sessionUnlocked', {});
+        this.notifyListeners('onLockStatusChanged', { isLocked: false });
+      }
+
+      return;
+    }
+
     this.assertWebAuthnAvailable();
 
     try {
@@ -207,11 +321,22 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
         await this.verifyServerAuthentication(credential, state);
       }
 
-      this.session.isLocked = false;
+      const wasLocked = this.session.isLocked;
+      this.transitionToVaultState('UNLOCKING');
+      this.transitionToVaultState('UNLOCKED');
       this.session.lastActiveAt = Date.now();
+      this.lastTouchAt = this.session.lastActiveAt;
+      this.lastSuccessfulAuthAt = this.session.lastActiveAt;
+      this.clearBiometricFailureState();
       this.saveSession();
-      this.notifyListeners('sessionUnlocked', {});
+      if (wasLocked) {
+        this.notifyListeners('sessionUnlocked', {});
+        this.notifyListeners('onLockStatusChanged', { isLocked: false });
+      }
     } catch (error) {
+      this.recordBiometricFailure(error);
+      this.logWarn('Unlock failed', error);
+
       if (error instanceof FortressWebError) {
         throw error;
       }
@@ -225,11 +350,17 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
   }
 
   async lock(): Promise<void> {
-    this.session.isLocked = true;
+    const wasUnlocked = !this.session.isLocked;
+    this.transitionToVaultState('LOCKED');
+    this.session.lastActiveAt = 0;
+    this.lastTouchAt = 0;
+    this.lastSuccessfulAuthAt = 0;
     this.saveSession();
 
-    // Emit lock event
-    this.notifyListeners('sessionLocked', {});
+    if (wasUnlocked) {
+      this.notifyListeners('sessionLocked', {});
+      this.notifyListeners('onLockStatusChanged', { isLocked: true });
+    }
   }
 
   async isLocked(): Promise<{ isLocked: boolean }> {
@@ -241,18 +372,276 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
   }
 
   async resetSession(): Promise<void> {
-    this.session.isLocked = true;
+    const wasUnlocked = !this.session.isLocked;
+    this.transitionToVaultState('LOCKED');
     this.session.lastActiveAt = 0;
+    this.lastTouchAt = 0;
+    this.lastSuccessfulAuthAt = 0;
     this.saveSession();
 
-    this.notifyListeners('sessionLocked', {});
+    if (wasUnlocked) {
+      this.notifyListeners('sessionLocked', {});
+      this.notifyListeners('onLockStatusChanged', { isLocked: true });
+    }
   }
 
   async touchSession(): Promise<void> {
     if (!this.session.isLocked) {
-      this.session.lastActiveAt = Date.now();
+      const now = Date.now();
+      if (now - this.lastTouchAt < 1000) {
+        return;
+      }
+
+      this.lastTouchAt = now;
+      this.session.lastActiveAt = now;
       this.saveSession();
+
+      // Debounce implementation: reset the auto-lock timer on each activity
+      if (this.config.lockAfterMs && this.config.lockAfterMs > 0) {
+        this.startAutoLockTimer(this.config.lockAfterMs);
+      }
     }
+  }
+
+  async biometricKeysExist(options?: KeyAliasOptions): Promise<BiometricKeysExistResult> {
+    void options;
+    const state = this.readWebAuthnState();
+    return { keysExist: state.credentialIds.length > 0 };
+  }
+
+  async createKeys(options?: KeyAliasOptions): Promise<CreateKeysResult> {
+    void options;
+    this.assertWebAuthnAvailable();
+
+    const state = await this.ensureWebAuthnCredential();
+    const publicKey = state.credentialIds[0];
+
+    if (!publicKey) {
+      this.throwWebError(FortressErrorCode.INIT_FAILED);
+    }
+
+    return { publicKey };
+  }
+
+  async deleteKeys(options?: KeyAliasOptions): Promise<void> {
+    void options;
+    const hadKeys = this.readWebAuthnState().credentialIds.length > 0;
+    localStorage.removeItem(FortressWeb.WEBAUTHN_STATE_KEY);
+
+    if (hadKeys) {
+      this.notifyListeners('onVaultInvalidated', {
+        reason: FortressWeb.VAULT_INVALIDATION_REASON_KEYS_DELETED,
+      });
+      await this.refreshSecuritySignals(true);
+    }
+  }
+
+  async createSignature(options: CreateSignatureOptions): Promise<CreateSignatureResult> {
+    if (options.payload.trim().length === 0) {
+      this.throwWebError(FortressErrorCode.INVALID_INPUT);
+    }
+
+    const { isLocked } = await this.isLocked();
+    if (isLocked) {
+      this.throwWebError(FortressErrorCode.VAULT_LOCKED);
+    }
+
+    this.assertWebAuthnAvailable();
+    this.assertNotBiometricLockedOut();
+
+    try {
+      const state = await this.ensureWebAuthnCredential();
+      const allowCredentials = state.credentialIds.map((credentialId) => this.toAllowCredential(credentialId));
+
+      const credential = await navigator.credentials.get({
+        publicKey: {
+          challenge: this.utf8ToArrayBuffer(options.payload),
+          timeout: FortressWeb.WEBAUTHN_TIMEOUT_MS,
+          userVerification: 'preferred',
+          ...(allowCredentials.length > 0 ? { allowCredentials } : {}),
+        },
+      });
+
+      if (credential === null) {
+        this.throwWebError(FortressErrorCode.CANCELLED);
+      }
+
+      if (!(credential instanceof PublicKeyCredential)) {
+        this.throwWebError(FortressErrorCode.INIT_FAILED);
+      }
+
+      const assertionResponse = credential.response;
+      if (!(assertionResponse instanceof AuthenticatorAssertionResponse)) {
+        this.throwWebError(FortressErrorCode.INIT_FAILED);
+      }
+
+      this.lastSuccessfulAuthAt = Date.now();
+      this.clearBiometricFailureState();
+
+      return {
+        success: true,
+        signature: this.arrayBufferToBase64Url(assertionResponse.signature),
+      };
+    } catch (error) {
+      this.recordBiometricFailure(error);
+      this.logWarn('Create signature failed', error);
+
+      if (error instanceof FortressWebError) {
+        throw error;
+      }
+
+      if (error instanceof DOMException) {
+        throw this.mapWebAuthnError(error);
+      }
+
+      this.throwWebError(FortressErrorCode.SECURITY_VIOLATION);
+    }
+  }
+
+  async registerWithChallenge(options: ChallengeAuthOptions): Promise<RegisterWithChallengeResult> {
+    if (options.challenge.trim().length === 0) {
+      this.throwWebError(FortressErrorCode.INVALID_INPUT);
+    }
+
+    const { publicKey } = await this.createKeys({ keyAlias: options.keyAlias });
+    const state = this.readWebAuthnState();
+    const signature = await this.signChallengeWithWebAuthn(options.challenge, state);
+
+    return {
+      publicKey,
+      signature,
+    };
+  }
+
+  async authenticateWithChallenge(options: ChallengeAuthOptions): Promise<AuthenticateWithChallengeResult> {
+    if (options.challenge.trim().length === 0) {
+      this.throwWebError(FortressErrorCode.INVALID_INPUT);
+    }
+
+    const state = this.readWebAuthnState();
+    if (state.credentialIds.length === 0) {
+      this.notifyListeners('onVaultInvalidated', {
+        reason: FortressWeb.VAULT_INVALIDATION_REASON_KEYPAIR_INVALIDATED,
+      });
+      this.throwWebError(FortressErrorCode.NOT_FOUND);
+    }
+
+    const signature = await this.signChallengeWithWebAuthn(options.challenge, state);
+    return { signature };
+  }
+
+  async generateChallengePayload(options: GenerateChallengePayloadOptions): Promise<GenerateChallengePayloadResult> {
+    if (options.nonce.trim().length === 0) {
+      this.throwWebError(FortressErrorCode.INVALID_INPUT);
+    }
+
+    // Manual string building to guarantee key order and avoid JSON.stringify variations
+    const timestamp = Date.now();
+    const deviceHash = await this.getWebDeviceIdentifierHash();
+    const controlChars =
+      String.fromCharCode(0) +
+      '-' +
+      String.fromCharCode(31) +
+      String.fromCharCode(127) +
+      '-' +
+      String.fromCharCode(159);
+    const sanitizeRegex = new RegExp('[' + controlChars + ']', 'g');
+    const sanitize = (str: string) => str.replace(sanitizeRegex, '');
+
+    const payload =
+      `{` +
+      `"deviceIdentifierHash":"${sanitize(deviceHash)}",` +
+      `"nonce":"${sanitize(options.nonce)}",` +
+      `"timestamp":${timestamp}` +
+      `}`;
+
+    return {
+      payload,
+    };
+  }
+
+  async checkStatus(): Promise<DeviceSecurityStatus> {
+    const hasWebAuthnApi =
+      typeof window.PublicKeyCredential !== 'undefined' &&
+      typeof window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function';
+
+    let isBiometricsAvailable = false;
+    if (hasWebAuthnApi) {
+      isBiometricsAvailable = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    }
+
+    const state = this.readWebAuthnState();
+    const isBiometricsEnabled = isBiometricsAvailable && state.credentialIds.length > 0;
+
+    const isDeviceSecure = globalThis.isSecureContext && isBiometricsAvailable;
+
+    return {
+      isBiometricsAvailable,
+      isBiometricsEnabled,
+      isDeviceSecure,
+      biometryType: isBiometricsAvailable ? 'fingerprint' : 'none',
+    };
+  }
+
+  private async handleVisibilityChange(): Promise<void> {
+    if (document.visibilityState !== 'visible') {
+      return;
+    }
+
+    this.notifyListeners('onAppResume', {});
+    await this.refreshSecuritySignals(true);
+  }
+
+  private shouldUseCachedAuthentication(): boolean {
+    if (this.config.allowCachedAuthentication !== true) {
+      return false;
+    }
+
+    const timeout = this.config.cachedAuthenticationTimeoutMs ?? 30_000;
+    if (timeout <= 0 || this.lastSuccessfulAuthAt <= 0) {
+      return false;
+    }
+
+    if (typeof this.config.requireFreshAuthenticationMs === 'number' && this.config.requireFreshAuthenticationMs > 0) {
+      if (Date.now() - this.lastSuccessfulAuthAt > this.config.requireFreshAuthenticationMs) {
+        return false;
+      }
+    }
+
+    return Date.now() - this.lastSuccessfulAuthAt <= timeout;
+  }
+
+  private async refreshSecuritySignals(emitEvents: boolean): Promise<void> {
+    const lockAfterMs = this.config.lockAfterMs;
+    if (typeof lockAfterMs === 'number' && lockAfterMs > 0) {
+      const idleTimeMs = Date.now() - this.session.lastActiveAt;
+      if (!this.session.isLocked && idleTimeMs >= lockAfterMs) {
+        await this.lock();
+      }
+    }
+
+    const currentStatus = await this.checkStatus();
+    const previousStatus = this.lastKnownSecurityStatus;
+    const changed =
+      previousStatus?.isBiometricsAvailable !== currentStatus.isBiometricsAvailable ||
+      previousStatus.isBiometricsEnabled !== currentStatus.isBiometricsEnabled ||
+      previousStatus.isDeviceSecure !== currentStatus.isDeviceSecure ||
+      previousStatus.biometryType !== currentStatus.biometryType;
+
+    if (emitEvents && changed) {
+      this.notifyListeners('onSecurityStateChanged', currentStatus);
+      if (
+        previousStatus !== null &&
+        (previousStatus.isDeviceSecure !== currentStatus.isDeviceSecure ||
+          previousStatus.isBiometricsEnabled !== currentStatus.isBiometricsEnabled)
+      ) {
+        this.notifyListeners('onVaultInvalidated', {
+          reason: FortressWeb.VAULT_INVALIDATION_REASON_SECURITY_STATE_CHANGED,
+        });
+      }
+    }
+
+    this.lastKnownSecurityStatus = currentStatus;
   }
 
   // -----------------------------------------------------------------------------
@@ -267,19 +656,51 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
     return `${FortressWeb.SECURE_STORAGE_PREFIX}${btoa(key)}`;
   }
 
-  /**
-   * Encodes a value for secure storage.
-   * Uses base64 encoding.
-   */
-  private encodeValue(value: string): string {
-    return btoa(unescape(encodeURIComponent(value)));
+  private async encryptValue(value: string): Promise<string> {
+    this.assertWebCryptoAvailable();
+
+    const algorithm = this.getEncryptionAlgorithm();
+    const key = await this.getOrCreateWebCryptoKey();
+    const iv = this.createRandomIv(algorithm);
+    const plaintext = new TextEncoder().encode(value);
+    const ciphertext = await crypto.subtle.encrypt(
+      {
+        name: algorithm,
+        iv: iv as BufferSource,
+      },
+      key,
+      plaintext,
+    );
+
+    const payload: EncryptedWebPayload = {
+      v: FortressWeb.WEB_CRYPTO_SCHEMA_VERSION,
+      alg: algorithm,
+      iv: this.arrayBufferToBase64(iv.buffer),
+      cipher: this.arrayBufferToBase64(ciphertext),
+    };
+
+    return JSON.stringify(payload);
   }
 
-  /**
-   * Decodes a value from secure storage.
-   */
-  private decodeValue(encoded: string): string {
-    return decodeURIComponent(escape(atob(encoded)));
+  private async decryptValue(payloadJson: string): Promise<string> {
+    this.assertWebCryptoAvailable();
+
+    const payload = this.parseEncryptedPayload(payloadJson);
+    const algorithm = payload.alg ?? 'AES-GCM';
+    const key = await this.getOrCreateWebCryptoKey();
+    const iv = new Uint8Array(this.base64ToArrayBuffer(payload.iv));
+    const ciphertext = this.base64ToArrayBuffer(payload.cipher);
+
+    const plaintext = await crypto.subtle.decrypt(
+      {
+        name: algorithm,
+        iv: iv as BufferSource,
+      },
+      key,
+      ciphertext,
+    );
+
+    return new TextDecoder().decode(plaintext);
   }
 
   /**
@@ -287,8 +708,241 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
    * Simple XOR-like transformation with prefix.
    */
   private obfuscateKey(key: string): string {
-    const prefix = this.config.obfuscationPrefix ?? 'ftrss_';
+    // Force a fallback prefix if the one in config is empty or invalid
+    const prefix =
+      this.config.obfuscationPrefix && this.config.obfuscationPrefix.trim().length > 0
+        ? this.config.obfuscationPrefix
+        : 'ftrss_';
     return `${prefix}${btoa(key)}`;
+  }
+
+  private parseEncryptedPayload(payloadJson: string): EncryptedWebPayload {
+    const parsed: unknown = JSON.parse(payloadJson);
+    if (
+      typeof parsed !== 'object' ||
+      parsed === null ||
+      !('v' in parsed) ||
+      !('iv' in parsed) ||
+      !('cipher' in parsed)
+    ) {
+      this.throwWebError(FortressErrorCode.SECURITY_VIOLATION);
+    }
+
+    const payload = parsed as Partial<EncryptedWebPayload>;
+    if (
+      payload.v !== FortressWeb.WEB_CRYPTO_SCHEMA_VERSION ||
+      (payload.alg !== undefined && payload.alg !== 'AES-GCM' && payload.alg !== 'AES-CBC') ||
+      typeof payload.iv !== 'string' ||
+      payload.iv.length === 0 ||
+      typeof payload.cipher !== 'string' ||
+      payload.cipher.length === 0
+    ) {
+      this.throwWebError(FortressErrorCode.SECURITY_VIOLATION);
+    }
+
+    return payload as EncryptedWebPayload;
+  }
+
+  private async getOrCreateWebCryptoKey(): Promise<CryptoKey> {
+    const now = Date.now();
+    if (this.webCryptoKeyCache !== null && this.webCryptoKeyCache.expiresAt > now) {
+      return this.webCryptoKeyCache.key;
+    }
+
+    const encryptionAlgorithm = this.getEncryptionAlgorithm();
+    const passphrase = `${globalThis.location.origin}|${this.config.obfuscationPrefix ?? ''}|fortress-web-key`;
+    const saltSource = `${globalThis.location.hostname}|fortress-salt-v1`;
+    const baseKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(passphrase), 'PBKDF2', false, [
+      'deriveKey',
+    ]);
+
+    const key = await crypto.subtle.deriveKey(
+      {
+        name: 'PBKDF2',
+        salt: new TextEncoder().encode(saltSource),
+        iterations: 150_000,
+        hash: 'SHA-256',
+      },
+      baseKey,
+      {
+        name: encryptionAlgorithm,
+        length: 256,
+      },
+      false,
+      ['encrypt', 'decrypt'],
+    );
+
+    this.webCryptoKeyCache = {
+      key,
+      expiresAt: now + FortressWeb.WEB_CRYPTO_KEY_CACHE_TTL_MS,
+    };
+
+    return key;
+  }
+
+  private createRandomIv(algorithm: 'AES-GCM' | 'AES-CBC'): Uint8Array {
+    const iv = new Uint8Array(algorithm === 'AES-CBC' ? 16 : 12);
+    crypto.getRandomValues(iv);
+    return iv;
+  }
+
+  private getEncryptionAlgorithm(): 'AES-GCM' | 'AES-CBC' {
+    return this.config.encryptionAlgorithm === 'AES-CBC' ? 'AES-CBC' : 'AES-GCM';
+  }
+
+  private getCryptoStrategy(): 'auto' | 'ecc' | 'rsa' {
+    return this.config.cryptoStrategy ?? 'auto';
+  }
+
+  private getPubKeyCredParams(): { type: 'public-key'; alg: -7 | -257 }[] {
+    const strategy = this.getCryptoStrategy();
+
+    if (strategy === 'ecc') {
+      return [{ type: 'public-key', alg: -7 }];
+    }
+
+    if (strategy === 'rsa') {
+      return [{ type: 'public-key', alg: -257 }];
+    }
+
+    return [
+      { type: 'public-key', alg: -7 },
+      { type: 'public-key', alg: -257 },
+    ];
+  }
+
+  private assertNotBiometricLockedOut(): void {
+    if (Date.now() < this.lockoutUntilMs) {
+      this.throwWebError(FortressErrorCode.SECURITY_VIOLATION);
+    }
+  }
+
+  private recordBiometricFailure(error: unknown): void {
+    const maxAttempts = this.config.maxBiometricAttempts ?? 5;
+    const lockoutDurationMs = this.config.lockoutDurationMs ?? 30_000;
+
+    if (maxAttempts <= 0 || lockoutDurationMs <= 0) {
+      return;
+    }
+
+    const fortressError = error instanceof FortressWebError ? error : null;
+    if (fortressError?.code === FortressErrorCode.CANCELLED) {
+      return;
+    }
+
+    this.failedBiometricAttempts += 1;
+    if (this.failedBiometricAttempts >= maxAttempts) {
+      this.lockoutUntilMs = Date.now() + lockoutDurationMs;
+      this.failedBiometricAttempts = 0;
+    }
+  }
+
+  private clearBiometricFailureState(): void {
+    this.failedBiometricAttempts = 0;
+    this.lockoutUntilMs = 0;
+  }
+
+  private isLockedState(state: VaultState): boolean {
+    return state !== 'UNLOCKED';
+  }
+
+  private transitionToVaultState(nextState: VaultState): void {
+    this.vaultState = nextState;
+    this.session.isLocked = this.isLockedState(nextState);
+  }
+
+  private resolveLogLevel(
+    level: FortressConfig['logLevel'],
+    verboseLogging: FortressConfig['verboseLogging'],
+  ): 'error' | 'warn' | 'info' | 'debug' | 'verbose' {
+    if (level === 'error' || level === 'warn' || level === 'debug' || level === 'verbose') {
+      return level;
+    }
+
+    if (verboseLogging === true) {
+      return 'debug';
+    }
+
+    return 'info';
+  }
+
+  private canLog(level: 'error' | 'warn' | 'info' | 'debug' | 'verbose'): boolean {
+    return FortressWeb.LOG_LEVEL_WEIGHT[this.currentLogLevel] >= FortressWeb.LOG_LEVEL_WEIGHT[level];
+  }
+
+  private logDebug(message: string, ...args: unknown[]): void {
+    if (this.canLog('debug')) {
+      console.debug('[FortressWeb]', message, ...args);
+    }
+  }
+
+  private logWarn(message: string, ...args: unknown[]): void {
+    if (this.canLog('warn')) {
+      console.warn('[FortressWeb]', message, ...args);
+    }
+  }
+
+  private arrayBufferToBase64(buffer: ArrayBufferLike): string {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (const byte of bytes) {
+      binary += String.fromCharCode(byte);
+    }
+    return btoa(binary);
+  }
+
+  private base64ToArrayBuffer(base64Value: string): ArrayBuffer {
+    const binary = atob(base64Value);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    return bytes.buffer;
+  }
+
+  private assertWebCryptoAvailable(): void {
+    if (typeof crypto === 'undefined' || typeof crypto.subtle === 'undefined') {
+      this.throwWebError(FortressErrorCode.UNAVAILABLE);
+    }
+  }
+
+  private async assertSecureVaultAccess(): Promise<void> {
+    const isLocked = await this.isVaultLockedByPolicy();
+    if (isLocked) {
+      this.throwWebError(FortressErrorCode.VAULT_LOCKED);
+    }
+  }
+
+  private async isVaultLockedByPolicy(): Promise<boolean> {
+    if (this.isLockedState(this.vaultState)) {
+      return true;
+    }
+
+    if (typeof this.config.requireFreshAuthenticationMs === 'number' && this.config.requireFreshAuthenticationMs > 0) {
+      const freshnessAge = Date.now() - this.lastSuccessfulAuthAt;
+      if (this.lastSuccessfulAuthAt <= 0 || freshnessAge > this.config.requireFreshAuthenticationMs) {
+        this.transitionToVaultState('EXPIRED');
+        this.session.lastActiveAt = 0;
+        this.lastTouchAt = 0;
+        this.lastSuccessfulAuthAt = 0;
+        this.saveSession();
+        return true;
+      }
+    }
+
+    if (typeof this.config.lockAfterMs === 'number' && this.config.lockAfterMs > 0) {
+      const idleTimeMs = Date.now() - this.session.lastActiveAt;
+      if (idleTimeMs >= this.config.lockAfterMs) {
+        this.transitionToVaultState('EXPIRED');
+        this.session.lastActiveAt = 0;
+        this.lastTouchAt = 0;
+        this.lastSuccessfulAuthAt = 0;
+        this.saveSession();
+        return true;
+      }
+    }
+
+    return false;
   }
 
   // -----------------------------------------------------------------------------
@@ -306,14 +960,19 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
       try {
         const parsed = JSON.parse(stored);
         this.session.lastActiveAt = parsed.lastActiveAt ?? Date.now();
+        this.lastTouchAt = this.session.lastActiveAt;
 
         // Always start locked on web for security
-        this.session.isLocked = true;
+        this.transitionToVaultState('LOCKED');
       } catch {
         this.session = { isLocked: true, lastActiveAt: Date.now() };
+        this.transitionToVaultState('LOCKED');
+        this.lastTouchAt = this.session.lastActiveAt;
       }
     } else {
       this.session = { isLocked: true, lastActiveAt: Date.now() };
+      this.transitionToVaultState('LOCKED');
+      this.lastTouchAt = this.session.lastActiveAt;
     }
   }
 
@@ -367,6 +1026,26 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
     return challenge.buffer.slice(challenge.byteOffset, challenge.byteOffset + challenge.byteLength) as ArrayBuffer;
   }
 
+  private utf8ToArrayBuffer(value: string): ArrayBuffer {
+    const bytes = new TextEncoder().encode(value);
+    return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+  }
+
+  private async getWebDeviceIdentifierHash(): Promise<string> {
+    const baseIdentifier = `${globalThis.location.origin}|${navigator.userAgent}`;
+    return this.sha256Hex(baseIdentifier);
+  }
+
+  private async sha256Hex(value: string): Promise<string> {
+    if (typeof crypto.subtle === 'undefined') {
+      this.throwWebError(FortressErrorCode.UNAVAILABLE);
+    }
+
+    const bytes = new TextEncoder().encode(value);
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
+    return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  }
+
   private async ensureWebAuthnCredential(): Promise<WebAuthnState> {
     const state = this.readWebAuthnState();
     if (state.credentialIds.length > 0) {
@@ -389,10 +1068,7 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
           name: FortressWeb.WEBAUTHN_USER_NAME,
           displayName: FortressWeb.WEBAUTHN_USER_DISPLAY_NAME,
         },
-        pubKeyCredParams: [
-          { type: 'public-key', alg: -7 },
-          { type: 'public-key', alg: -257 },
-        ],
+        pubKeyCredParams: this.getPubKeyCredParams(),
         authenticatorSelection: {
           userVerification: 'preferred',
           residentKey: 'preferred',
@@ -414,6 +1090,55 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
 
     this.writeWebAuthnState(persistedState);
     return persistedState;
+  }
+
+  private async signChallengeWithWebAuthn(challenge: string, state: WebAuthnState): Promise<string> {
+    this.assertWebAuthnAvailable();
+    this.assertNotBiometricLockedOut();
+
+    try {
+      const allowCredentials = state.credentialIds.map((credentialId) => this.toAllowCredential(credentialId));
+
+      const credential = await navigator.credentials.get({
+        publicKey: {
+          challenge: this.utf8ToArrayBuffer(challenge),
+          timeout: FortressWeb.WEBAUTHN_TIMEOUT_MS,
+          userVerification: 'preferred',
+          ...(allowCredentials.length > 0 ? { allowCredentials } : {}),
+        },
+      });
+
+      if (credential === null) {
+        this.throwWebError(FortressErrorCode.CANCELLED);
+      }
+
+      if (!(credential instanceof PublicKeyCredential)) {
+        this.throwWebError(FortressErrorCode.INIT_FAILED);
+      }
+
+      const assertionResponse = credential.response;
+      if (!(assertionResponse instanceof AuthenticatorAssertionResponse)) {
+        this.throwWebError(FortressErrorCode.INIT_FAILED);
+      }
+
+      this.lastSuccessfulAuthAt = Date.now();
+      this.clearBiometricFailureState();
+
+      return this.arrayBufferToBase64Url(assertionResponse.signature);
+    } catch (error) {
+      this.recordBiometricFailure(error);
+      this.logWarn('Challenge signature failed', error);
+
+      if (error instanceof FortressWebError) {
+        throw error;
+      }
+
+      if (error instanceof DOMException) {
+        throw this.mapWebAuthnError(error);
+      }
+
+      this.throwWebError(FortressErrorCode.SECURITY_VIOLATION);
+    }
   }
 
   private readWebAuthnState(): WebAuthnState {
@@ -508,10 +1233,7 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
           name: registrationStart.userName ?? FortressWeb.WEBAUTHN_USER_NAME,
           displayName: registrationStart.userDisplayName ?? FortressWeb.WEBAUTHN_USER_DISPLAY_NAME,
         },
-        pubKeyCredParams: [
-          { type: 'public-key', alg: -7 },
-          { type: 'public-key', alg: -257 },
-        ],
+        pubKeyCredParams: this.getPubKeyCredParams(),
         authenticatorSelection: {
           userVerification: 'preferred',
           residentKey: 'preferred',
@@ -688,6 +1410,13 @@ interface ServerAuthenticationStartPayload {
 
 interface ServerAuthenticationFinishResponse {
   verified: boolean;
+}
+
+interface EncryptedWebPayload {
+  v: number;
+  alg?: 'AES-GCM' | 'AES-CBC';
+  iv: string;
+  cipher: string;
 }
 
 class FortressWebError extends Error {

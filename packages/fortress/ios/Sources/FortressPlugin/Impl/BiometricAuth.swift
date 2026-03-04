@@ -108,11 +108,12 @@ struct BiometricAuth {
      */
     func authenticate(
         reason: String,
+        cancelTitle: String = "Cancel",
         allowPasscode: Bool = true,
         completion: @escaping (Result<Void, Error>) -> Void
     ) {
         let context = LAContext()
-        context.localizedCancelTitle = "Cancel"
+        context.localizedCancelTitle = cancelTitle
         context.localizedFallbackTitle = allowPasscode ? "Use Passcode" : ""
 
         var error: NSError?
@@ -159,6 +160,77 @@ struct BiometricAuth {
         authenticate(reason: reason, allowPasscode: false, completion: completion)
     }
 
+    func checkStatus() -> [String: Any] {
+        let deviceContext = LAContext()
+        var deviceError: NSError?
+        let isDeviceSecure = deviceContext.canEvaluatePolicy(.deviceOwnerAuthentication, error: &deviceError)
+
+        let biometricContext = LAContext()
+        var biometricError: NSError?
+        let canEvaluateBiometrics = biometricContext.canEvaluatePolicy(
+            .deviceOwnerAuthenticationWithBiometrics,
+            error: &biometricError
+        )
+
+        let isBiometricsAvailable: Bool
+        let isBiometricsEnabled: Bool
+
+        if canEvaluateBiometrics {
+            isBiometricsAvailable = true
+            isBiometricsEnabled = true
+        } else if let laError = biometricError as? LAError {
+            switch laError.code {
+            case .biometryNotEnrolled:
+                isBiometricsAvailable = true
+                isBiometricsEnabled = false
+            case .biometryNotAvailable:
+                isBiometricsAvailable = false
+                isBiometricsEnabled = false
+            case .passcodeNotSet:
+                isBiometricsAvailable = true
+                isBiometricsEnabled = false
+            default:
+                isBiometricsAvailable = false
+                isBiometricsEnabled = false
+            }
+        } else {
+            isBiometricsAvailable = false
+            isBiometricsEnabled = false
+        }
+
+        let biometryType = resolveBiometryType(context: biometricContext, available: isBiometricsAvailable)
+
+        return [
+            "isBiometricsAvailable": isBiometricsAvailable,
+            "isBiometricsEnabled": isBiometricsEnabled,
+            "isDeviceSecure": isDeviceSecure,
+            "biometryType": biometryType
+        ]
+    }
+
+    private func resolveBiometryType(context: LAContext, available: Bool) -> String {
+        guard available else {
+            return "none"
+        }
+
+        if #available(iOS 11.0, *) {
+            switch context.biometryType {
+            case .faceID:
+                return "faceId"
+            case .touchID:
+                return "touchId"
+            case .opticID:
+                return "iris"
+            case .none:
+                return "none"
+            @unknown default:
+                return "none"
+            }
+        }
+
+        return "none"
+    }
+
     // MARK: - Private Helpers
 
     private func mapLAError(_ error: NSError) -> NativeError {
@@ -167,23 +239,9 @@ struct BiometricAuth {
         }
 
         switch laError.code {
-        case .biometryNotAvailable:
+        case .biometryNotAvailable, .biometryNotEnrolled, .biometryLockout, .passcodeNotSet:
             return .unavailable(ErrorMessages.unavailable)
-        case .biometryNotEnrolled:
-            return .unavailable(ErrorMessages.unavailable)
-        case .biometryLockout:
-            return .unavailable(ErrorMessages.unavailable)
-        case .userCancel:
-            return .cancelled(ErrorMessages.cancelled)
-        case .userFallback:
-            return .cancelled(ErrorMessages.cancelled)
-        case .authenticationFailed:
-            return .cancelled(ErrorMessages.cancelled)
-        case .passcodeNotSet:
-            return .unavailable(ErrorMessages.unavailable)
-        case .systemCancel:
-            return .cancelled(ErrorMessages.cancelled)
-        case .appCancel:
+        case .userCancel, .userFallback, .authenticationFailed, .systemCancel, .appCancel:
             return .cancelled(ErrorMessages.cancelled)
         default:
             return .initFailed(ErrorMessages.initFailed)
