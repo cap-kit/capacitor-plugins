@@ -14,12 +14,18 @@ import java.security.MessageDigest
  * separation between core logic and helper code.
  */
 object Utils {
+  /**
+   * Produces a SHA-256 hex digest.
+   */
   fun sha256Hex(value: String): String {
     val digest = MessageDigest.getInstance("SHA-256")
     val hash = digest.digest(value.toByteArray(Charsets.UTF_8))
     return hash.joinToString("") { byte -> "%02x".format(byte) }
   }
 
+  /**
+   * Returns a non-PII stable device identifier hash.
+   */
   fun deviceIdentifierHash(context: Context): String {
     val androidId =
       Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: "android-unknown-device"

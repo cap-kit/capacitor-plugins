@@ -1,5 +1,12 @@
 import Foundation
 
+/**
+ Key-formatting helpers for Fortress storage namespaces.
+
+ Responsibilities:
+ - Apply deterministic obfuscation prefixing for standard-storage keys
+ - Apply global prefixing for secure-storage keys
+ */
 enum KeyUtils {
     /**
      Applies both the global prefix and the obfuscation prefix for standard storage.

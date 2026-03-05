@@ -88,8 +88,8 @@ final class SessionManager {
             _state = .locked
             _lastActiveAt = 0
             _lastTouchAt = 0
-            // Logic improvement: Explicitly invalidate memory to ensure
-            // no subsequent 'touch' can resurrect an expired session.
+            // Explicitly invalidate background timestamp so a later touch
+            // cannot resurrect an expired session.
             _backgroundTimestamp = 0
         }
 
@@ -174,7 +174,7 @@ final class SessionManager {
                 return true
             }
 
-            // Fail-safe: If we are unlocked but the activity is 0, it is an inconsistent state
+            // Fail-safe: unlocked state with zero activity timestamp is inconsistent.
             if !isLockedState(_state) && _lastActiveAt == 0 {
                 _state = .expired
                 _lastTouchAt = 0

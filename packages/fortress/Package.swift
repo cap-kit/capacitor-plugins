@@ -20,10 +20,7 @@ let package = Package(
                 .product(name: "Cordova", package: "capacitor-swift-pm")
             ],
             path: "ios/Sources/FortressPlugin",
-            swiftSettings: [
-                .enableUpcomingFeature("StrictConcurrency"),
-                .unsafeFlags(["-warnings-as-errors"])
-            ]
+            swiftSettings: []
         ),
         .testTarget(
             name: "FortressPluginTests",

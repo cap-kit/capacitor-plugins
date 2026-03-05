@@ -32,9 +32,17 @@ class Config(
     const val LOG_LEVEL = "logLevel"
     const val LOCK_AFTER_MS = "lockAfterMs"
     const val ENABLE_PRIVACY_SCREEN = "enablePrivacyScreen"
+    const val PRIVACY_OVERLAY_TEXT = "privacyOverlayText"
+    const val PRIVACY_OVERLAY_IMAGE_NAME = "privacyOverlayImageName"
+    const val PRIVACY_OVERLAY_SHOW_TEXT = "privacyOverlayShowText"
+    const val PRIVACY_OVERLAY_SHOW_IMAGE = "privacyOverlayShowImage"
+    const val PRIVACY_OVERLAY_TEXT_COLOR = "privacyOverlayTextColor"
+    const val PRIVACY_OVERLAY_BACKGROUND_OPACITY = "privacyOverlayBackgroundOpacity"
+    const val PRIVACY_OVERLAY_THEME = "privacyOverlayTheme"
     const val OBFUSCATION_PREFIX = "obfuscationPrefix"
     const val REQUIRE_STRONGBOX = "requireStrongBox"
     const val ALLOW_DEVICE_PASSCODE = "allowDevicePasscode"
+    const val FALLBACK_STRATEGY = "fallbackStrategy"
     const val BIOMETRIC_PROMPT_TEXT = "biometricPromptText"
     const val PREFIX = "prefix"
     const val ALLOW_CACHED_AUTHENTICATION = "allowCachedAuthentication"
@@ -45,6 +53,7 @@ class Config(
     const val LOCKOUT_DURATION_MS = "lockoutDurationMs"
     const val REQUIRE_FRESH_AUTHENTICATION_MS = "requireFreshAuthenticationMs"
     const val ENCRYPTION_ALGORITHM = "encryptionAlgorithm"
+    const val PERSIST_SESSION_STATE = "persistSessionState"
   }
 
   // -----------------------------------------------------------------------------
@@ -59,23 +68,32 @@ class Config(
    *
    * @default false
    */
-  val verboseLogging: Boolean
-  val logLevel: String
-  val lockAfterMs: Int
-  val enablePrivacyScreen: Boolean
-  val obfuscationPrefix: String
-  val requireStrongBox: Boolean
-  val allowDevicePasscode: Boolean
-  val biometricPromptText: String
-  val prefix: String
-  val allowCachedAuthentication: Boolean
-  val cachedAuthenticationTimeoutMs: Int
-  val cryptoStrategy: String
-  val keySize: Int
-  val maxBiometricAttempts: Int
-  val lockoutDurationMs: Int
-  val requireFreshAuthenticationMs: Int
-  val encryptionAlgorithm: String
+  var verboseLogging: Boolean
+  var logLevel: String
+  var lockAfterMs: Int
+  var enablePrivacyScreen: Boolean
+  var privacyOverlayText: String
+  var privacyOverlayImageName: String
+  var privacyOverlayShowText: Boolean
+  var privacyOverlayShowImage: Boolean
+  var privacyOverlayTextColor: String
+  var privacyOverlayBackgroundOpacity: Double
+  var privacyOverlayTheme: String
+  var obfuscationPrefix: String
+  var requireStrongBox: Boolean
+  var allowDevicePasscode: Boolean
+  var fallbackStrategy: String
+  var biometricPromptText: String
+  var prefix: String
+  var allowCachedAuthentication: Boolean
+  var cachedAuthenticationTimeoutMs: Int
+  var cryptoStrategy: String
+  var keySize: Int
+  var maxBiometricAttempts: Int
+  var lockoutDurationMs: Int
+  var requireFreshAuthenticationMs: Int
+  var encryptionAlgorithm: String
+  var persistSessionState: Boolean
 
   // ---------------------------------------------------------------------------
   // Initialization
@@ -102,6 +120,27 @@ class Config(
     enablePrivacyScreen =
       config.getBoolean(Keys.ENABLE_PRIVACY_SCREEN, true)
 
+    privacyOverlayText =
+      config.getString(Keys.PRIVACY_OVERLAY_TEXT, "") ?: ""
+
+    privacyOverlayImageName =
+      config.getString(Keys.PRIVACY_OVERLAY_IMAGE_NAME, "") ?: ""
+
+    privacyOverlayShowText =
+      config.getBoolean(Keys.PRIVACY_OVERLAY_SHOW_TEXT, true)
+
+    privacyOverlayShowImage =
+      config.getBoolean(Keys.PRIVACY_OVERLAY_SHOW_IMAGE, true)
+
+    privacyOverlayTextColor =
+      config.getString(Keys.PRIVACY_OVERLAY_TEXT_COLOR, "") ?: ""
+
+    privacyOverlayBackgroundOpacity =
+      config.getString(Keys.PRIVACY_OVERLAY_BACKGROUND_OPACITY, "")?.toDoubleOrNull() ?: -1.0
+
+    privacyOverlayTheme =
+      config.getString(Keys.PRIVACY_OVERLAY_THEME, "system") ?: "system"
+
     obfuscationPrefix =
       config.getString(Keys.OBFUSCATION_PREFIX, "ftrss_")
 
@@ -111,6 +150,9 @@ class Config(
 
     allowDevicePasscode =
       config.getBoolean(Keys.ALLOW_DEVICE_PASSCODE, true)
+
+    fallbackStrategy =
+      config.getString(Keys.FALLBACK_STRATEGY, "systemDefault") ?: "systemDefault"
 
     biometricPromptText =
       config.getString(Keys.BIOMETRIC_PROMPT_TEXT, "Cancel") ?: "Cancel"
@@ -141,5 +183,8 @@ class Config(
 
     encryptionAlgorithm =
       config.getString(Keys.ENCRYPTION_ALGORITHM, "AES-GCM") ?: "AES-GCM"
+
+    persistSessionState =
+      config.getBoolean(Keys.PERSIST_SESSION_STATE, false)
   }
 }

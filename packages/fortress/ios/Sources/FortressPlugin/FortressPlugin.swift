@@ -1,6 +1,5 @@
 import Foundation
 import Capacitor
-// swiftlint:disable file_length
 
 /**
  Capacitor bridge for the Fortress plugin.
@@ -28,6 +27,7 @@ public final class FortressPlugin: CAPPlugin, CAPBridgedPlugin {
      */
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "getPluginVersion", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getRuntimeConfig", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "configure", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setValue", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getValue", returnType: CAPPluginReturnPromise),
@@ -52,20 +52,25 @@ public final class FortressPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "getObfuscatedKey", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "hasKey", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setMany", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "checkStatus", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "checkStatus", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setBiometryType", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setBiometryIsEnrolled", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setDeviceIsSecure", returnType: CAPPluginReturnPromise)
     ]
 
     // MARK: - Properties
 
     /// Native implementation containing platform-specific logic.
-    private let implementation: Fortress = Fortress()
+    let implementation: Fortress = Fortress()
 
     /// Configuration instance
-    private var config: Config?
-    private var lastSecurityStatus: [String: Any]?
+    var config: Config?
+    var lastSecurityStatus: [String: Any]?
+    private var isPrivacyTapUnlockInProgress = false
+    private let privacyTapNotification = Notification.Name("FortressPrivacyScreenTapUnlock")
     private let reasonSecurityStateChanged = "security_state_changed"
-    private let reasonKeypairInvalidated = "keypair_invalidated"
-    private let reasonKeysDeleted = "keys_deleted"
+    let reasonKeypairInvalidated = "keypair_invalidated"
+    let reasonKeysDeleted = "keys_deleted"
 
     // MARK: - Lifecycle
 
@@ -93,8 +98,26 @@ public final class FortressPlugin: CAPPlugin, CAPBridgedPlugin {
         )
         NotificationCenter.default.addObserver(
             self,
+            selector: #selector(handleWillResignActive),
+            name: UIApplication.willResignActiveNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
             selector: #selector(handleWillEnterForeground),
             name: UIApplication.willEnterForegroundNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleDidBecomeActive),
+            name: UIApplication.didBecomeActiveNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handlePrivacyScreenTapUnlock),
+            name: privacyTapNotification,
             object: nil
         )
 
@@ -110,6 +133,11 @@ public final class FortressPlugin: CAPPlugin, CAPBridgedPlugin {
             ])
         }
 
+        // Set up callback for when user taps on privacy screen
+        implementation.setPrivacyScreenTapCallback { [privacyTapNotification] in
+            NotificationCenter.default.post(name: privacyTapNotification, object: nil)
+        }
+
         lastSecurityStatus = implementation.checkBiometricStatus()
 
         // Log if verbose logging is enabled
@@ -120,7 +148,13 @@ public final class FortressPlugin: CAPPlugin, CAPBridgedPlugin {
         // Register app background timestamp for grace-period timeout checks.
         implementation.setSessionBackgroundTimestamp()
 
-        if config?.enablePrivacyScreen == true {
+        if implementation.isPrivacyScreenActive() {
+            implementation.setPrivacyScreenVisible(true)
+        }
+    }
+
+    @objc private func handleWillResignActive() {
+        if implementation.isPrivacyScreenActive() {
             implementation.setPrivacyScreenVisible(true)
         }
     }
@@ -130,7 +164,7 @@ public final class FortressPlugin: CAPPlugin, CAPBridgedPlugin {
         let timeout = Int64(config?.lockAfterMs ?? 60000)
         implementation.evaluateSessionBackgroundGracePeriod(lockAfterMs: timeout)
 
-        if config?.enablePrivacyScreen == true {
+        if implementation.isPrivacyScreenActive() {
             // 2. Keep privacy overlay only while vault is locked.
             let locked = (try? implementation.isLocked()) ?? true
             implementation.setPrivacyScreenVisible(locked)
@@ -140,50 +174,20 @@ public final class FortressPlugin: CAPPlugin, CAPBridgedPlugin {
         notifyListeners("onAppResume", data: nil)
     }
 
-    private func parsePromptOptions(_ call: CAPPluginCall) -> Fortress.PromptOptions? {
-        guard let promptOptions = call.getObject("promptOptions") else {
-            return nil
+    @objc private func handleDidBecomeActive() {
+        if implementation.isPrivacyScreenActive() {
+            let locked = (try? implementation.isLocked()) ?? true
+            implementation.setPrivacyScreenVisible(locked)
         }
+    }
 
-        return Fortress.PromptOptions(
-            title: promptOptions["title"] as? String,
-            subtitle: promptOptions["subtitle"] as? String,
-            description: promptOptions["description"] as? String,
-            negativeButtonText: promptOptions["negativeButtonText"] as? String,
-            confirmationRequired: promptOptions["confirmationRequired"] as? Bool
-        )
+    @MainActor
+    @objc private func handlePrivacyScreenTapUnlock() {
+        triggerBiometricUnlock()
     }
 
     deinit {
         NotificationCenter.default.removeObserver(self)
-    }
-
-    // MARK: - Error mapping
-
-    /**
-     Maps native `NativeError` values to JS-facing error codes.
-
-     CONTRACT:
-     - Error codes MUST be stable and documented
-     - Error codes MUST match across platforms
-     - Platform-specific error codes are FORBIDDEN
-     */
-    private func reject(
-        _ call: CAPPluginCall,
-        error: NativeError
-    ) {
-        call.reject(error.message, error.errorCode)
-    }
-
-    private func handleError(_ call: CAPPluginCall, _ error: Error) {
-        if let nativeError = error as? NativeError {
-            reject(call, error: nativeError)
-        } else {
-            let message = error.localizedDescription.isEmpty
-                ? ErrorMessages.unexpectedNativeError
-                : error.localizedDescription
-            reject(call, error: .initFailed(message))
-        }
     }
 
     private func notifySecurityStateIfChanged() {
@@ -204,6 +208,30 @@ public final class FortressPlugin: CAPPlugin, CAPBridgedPlugin {
             }
 
             lastSecurityStatus = currentStatus
+        }
+    }
+
+    @MainActor
+    private func triggerBiometricUnlock() {
+        guard !isPrivacyTapUnlockInProgress else { return }
+
+        let locked = (try? implementation.isLocked()) ?? true
+        if !locked {
+            implementation.setPrivacyScreenVisible(false)
+            return
+        }
+
+        isPrivacyTapUnlockInProgress = true
+
+        implementation.unlock(promptOptions: nil, promptMessage: nil) { [weak self] result in
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                self.isPrivacyTapUnlockInProgress = false
+
+                if case .failure(let error) = result {
+                    Logger.warn("Privacy tap unlock failed:", error.localizedDescription)
+                }
+            }
         }
     }
 
@@ -236,379 +264,4 @@ public final class FortressPlugin: CAPPlugin, CAPBridgedPlugin {
         return (wasDeviceSecure && !isDeviceSecure) || (wasBiometricsEnabled && !isBiometricsEnabled)
     }
 
-}
-
-extension FortressPlugin {
-
-    // MARK: - Version
-
-    /// Retrieves the plugin version synchronized from package.json.
-    @objc func getPluginVersion(_ call: CAPPluginCall) {
-        // Standardized enum name across all CapKit plugins
-        call.resolve([
-            "version": PluginVersion.number
-        ])
-    }
-
-    @objc func configure(_ call: CAPPluginCall) {
-        guard let cfg = self.config else {
-            call.reject(ErrorMessages.initFailed, NativeError.initFailed(ErrorMessages.initFailed).errorCode)
-            return
-        }
-
-        implementation.configure(cfg)
-        call.resolve()
-    }
-
-    @objc func setValue(_ call: CAPPluginCall) {
-        guard let key = call.getString("key"), let value = call.getString("value") else {
-            call.reject(ErrorMessages.invalidInput, NativeError.invalidInput(ErrorMessages.invalidInput).errorCode)
-            return
-        }
-
-        do {
-            try implementation.setValue(key: key, value: value)
-            call.resolve()
-        } catch {
-            handleError(call, error)
-        }
-    }
-
-    @objc func setMany(_ call: CAPPluginCall) {
-        guard let values = call.getArray("values", [String: Any].self) else {
-            reject(call, error: .invalidInput(ErrorMessages.invalidInput))
-            return
-        }
-
-        do {
-            try implementation.setMany(values: values)
-            call.resolve()
-        } catch {
-            handleError(call, error)
-        }
-    }
-
-    @objc func getValue(_ call: CAPPluginCall) {
-        guard let key = call.getString("key") else {
-            call.reject(ErrorMessages.invalidInput, NativeError.invalidInput(ErrorMessages.invalidInput).errorCode)
-            return
-        }
-
-        do {
-            let value = try implementation.getValue(key: key)
-            call.resolve(["value": value as Any])
-        } catch {
-            handleError(call, error)
-        }
-    }
-
-    @objc func removeValue(_ call: CAPPluginCall) {
-        guard let key = call.getString("key") else {
-            call.reject(ErrorMessages.invalidInput, NativeError.invalidInput(ErrorMessages.invalidInput).errorCode)
-            return
-        }
-
-        do {
-            try implementation.removeValue(key: key)
-            call.resolve()
-        } catch {
-            handleError(call, error)
-        }
-    }
-
-    @objc func clearAll(_ call: CAPPluginCall) {
-        do {
-            try implementation.clearAll()
-            call.resolve()
-        } catch {
-            handleError(call, error)
-        }
-    }
-
-    @objc func unlock(_ call: CAPPluginCall) {
-        let promptMessage = call.getString("promptMessage")
-        let promptOptions = parsePromptOptions(call)
-
-        implementation.unlock(promptOptions: promptOptions, promptMessage: promptMessage) { [weak self] result in
-            switch result {
-            case .success:
-                call.resolve()
-            case .failure(let error):
-                if let nativeError = error as? NativeError,
-                   case .notFound = nativeError {
-                    self?.notifyListeners("onVaultInvalidated", data: [
-                        "reason": self?.reasonKeypairInvalidated ?? "keypair_invalidated"
-                    ])
-                }
-                self?.handleError(call, error)
-            }
-        }
-    }
-
-    @objc func lock(_ call: CAPPluginCall) {
-        do {
-            try implementation.lock()
-            call.resolve()
-        } catch {
-            handleError(call, error)
-        }
-    }
-
-    @objc func isLocked(_ call: CAPPluginCall) {
-        do {
-            call.resolve(["isLocked": try implementation.isLocked()])
-        } catch {
-            handleError(call, error)
-        }
-    }
-
-    @objc func getSession(_ call: CAPPluginCall) {
-        let session = implementation.getSession()
-
-        call.resolve([
-            "isLocked": session.isLocked,
-            "lastActiveAt": session.lastActiveAt
-        ])
-    }
-
-    @objc func resetSession(_ call: CAPPluginCall) {
-        do {
-            try implementation.resetSession()
-            call.resolve()
-        } catch {
-            handleError(call, error)
-        }
-    }
-
-    @objc func touchSession(_ call: CAPPluginCall) {
-        do {
-            try implementation.touchSession()
-            // implementation.sessionManager.touchSession()
-            call.resolve()
-        } catch {
-            handleError(call, error)
-        }
-    }
-
-    @objc func createSignature(_ call: CAPPluginCall) {
-        guard let payload = call.getString("payload"), !payload.isEmpty else {
-            call.reject(ErrorMessages.invalidInput, NativeError.invalidInput(ErrorMessages.invalidInput).errorCode)
-            return
-        }
-
-        let keyAlias = call.getString("keyAlias")
-        let promptMessage = call.getString("promptMessage")
-        let promptOptions = parsePromptOptions(call)
-
-        implementation.createSignature(
-            payload: payload,
-            keyAlias: keyAlias,
-            promptMessage: promptMessage,
-            promptOptions: promptOptions
-        ) { [weak self] result in
-            switch result {
-            case .success(let signature):
-                call.resolve([
-                    "success": true,
-                    "signature": signature
-                ])
-            case .failure(let error):
-                if let nativeError = error as? NativeError,
-                   case .notFound = nativeError {
-                    self?.notifyListeners("onVaultInvalidated", data: [
-                        "reason": self?.reasonKeypairInvalidated ?? "keypair_invalidated"
-                    ])
-                }
-                self?.handleError(call, error)
-            }
-        }
-    }
-
-    @objc func biometricKeysExist(_ call: CAPPluginCall) {
-        let keyAlias = call.getString("keyAlias")
-        let keysExist = implementation.biometricKeysExist(keyAlias: keyAlias)
-        call.resolve(["keysExist": keysExist])
-    }
-
-    @objc func createKeys(_ call: CAPPluginCall) {
-        do {
-            let keyAlias = call.getString("keyAlias")
-            let publicKey = try implementation.createKeys(keyAlias: keyAlias)
-            call.resolve(["publicKey": publicKey])
-        } catch {
-            handleError(call, error)
-        }
-    }
-
-    @objc func deleteKeys(_ call: CAPPluginCall) {
-        do {
-            let keyAlias = call.getString("keyAlias")
-            let hadKeys = implementation.biometricKeysExist(keyAlias: keyAlias)
-            try implementation.deleteKeys(keyAlias: keyAlias)
-
-            if hadKeys {
-                notifyListeners("onVaultInvalidated", data: [
-                    "reason": reasonKeysDeleted
-                ])
-            }
-
-            call.resolve()
-        } catch {
-            handleError(call, error)
-        }
-    }
-
-    @objc func registerWithChallenge(_ call: CAPPluginCall) {
-        guard let challenge = call.getString("challenge"), !challenge.isEmpty else {
-            call.reject(ErrorMessages.invalidInput, NativeError.invalidInput(ErrorMessages.invalidInput).errorCode)
-            return
-        }
-
-        let keyAlias = call.getString("keyAlias")
-        let promptMessage = call.getString("promptMessage")
-        let promptOptions = parsePromptOptions(call)
-
-        implementation.registerWithChallenge(
-            challenge: challenge,
-            keyAlias: keyAlias,
-            promptMessage: promptMessage,
-            promptOptions: promptOptions
-        ) { [weak self] result in
-            switch result {
-            case .success(let data):
-                call.resolve(data)
-            case .failure(let error):
-                if let nativeError = error as? NativeError,
-                   case .notFound = nativeError {
-                    self?.notifyListeners("onVaultInvalidated", data: [
-                        "reason": self?.reasonKeypairInvalidated ?? "keypair_invalidated"
-                    ])
-                }
-                self?.handleError(call, error)
-            }
-        }
-    }
-
-    @objc func authenticateWithChallenge(_ call: CAPPluginCall) {
-        guard let challenge = call.getString("challenge"), !challenge.isEmpty else {
-            call.reject(ErrorMessages.invalidInput, NativeError.invalidInput(ErrorMessages.invalidInput).errorCode)
-            return
-        }
-
-        let keyAlias = call.getString("keyAlias")
-        let promptMessage = call.getString("promptMessage")
-        let promptOptions = parsePromptOptions(call)
-
-        implementation.authenticateWithChallenge(
-            challenge: challenge,
-            keyAlias: keyAlias,
-            promptMessage: promptMessage,
-            promptOptions: promptOptions
-        ) { [weak self] result in
-            switch result {
-            case .success(let signature):
-                call.resolve(["signature": signature])
-            case .failure(let error):
-                if let nativeError = error as? NativeError,
-                   case .notFound = nativeError {
-                    self?.notifyListeners("onVaultInvalidated", data: [
-                        "reason": self?.reasonKeypairInvalidated ?? "keypair_invalidated"
-                    ])
-                }
-                self?.handleError(call, error)
-            }
-        }
-    }
-
-    @objc func generateChallengePayload(_ call: CAPPluginCall) {
-        guard let nonce = call.getString("nonce"), !nonce.isEmpty else {
-            call.reject(ErrorMessages.invalidInput, NativeError.invalidInput(ErrorMessages.invalidInput).errorCode)
-            return
-        }
-
-        do {
-            let payload = try implementation.generateChallengePayload(nonce: nonce)
-            call.resolve(["payload": payload])
-        } catch {
-            handleError(call, error)
-        }
-    }
-
-    @objc func setInsecureValue(_ call: CAPPluginCall) {
-        guard let key = call.getString("key"), let value = call.getString("value") else {
-            call.reject(ErrorMessages.invalidInput, NativeError.invalidInput(ErrorMessages.invalidInput).errorCode)
-            return
-        }
-
-        do {
-            try implementation.setInsecureValue(key: key, value: value)
-            call.resolve()
-        } catch {
-            handleError(call, error)
-        }
-    }
-
-    @objc func getInsecureValue(_ call: CAPPluginCall) {
-        guard let key = call.getString("key") else {
-            call.reject(ErrorMessages.invalidInput, NativeError.invalidInput(ErrorMessages.invalidInput).errorCode)
-            return
-        }
-
-        do {
-            let value = try implementation.getInsecureValue(key: key)
-            call.resolve(["value": value as Any])
-        } catch {
-            handleError(call, error)
-        }
-    }
-
-    @objc func removeInsecureValue(_ call: CAPPluginCall) {
-        guard let key = call.getString("key") else {
-            call.reject(ErrorMessages.invalidInput, NativeError.invalidInput(ErrorMessages.invalidInput).errorCode)
-            return
-        }
-
-        do {
-            try implementation.removeInsecureValue(key: key)
-            call.resolve()
-        } catch {
-            handleError(call, error)
-        }
-    }
-
-    @objc func getObfuscatedKey(_ call: CAPPluginCall) {
-        guard let key = call.getString("key") else {
-            call.reject(ErrorMessages.invalidInput, NativeError.invalidInput(ErrorMessages.invalidInput).errorCode)
-            return
-        }
-
-        do {
-            let obfuscated = try implementation.getObfuscatedKey(key: key)
-            call.resolve(["obfuscated": obfuscated])
-        } catch {
-            handleError(call, error)
-        }
-    }
-
-    @objc func hasKey(_ call: CAPPluginCall) {
-        guard let key = call.getString("key") else {
-            call.reject(ErrorMessages.invalidInput, NativeError.invalidInput(ErrorMessages.invalidInput).errorCode)
-            return
-        }
-
-        let secure = call.getBool("secure", true)
-
-        do {
-            let exists = try implementation.hasKey(key: key, secure: secure)
-            call.resolve(["exists": exists])
-        } catch {
-            handleError(call, error)
-        }
-    }
-
-    @objc func checkStatus(_ call: CAPPluginCall) {
-        let status = implementation.checkBiometricStatus()
-        lastSecurityStatus = status
-        call.resolve(status)
-    }
 }

@@ -55,6 +55,10 @@ class Fortress(
   private var lastSuccessfulAuthAtMs: Long = 0
   private var failedBiometricAttempts: Int = 0
   private var lockoutUntilMs: Long = 0
+  private var overrideBiometryType: String? = null
+  private var overrideIsBiometricsAvailable: Boolean? = null
+  private var overrideIsBiometricsEnabled: Boolean? = null
+  private var overrideIsDeviceSecure: Boolean? = null
 
   /**
    * Applies static plugin configuration.
@@ -66,6 +70,17 @@ class Fortress(
     Logger.debug(
       "Configuration applied. Log level:",
       newConfig.logLevel,
+    )
+
+    // Configure privacy screen overlay
+    privacyScreen.updateOverlayConfig(
+      text = newConfig.privacyOverlayText,
+      showText = newConfig.privacyOverlayShowText,
+      textColor = newConfig.privacyOverlayTextColor,
+      backgroundOpacity = newConfig.privacyOverlayBackgroundOpacity,
+      theme = newConfig.privacyOverlayTheme,
+      imageName = newConfig.privacyOverlayImageName,
+      showImage = newConfig.privacyOverlayShowImage,
     )
   }
 
@@ -81,6 +96,14 @@ class Fortress(
     }
 
     if (config.keySize != 2048 && config.keySize != 4096) {
+      throw NativeError.InvalidInput(ErrorMessages.INVALID_INPUT)
+    }
+
+    if (
+      config.fallbackStrategy != "deviceCredential" &&
+      config.fallbackStrategy != "none" &&
+      config.fallbackStrategy != "systemDefault"
+    ) {
       throw NativeError.InvalidInput(ErrorMessages.INVALID_INPUT)
     }
   }
@@ -153,7 +176,7 @@ class Fortress(
       values.map { item ->
         val key = item.getString("key") ?: throw NativeError.InvalidInput(ErrorMessages.INVALID_INPUT)
         val value = item.getString("value") ?: throw NativeError.InvalidInput(ErrorMessages.INVALID_INPUT)
-        val secure = item.getBoolean("secure") ?: true
+        val secure = if (item.has("secure")) item.getBoolean("secure") else true
         SetManyOperation(key = key, value = value, secure = secure)
       }
 
@@ -210,7 +233,7 @@ class Fortress(
 
     if (shouldUseCachedAuthentication()) {
       if (isPrivacyScreenEnabled()) {
-        privacyScreen.unlock(activity)
+        privacyScreen.hideOverlay(activity)
       }
       sessionManager.unlock()
       completion(Result.success(Unit))
@@ -219,7 +242,7 @@ class Fortress(
 
     biometricAuth.unlock(
       activity = activity,
-      allowPasscode = config.allowDevicePasscode,
+      allowPasscode = resolveAllowPasscode(),
       promptText = config.biometricPromptText,
       promptOptions = promptOptions,
     ) { result ->
@@ -227,7 +250,7 @@ class Fortress(
         .onSuccess {
           markAuthenticationSuccess()
           if (isPrivacyScreenEnabled()) {
-            privacyScreen.unlock(activity)
+            privacyScreen.hideOverlay(activity)
           }
           sessionManager.unlock()
           completion(Result.success(Unit))
@@ -317,7 +340,7 @@ class Fortress(
 
     biometricAuth.unlock(
       activity = activity,
-      allowPasscode = config.allowDevicePasscode,
+      allowPasscode = resolveAllowPasscode(),
       promptText = promptMessage ?: config.biometricPromptText,
       promptOptions = promptOptions,
     ) { result ->
@@ -336,7 +359,7 @@ class Fortress(
                 else -> NativeError.SecurityViolation(ErrorMessages.SECURITY_VIOLATION)
               }
             completion(Result.failure(mapped))
-          } catch (error: Throwable) {
+          } catch (_: Throwable) {
             completion(Result.failure(NativeError.InitFailed(ErrorMessages.INIT_FAILED)))
           }
         }.onFailure { error ->
@@ -410,7 +433,7 @@ class Fortress(
 
     biometricAuth.unlock(
       activity = activity,
-      allowPasscode = config.allowDevicePasscode,
+      allowPasscode = resolveAllowPasscode(),
       promptText = promptMessage ?: config.biometricPromptText,
       promptOptions = promptOptions,
     ) { result ->
@@ -466,7 +489,7 @@ class Fortress(
 
     biometricAuth.unlock(
       activity = activity,
-      allowPasscode = config.allowDevicePasscode,
+      allowPasscode = resolveAllowPasscode(),
       promptText = promptMessage ?: config.biometricPromptText,
       promptOptions = promptOptions,
     ) { result ->
@@ -545,6 +568,10 @@ class Fortress(
     sessionManager.onLockStatusChanged = callback
   }
 
+  fun setPrivacyScreenTapCallback(callback: () -> Unit) {
+    privacyScreen.setOnTapUnlock(callback)
+  }
+
   fun setSessionBackgroundTimestamp() {
     sessionManager.setBackgroundTimestamp()
   }
@@ -569,17 +596,63 @@ class Fortress(
   ) {
     if (!isPrivacyScreenEnabled()) {
       privacyScreen.unlock(activity)
+      privacyScreen.setWindowSecure(activity, false)
       return
     }
+
+    // Keep snapshot protection always active while privacy screen is enabled.
+    privacyScreen.setWindowSecure(activity, true)
 
     if (enabled) {
       privacyScreen.lock(activity)
     } else {
-      privacyScreen.unlock(activity)
+      privacyScreen.hideOverlay(activity)
     }
   }
 
-  fun checkBiometricStatus(context: Context): JSObject = biometricAuth.checkStatus(context)
+  fun setWindowSecure(
+    activity: android.app.Activity?,
+    enabled: Boolean,
+  ) {
+    privacyScreen.setWindowSecure(activity, enabled)
+  }
+
+  fun checkBiometricStatus(context: Context): JSObject = applySecurityOverrides(biometricAuth.checkStatus(context))
+
+  /**
+   * Overrides the detected biometry type for development/testing flows.
+   */
+  fun setBiometryType(biometryType: String) {
+    overrideBiometryType = biometryType
+
+    if (biometryType == "none") {
+      overrideIsBiometricsAvailable = false
+      overrideIsBiometricsEnabled = false
+    } else {
+      overrideIsBiometricsAvailable = true
+    }
+  }
+
+  /**
+   * Overrides biometric enrollment state for development/testing flows.
+   */
+  fun setBiometryIsEnrolled(isBiometricsEnabled: Boolean) {
+    overrideIsBiometricsEnabled = isBiometricsEnabled
+
+    if (isBiometricsEnabled) {
+      overrideIsBiometricsAvailable = true
+      if (overrideBiometryType == "none") {
+        overrideBiometryType = "fingerprint"
+      }
+    }
+  }
+
+  /**
+   * Overrides device secure-state for development/testing flows.
+   */
+  fun setDeviceIsSecure(isDeviceSecure: Boolean) {
+    overrideIsDeviceSecure = isDeviceSecure
+  }
 
   private data class SetManyOperation(
     val key: String,
@@ -605,6 +678,38 @@ class Fortress(
   }
 
   private fun isPrivacyScreenEnabled(): Boolean = config.enablePrivacyScreen
+
+  /**
+   * Resolves whether passcode/device credential fallback is allowed
+   * according to fallback strategy semantics.
+   */
+  private fun resolveAllowPasscode(): Boolean =
+    when (config.fallbackStrategy) {
+      "deviceCredential" -> true
+      "none" -> false
+      else -> config.allowDevicePasscode
+    }
+
+  private fun applySecurityOverrides(status: JSObject): JSObject {
+    val merged = JSObject()
+    merged.put(
+      "isBiometricsAvailable",
+      overrideIsBiometricsAvailable ?: (status.getBool("isBiometricsAvailable") ?: false),
+    )
+    merged.put(
+      "isBiometricsEnabled",
+      overrideIsBiometricsEnabled ?: (status.getBool("isBiometricsEnabled") ?: false),
+    )
+    merged.put(
+      "isDeviceSecure",
+      overrideIsDeviceSecure ?: (status.getBool("isDeviceSecure") ?: false),
+    )
+    merged.put(
+      "biometryType",
+      overrideBiometryType ?: status.getString("biometryType") ?: "none",
+    )
+    return merged
+  }
 
   private fun operationMarker(operation: SetManyOperation): String =
     if (operation.secure) {

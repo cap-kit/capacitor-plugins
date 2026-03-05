@@ -121,6 +121,26 @@ const config: CapacitorConfig = {
 export default config;
 ```
 
+### Runtime Configuration
+
+You can override configuration at runtime using `configure()`:
+
+```ts
+import { Fortress } from '@cap-kit/fortress';
+
+// Update session timeout
+await Fortress.configure({
+  lockAfterMs: 300000, // 5 minutes
+});
+
+// Update privacy overlay text
+await Fortress.configure({
+  privacyOverlayText: 'Session Expired',
+});
+```
+
+**Note**: Some configuration changes take effect immediately (e.g., privacy overlay), while others apply on the next lifecycle transition (e.g., session timeout).
+
 ## Native Requirements
 
 ### Android
@@ -128,6 +148,7 @@ export default config;
 - Android API 23+ (for BiometricPrompt)
 - AndroidX Biometric library (included via Gradle)
 - StrongBox hardware (optional, for enhanced security)
+- Recommended: `compileSdkVersion` 34, `targetSdkVersion` 34
 
 ### iOS
 
@@ -150,12 +171,23 @@ The plugin automatically adds the following permissions to your app's manifest:
 
 ### iOS
 
-Add the following to your `Info.plist`:
+You must add the following to your `Info.plist`:
 
 ```xml
 <key>NSFaceIDUsageDescription</key>
 <string>Fortress uses Face ID to secure your data.</string>
 ```
+
+#### Optional Capabilities
+
+For iCloud Keychain sync support, enable the **Keychain Sharing** capability in your Xcode project:
+
+1. Select your app target in Xcode
+2. Go to **Signing & Capabilities**
+3. Click **+ Capability** → **Keychain Sharing**
+4. Add an appropriate Keychain Access Group (optional)
+
+This enables the `enableICloudKeychainSync` configuration option.
 
 ---
 
@@ -163,11 +195,15 @@ Add the following to your `Info.plist`:
 
 <docgen-index>
 
+- [`getRuntimeConfig()`](#getruntimeconfig)
 - [`configure(...)`](#configure)
 - [`setValue(...)`](#setvalue)
 - [`getValue(...)`](#getvalue)
 - [`setMany(...)`](#setmany)
 - [`checkStatus()`](#checkstatus)
+- [`setBiometryType(...)`](#setbiometrytype)
+- [`setBiometryIsEnrolled(...)`](#setbiometryisenrolled)
+- [`setDeviceIsSecure(...)`](#setdeviceissecure)
 - [`removeValue(...)`](#removevalue)
 - [`clearAll()`](#clearall)
 - [`unlock(...)`](#unlock)
@@ -206,6 +242,20 @@ Public JavaScript API for the Fortress Capacitor plugin.
 
 This interface defines a stable, platform-agnostic API.
 All methods behave consistently across Android, iOS, and Web.
+
+### getRuntimeConfig()
+
+```typescript
+getRuntimeConfig() => Promise<FortressRuntimeConfig>
+```
+
+Returns the runtime configuration currently used by Fortress.
+
+**Returns:** <code>Promise&lt;<a href="#fortressruntimeconfig">FortressRuntimeConfig</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
 
 ### configure(...)
 
@@ -312,6 +362,56 @@ checkStatus() => Promise<DeviceSecurityStatus>
 ```
 
 **Returns:** <code>Promise&lt;<a href="#devicesecuritystatus">DeviceSecurityStatus</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### setBiometryType(...)
+
+```typescript
+setBiometryType(options: SetBiometryTypeOptions) => Promise<void>
+```
+
+Overrides detected biometry type for development/testing scenarios.
+
+This method is intended for QA and simulator/device mocking flows.
+
+| Param         | Type                                                                      |
+| ------------- | ------------------------------------------------------------------------- |
+| **`options`** | <code><a href="#setbiometrytypeoptions">SetBiometryTypeOptions</a></code> |
+
+**Since:** 8.0.0
+
+---
+
+### setBiometryIsEnrolled(...)
+
+```typescript
+setBiometryIsEnrolled(options: SetBiometryIsEnrolledOptions) => Promise<void>
+```
+
+Overrides biometrics enrollment state for development/testing scenarios.
+
+| Param         | Type                                                                                  |
+| ------------- | ------------------------------------------------------------------------------------- |
+| **`options`** | <code><a href="#setbiometryisenrolledoptions">SetBiometryIsEnrolledOptions</a></code> |
+
+**Since:** 8.0.0
+
+---
+
+### setDeviceIsSecure(...)
+
+```typescript
+setDeviceIsSecure(options: SetDeviceIsSecureOptions) => Promise<void>
+```
+
+Overrides device secure-state for development/testing scenarios.
+
+| Param         | Type                                                                          |
+| ------------- | ----------------------------------------------------------------------------- |
+| **`options`** | <code><a href="#setdeviceissecureoptions">SetDeviceIsSecureOptions</a></code> |
 
 **Since:** 8.0.0
 
@@ -888,6 +988,35 @@ const { version } = await Fortress.getPluginVersion();
 
 ### Interfaces
 
+#### FortressRuntimeConfig
+
+Runtime configuration snapshot currently used by the plugin.
+
+This reflects static startup configuration merged with
+runtime overrides applied via `configure(...)`.
+
+| Prop                                  | Type                                                             |
+| ------------------------------------- | ---------------------------------------------------------------- |
+| **`verboseLogging`**                  | <code>boolean</code>                                             |
+| **`logLevel`**                        | <code>'debug' \| 'error' \| 'warn' \| 'info' \| 'verbose'</code> |
+| **`lockAfterMs`**                     | <code>number</code>                                              |
+| **`enablePrivacyScreen`**             | <code>boolean</code>                                             |
+| **`privacyOverlayText`**              | <code>string</code>                                              |
+| **`privacyOverlayImageName`**         | <code>string</code>                                              |
+| **`privacyOverlayShowText`**          | <code>boolean</code>                                             |
+| **`privacyOverlayShowImage`**         | <code>boolean</code>                                             |
+| **`privacyOverlayTextColor`**         | <code>string</code>                                              |
+| **`privacyOverlayBackgroundOpacity`** | <code>number</code>                                              |
+| **`privacyOverlayTheme`**             | <code>'system' \| 'light' \| 'dark'</code>                       |
+| **`fallbackStrategy`**                | <code>'none' \| 'deviceCredential' \| 'systemDefault'</code>     |
+| **`allowCachedAuthentication`**       | <code>boolean</code>                                             |
+| **`cachedAuthenticationTimeoutMs`**   | <code>number</code>                                              |
+| **`maxBiometricAttempts`**            | <code>number</code>                                              |
+| **`lockoutDurationMs`**               | <code>number</code>                                              |
+| **`requireFreshAuthenticationMs`**    | <code>number</code>                                              |
+| **`encryptionAlgorithm`**             | <code>'AES-GCM' \| 'AES-CBC'</code>                              |
+| **`persistSessionState`**             | <code>boolean</code>                                             |
+
 #### FortressConfig
 
 Static configuration options for the Fortress plugin.
@@ -901,24 +1030,33 @@ Configuration values:
 - do NOT enable/disable methods
 - are applied once during plugin load
 
-| Prop                                | Type                                                                      | Description                                                                                                                                                                                                                              | Default                           | Since |
-| ----------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- | ----- |
-| **`verboseLogging`**                | <code>boolean</code>                                                      | Enables verbose native logging. When enabled, additional debug information is printed to the native console (Logcat on Android, Xcode on iOS). This option affects native logging behavior only and has no impact on the JavaScript API. | <code>false</code>                | 8.0.0 |
-| **`logLevel`**                      | <code>'debug' \| 'error' \| 'warn' \| 'verbose'</code>                    | Native/Web logging threshold. - `error`: errors only - `warn`: warnings and errors - `debug`: debug/info/warn/error - `verbose`: maximum logging level                                                                                   | <code>'info'</code>               | 8.0.0 |
-| **`lockAfterMs`**                   | <code>number</code>                                                       | Global auto-lock timeout in milliseconds.                                                                                                                                                                                                | <code>60000</code>                | 8.0.0 |
-| **`accessControl`**                 | <code><a href="#biometricaccesscontrol">BiometricAccessControl</a></code> | Security level for biometric hardware access.                                                                                                                                                                                            | <code>'biometryCurrentSet'</code> | 8.0.0 |
-| **`enablePrivacyScreen`**           | <code>boolean</code>                                                      | Enables or disables privacy protection for app snapshots.                                                                                                                                                                                | <code>true</code>                 | 8.0.0 |
-| **`obfuscationPrefix`**             | <code>string</code>                                                       | Prefix used by key obfuscation utilities.                                                                                                                                                                                                | <code>'ftrss\_'</code>            | 8.0.0 |
-| **`webAuthn`**                      | <code><a href="#webauthnconfig">WebAuthnConfig</a></code>                 | WebAuthn configuration for Web platform unlock behavior. - `local` mode stores credential metadata only in browser storage. - `server` mode uses backend challenge and assertion verification endpoints.                                 |                                   | 8.0.0 |
-| **`allowCachedAuthentication`**     | <code>boolean</code>                                                      | Enables in-memory cached authentication for unlock operations. When enabled, repeated `unlock()` calls within `cachedAuthenticationTimeoutMs` can skip the interactive biometric prompt.                                                 | <code>false</code>                | 8.0.0 |
-| **`cachedAuthenticationTimeoutMs`** | <code>number</code>                                                       | Cached authentication validity window in milliseconds. This value is only used when `allowCachedAuthentication` is enabled.                                                                                                              | <code>30000</code>                | 8.0.0 |
-| **`cryptoStrategy`**                | <code>'auto' \| 'ecc' \| 'rsa'</code>                                     | Asymmetric key-pair strategy for cryptographic operations. - `auto`: platform default strategy - `ecc`: force elliptic-curve key generation where supported - `rsa`: force RSA key generation where supported                            | <code>'auto'</code>               | 8.0.0 |
-| **`keySize`**                       | <code>2048 \| 4096</code>                                                 | RSA key size used when `cryptoStrategy` is set to `rsa`.                                                                                                                                                                                 | <code>2048</code>                 | 8.0.0 |
-| **`maxBiometricAttempts`**          | <code>number</code>                                                       | Maximum failed biometric attempts before temporary lockout.                                                                                                                                                                              | <code>5</code>                    | 8.0.0 |
-| **`lockoutDurationMs`**             | <code>number</code>                                                       | Temporary lockout duration in milliseconds after reaching the biometric failure threshold.                                                                                                                                               | <code>30000</code>                | 8.0.0 |
-| **`requireFreshAuthenticationMs`**  | <code>number</code>                                                       | Maximum allowed age in milliseconds for the last successful biometric authentication before requiring a fresh authentication.                                                                                                            | <code>0 (disabled)</code>         | 8.0.0 |
-| **`encryptionAlgorithm`**           | <code>'AES-GCM' \| 'AES-CBC'</code>                                       | Symmetric encryption algorithm used by the Web secure storage layer. Native platforms keep hardware-backed secure defaults.                                                                                                              | <code>'AES-GCM'</code>            | 8.0.0 |
-| **`enableICloudKeychainSync`**      | <code>boolean</code>                                                      | Enables iCloud Keychain synchronization for iOS secure-storage entries. Platform behavior: - iOS: when enabled, generic-password vault items are created as synchronizable - Android/Web: ignored (no-op)                                | <code>false</code>                | 8.0.0 |
+| Prop                                  | Type                                                                      | Description                                                                                                                                                                                                                                                                                                                                            | Default                           | Since |
+| ------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------- | ----- |
+| **`verboseLogging`**                  | <code>boolean</code>                                                      | Enables verbose native logging. When enabled, additional debug information is printed to the native console (Logcat on Android, Xcode on iOS). This option affects native logging behavior only and has no impact on the JavaScript API.                                                                                                               | <code>false</code>                | 8.0.0 |
+| **`logLevel`**                        | <code>'debug' \| 'error' \| 'warn' \| 'verbose'</code>                    | Native/Web logging threshold. - `error`: errors only - `warn`: warnings and errors - `debug`: debug/info/warn/error - `verbose`: maximum logging level                                                                                                                                                                                                 | <code>'info'</code>               | 8.0.0 |
+| **`lockAfterMs`**                     | <code>number</code>                                                       | Global auto-lock timeout in milliseconds.                                                                                                                                                                                                                                                                                                              | <code>60000</code>                | 8.0.0 |
+| **`accessControl`**                   | <code><a href="#biometricaccesscontrol">BiometricAccessControl</a></code> | Security level for biometric hardware access.                                                                                                                                                                                                                                                                                                          | <code>'biometryCurrentSet'</code> | 8.0.0 |
+| **`enablePrivacyScreen`**             | <code>boolean</code>                                                      | Enables or disables privacy protection for app snapshots. Platform behavior: - Android relies on window snapshot protection in recents/task switcher. - iOS uses a visual privacy overlay. Note: On Android recents previews, system-protected cards may not render custom overlay text/image and can appear as a blank/protected preview.             | <code>true</code>                 | 8.0.0 |
+| **`privacyOverlayText`**              | <code>string</code>                                                       | Optional text rendered on top of the privacy screen overlay. This is intended for lock-state messaging such as "Session Locked" or "Tap to Unlock". Platform note: - Android: text is shown on the in-app overlay. - Android recents/task switcher: system snapshot protection may hide custom text in preview cards.                                  |                                   | 8.0.0 |
+| **`privacyOverlayImageName`**         | <code>string</code>                                                       | Optional native asset name rendered on top of the privacy screen overlay. Asset lookup rules: - iOS: Image from app asset catalog by name - Android: Drawable resource by name Platform note: - Android: image is shown on the in-app overlay. - Android recents/task switcher: system snapshot protection may hide custom images in preview cards.    |                                   | 8.0.0 |
+| **`privacyOverlayShowText`**          | <code>boolean</code>                                                      | Controls whether privacy overlay text is visible.                                                                                                                                                                                                                                                                                                      | <code>true</code>                 | 8.0.0 |
+| **`privacyOverlayShowImage`**         | <code>boolean</code>                                                      | Controls whether privacy overlay image is visible.                                                                                                                                                                                                                                                                                                     | <code>true</code>                 | 8.0.0 |
+| **`privacyOverlayTextColor`**         | <code>string</code>                                                       | Optional text color (hex string) for the privacy overlay label. Example: `#FFFFFF`                                                                                                                                                                                                                                                                     |                                   | 8.0.0 |
+| **`privacyOverlayBackgroundOpacity`** | <code>number</code>                                                       | Optional background opacity for the privacy overlay scrim. Allowed range: `0.0` to `1.0`.                                                                                                                                                                                                                                                              |                                   | 8.0.0 |
+| **`privacyOverlayTheme`**             | <code>'system' \| 'light' \| 'dark'</code>                                | Controls the privacy overlay visual theme. - `system`: follow device appearance (light/dark) - `light`: force light overlay appearance - `dark`: force dark overlay appearance                                                                                                                                                                         | <code>'system'</code>             | 8.0.0 |
+| **`obfuscationPrefix`**               | <code>string</code>                                                       | Prefix used by key obfuscation utilities.                                                                                                                                                                                                                                                                                                              | <code>'ftrss\_'</code>            | 8.0.0 |
+| **`webAuthn`**                        | <code><a href="#webauthnconfig">WebAuthnConfig</a></code>                 | WebAuthn configuration for Web platform unlock behavior. - `local` mode stores credential metadata only in browser storage. - `server` mode uses backend challenge and assertion verification endpoints.                                                                                                                                               |                                   | 8.0.0 |
+| **`allowCachedAuthentication`**       | <code>boolean</code>                                                      | Enables in-memory cached authentication for unlock operations. When enabled, repeated `unlock()` calls within `cachedAuthenticationTimeoutMs` can skip the interactive biometric prompt.                                                                                                                                                               | <code>false</code>                | 8.0.0 |
+| **`cachedAuthenticationTimeoutMs`**   | <code>number</code>                                                       | Cached authentication validity window in milliseconds. This value is only used when `allowCachedAuthentication` is enabled.                                                                                                                                                                                                                            | <code>30000</code>                | 8.0.0 |
+| **`cryptoStrategy`**                  | <code>'auto' \| 'ecc' \| 'rsa'</code>                                     | Asymmetric key-pair strategy for cryptographic operations. - `auto`: platform default strategy - `ecc`: force elliptic-curve key generation where supported - `rsa`: force RSA key generation where supported                                                                                                                                          | <code>'auto'</code>               | 8.0.0 |
+| **`keySize`**                         | <code>2048 \| 4096</code>                                                 | RSA key size used when `cryptoStrategy` is set to `rsa`.                                                                                                                                                                                                                                                                                               | <code>2048</code>                 | 8.0.0 |
+| **`maxBiometricAttempts`**            | <code>number</code>                                                       | Maximum failed biometric attempts before temporary lockout.                                                                                                                                                                                                                                                                                            | <code>5</code>                    | 8.0.0 |
+| **`lockoutDurationMs`**               | <code>number</code>                                                       | Temporary lockout duration in milliseconds after reaching the biometric failure threshold.                                                                                                                                                                                                                                                             | <code>30000</code>                | 8.0.0 |
+| **`requireFreshAuthenticationMs`**    | <code>number</code>                                                       | Maximum allowed age in milliseconds for the last successful biometric authentication before requiring a fresh authentication.                                                                                                                                                                                                                          | <code>0 (disabled)</code>         | 8.0.0 |
+| **`encryptionAlgorithm`**             | <code>'AES-GCM' \| 'AES-CBC'</code>                                       | Symmetric encryption algorithm used by the Web secure storage layer. Native platforms keep hardware-backed secure defaults.                                                                                                                                                                                                                            | <code>'AES-GCM'</code>            | 8.0.0 |
+| **`enableICloudKeychainSync`**        | <code>boolean</code>                                                      | Enables iCloud Keychain synchronization for iOS secure-storage entries. Platform behavior: - iOS: when enabled, generic-password vault items are created as synchronizable - Android/Web: ignored (no-op)                                                                                                                                              | <code>false</code>                | 8.0.0 |
+| **`persistSessionState`**             | <code>boolean</code>                                                      | Persists web session lock/auth state across page reloads. Platform behavior: - Web: when enabled, vault/session state is restored from persisted storage - iOS/Android: ignored (no-op)                                                                                                                                                                | <code>false</code>                | 8.0.0 |
+| **`fallbackStrategy`**                | <code>'none' \| 'deviceCredential' \| 'systemDefault'</code>              | Controls fallback behavior when biometric authentication is unavailable or fails during an interactive prompt. - `deviceCredential`: always allow device credential fallback when supported. - `none`: disallow device credential fallback and require biometrics only. - `systemDefault`: preserve legacy behavior (`allowDevicePasscode` on native). | <code>'systemDefault'</code>      | 8.0.0 |
 
 #### WebAuthnConfig
 
@@ -960,6 +1098,30 @@ Result returned by secure and insecure read operations.
 | **`isDeviceSecure`**        | <code>boolean</code>                                                    |
 | **`biometryType`**          | <code>'none' \| 'touchId' \| 'faceId' \| 'fingerprint' \| 'iris'</code> |
 
+#### SetBiometryTypeOptions
+
+Input payload for overriding detected biometry type in development/testing.
+
+| Prop               | Type                                                                    |
+| ------------------ | ----------------------------------------------------------------------- |
+| **`biometryType`** | <code>'none' \| 'touchId' \| 'faceId' \| 'fingerprint' \| 'iris'</code> |
+
+#### SetBiometryIsEnrolledOptions
+
+Input payload for overriding biometrics enrollment state in development/testing.
+
+| Prop                      | Type                 |
+| ------------------------- | -------------------- |
+| **`isBiometricsEnabled`** | <code>boolean</code> |
+
+#### SetDeviceIsSecureOptions
+
+Input payload for overriding device secure-state in development/testing.
+
+| Prop                 | Type                 |
+| -------------------- | -------------------- |
+| **`isDeviceSecure`** | <code>boolean</code> |
+
 #### UnlockOptions
 
 Optional input payload for vault unlock.
@@ -976,6 +1138,7 @@ Prompt customization options for interactive authentication.
 Platform note:
 
 - Android uses title/subtitle/description/negativeButtonText directly.
+- Android BiometricPrompt layout/iconography remains system-controlled.
 - iOS uses localized reason + cancel title best-effort mapping.
 - Web keeps this shape for API parity.
 
@@ -1175,10 +1338,92 @@ try {
 
 The following error codes may be returned by the plugin:
 
-- `UNAVAILABLE` — The feature is not supported on the current device or platform
-- `PERMISSION_DENIED` — A required permission was denied (platform-dependent)
-- `INIT_FAILED` — Native initialization or runtime failure
-- `UNKNOWN_TYPE` — Invalid or unsupported input
+| Code                 | Description                                           |
+| -------------------- | ----------------------------------------------------- |
+| `UNAVAILABLE`        | Feature not supported on this device or configuration |
+| `CANCELLED`          | User cancelled the operation                          |
+| `PERMISSION_DENIED`  | Required permission was denied                        |
+| `INIT_FAILED`        | Native initialization or runtime failure              |
+| `INVALID_INPUT`      | Invalid input provided                                |
+| `NOT_FOUND`          | Requested resource not found                          |
+| `CONFLICT`           | Operation conflicts with current state                |
+| `TIMEOUT`            | Operation timed out                                   |
+| `SECURITY_VIOLATION` | Security validation failed                            |
+| `VAULT_LOCKED`       | Vault is locked, unlock required                      |
+
+### Example
+
+```ts
+import { Fortress, FortressErrorCode } from '@cap-kit/fortress';
+
+try {
+  await Fortress.unlock();
+} catch (err: any) {
+  switch (err.code) {
+    case FortressErrorCode.VAULT_LOCKED:
+      // Vault is locked - prompt for biometric
+      break;
+    case FortressErrorCode.CANCELLED:
+      // User cancelled - handle gracefully
+      break;
+    case FortressErrorCode.UNAVAILABLE:
+      // Biometrics not available
+      break;
+    case FortressErrorCode.SECURITY_VIOLATION:
+      // Security issue detected
+      break;
+    default:
+      console.error(err.message);
+  }
+}
+```
+
+---
+
+## Privacy Overlay
+
+Fortress supports customizable privacy screen overlays that display when the vault is locked.
+
+### Configuration
+
+```typescript
+// capacitor.config.ts
+const config: CapacitorConfig = {
+  plugins: {
+    Fortress: {
+      enablePrivacyScreen: true,
+      privacyOverlayText: 'Session Locked',
+      privacyOverlayImageName: 'lock_icon', // Optional: image from asset catalog
+      privacyOverlayShowText: true,
+      privacyOverlayShowImage: true,
+      privacyOverlayTextColor: '#FFFFFF',
+      privacyOverlayBackgroundOpacity: 0.8,
+      privacyOverlayTheme: 'system', // 'system' | 'light' | 'dark'
+    },
+  },
+};
+```
+
+### Runtime Updates
+
+You can update the privacy overlay at runtime:
+
+```ts
+await Fortress.configure({
+  privacyOverlayText: 'New text', // Updates immediately if overlay is visible
+});
+```
+
+### Platform Behavior Notes
+
+- **Android recents/task switcher:** Android applies snapshot protection with `FLAG_SECURE`. In this mode, the system usually shows a protected/blank preview card. Custom overlay text/image is not guaranteed to be visible in recents previews.
+- **Android in-app lock overlay:** `privacyOverlayText`, `privacyOverlayImageName`, and `privacyOverlayTheme` apply to the plugin's in-app privacy overlay.
+- **Biometric prompt UI on Android:** The lock icon/title style belongs to system `BiometricPrompt` and cannot be fully themed by the plugin. You can customize prompt content via `biometricPromptText` and `promptOptions` (title/subtitle/description/negative button).
+
+### Asset Requirements
+
+- **iOS**: Add images to your Xcode asset catalog (Assets.xcassets)
+- **Android**: Add drawable resources to `android/app/src/main/res/drawable`
 
 ---
 

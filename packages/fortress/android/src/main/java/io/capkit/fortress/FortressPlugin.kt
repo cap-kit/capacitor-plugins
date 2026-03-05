@@ -16,7 +16,7 @@ import io.capkit.fortress.impl.BiometricAuth
 import io.capkit.fortress.logger.Logger
 
 /**
- * Capacitor bridge for the Integrity plugin (Android).
+ * Capacitor bridge for the Fortress plugin (Android).
  *
  * CONTRACT:
  * - This class is the ONLY entry point from JavaScript.
@@ -36,6 +36,7 @@ import io.capkit.fortress.logger.Logger
 @CapacitorPlugin(
   name = "Fortress",
 )
+@Suppress("unused")
 class FortressPlugin :
   Plugin(),
   DefaultLifecycleObserver {
@@ -65,21 +66,15 @@ class FortressPlugin :
    */
   private lateinit var implementation: Fortress
   private var lastSecurityStatus: JSObject? = null
+  private var overlayUnlockInProgress = false
+
+  private fun currentActivityOrNull(): android.app.Activity? = activity ?: bridge.activity
 
   // ---------------------------------------------------------------------------
   // Companion Object
   // ---------------------------------------------------------------------------
 
   private companion object {
-    /**
-     * Account type identifier for internal plugin identification.
-     */
-    const val ACCOUNT_TYPE = "io.capkit.fortress"
-
-    /**
-     * Human-readable account name for the plugin.
-     */
-    const val ACCOUNT_NAME = "Fortress"
     const val REASON_SECURITY_STATE_CHANGED = "security_state_changed"
     const val REASON_KEYPAIR_INVALIDATED = "keypair_invalidated"
     const val REASON_KEYS_DELETED = "keys_deleted"
@@ -120,9 +115,31 @@ class FortressPlugin :
       notifyLockStatusChanged(isLocked)
     }
 
-    // Initial privacy screen enforcement if enabled in capacitor.config.ts
+    implementation.setPrivacyScreenTapCallback {
+      val hostActivity = activity as? FragmentActivity ?: return@setPrivacyScreenTapCallback
+      if (overlayUnlockInProgress) {
+        return@setPrivacyScreenTapCallback
+      }
+
+      overlayUnlockInProgress = true
+      implementation.unlock(hostActivity, null) { result ->
+        overlayUnlockInProgress = false
+        result.onFailure { error ->
+          Logger.warn("Overlay tap unlock failed: ${error.message}")
+        }
+      }
+    }
+
+    // Initial privacy protection sync for current foreground state.
+    // ProcessLifecycle onStart may not fire immediately when observer is
+    // registered while app is already in foreground.
+    val hostActivity = currentActivityOrNull()
     if (config.enablePrivacyScreen) {
-      implementation.lock(activity)
+      implementation.setContentVisibility(hostActivity, true)
+      val locked = implementation.isLocked(hostActivity)
+      implementation.setPrivacyProtection(hostActivity, locked)
+    } else {
+      implementation.setPrivacyProtection(hostActivity, false)
     }
 
     captureInitialSecurityStatus()
@@ -131,32 +148,70 @@ class FortressPlugin :
   }
 
   // Lifecycle Handlers
+  override fun onPause(owner: LifecycleOwner) {
+    if (config.enablePrivacyScreen) {
+      val hostActivity = currentActivityOrNull()
+      implementation.setWindowSecure(hostActivity, true)
+      implementation.setPrivacyProtection(hostActivity, true)
+      implementation.setContentVisibility(hostActivity, false)
+    }
+  }
+
+  /**
+   * Capacitor activity lifecycle hook.
+   *
+   * This fires earlier than ProcessLifecycleOwner callbacks on some OEM builds
+   * and helps ensure privacy protection is applied before recents snapshot.
+   */
+  override fun handleOnPause() {
+    super.handleOnPause()
+    if (config.enablePrivacyScreen) {
+      val hostActivity = currentActivityOrNull()
+      implementation.setWindowSecure(hostActivity, true)
+      implementation.setPrivacyProtection(hostActivity, true)
+      implementation.setContentVisibility(hostActivity, false)
+    }
+  }
+
+  override fun handleOnResume() {
+    super.handleOnResume()
+    val hostActivity = currentActivityOrNull()
+    if (config.enablePrivacyScreen) {
+      implementation.setContentVisibility(hostActivity, true)
+      val locked = implementation.isLocked(hostActivity)
+      implementation.setPrivacyProtection(hostActivity, locked)
+    }
+  }
+
   override fun onStop(owner: LifecycleOwner) {
+    val hostActivity = currentActivityOrNull()
+
     // 1. Register background timestamp for grace-period evaluation.
     implementation.setSessionBackgroundTimestamp()
 
     if (config.enablePrivacyScreen) {
       // 2. Enable privacy protection while app is in background.
-      implementation.setPrivacyProtection(activity, true)
+      implementation.setPrivacyProtection(hostActivity, true)
 
       // 3. Hide app content to harden recents/task-switcher snapshots.
-      implementation.setContentVisibility(activity, false)
+      implementation.setContentVisibility(hostActivity, false)
     }
   }
 
   override fun onStart(owner: LifecycleOwner) {
+    val hostActivity = currentActivityOrNull()
     val lockAfterMs = config.lockAfterMs.toLong()
 
-    // 1. Valuta se la sessione è scaduta mentre l'app era in stop
+    // 1. Evaluate whether session expired while the app was in stop/background.
     implementation.evaluateSessionBackgroundGracePeriod(lockAfterMs)
 
     if (config.enablePrivacyScreen) {
       // 2. Restore content visibility.
-      implementation.setContentVisibility(activity, true)
+      implementation.setContentVisibility(hostActivity, true)
 
       // 3. Keep privacy protection only while vault is locked.
-      val locked = implementation.isLocked(activity)
-      implementation.setPrivacyProtection(activity, locked)
+      val locked = implementation.isLocked(hostActivity)
+      implementation.setPrivacyProtection(hostActivity, locked)
     }
 
     notifySecurityStateIfChanged()
@@ -285,16 +340,80 @@ class FortressPlugin :
     call.resolve(ret)
   }
 
+  /**
+   * Returns the runtime configuration currently used by the plugin.
+   */
+  @PluginMethod
+  fun getRuntimeConfig(call: PluginCall) {
+    val ret = JSObject()
+    ret.put("verboseLogging", config.verboseLogging)
+    ret.put("logLevel", config.logLevel)
+    ret.put("lockAfterMs", config.lockAfterMs)
+    ret.put("enablePrivacyScreen", config.enablePrivacyScreen)
+    ret.put("privacyOverlayText", config.privacyOverlayText)
+    ret.put("privacyOverlayImageName", config.privacyOverlayImageName)
+    ret.put("privacyOverlayShowText", config.privacyOverlayShowText)
+    ret.put("privacyOverlayShowImage", config.privacyOverlayShowImage)
+    ret.put("privacyOverlayTextColor", config.privacyOverlayTextColor)
+    ret.put("privacyOverlayBackgroundOpacity", config.privacyOverlayBackgroundOpacity)
+    ret.put("privacyOverlayTheme", config.privacyOverlayTheme)
+    ret.put("fallbackStrategy", config.fallbackStrategy)
+    ret.put("allowCachedAuthentication", config.allowCachedAuthentication)
+    ret.put("cachedAuthenticationTimeoutMs", config.cachedAuthenticationTimeoutMs)
+    ret.put("maxBiometricAttempts", config.maxBiometricAttempts)
+    ret.put("lockoutDurationMs", config.lockoutDurationMs)
+    ret.put("requireFreshAuthenticationMs", config.requireFreshAuthenticationMs)
+    ret.put("encryptionAlgorithm", config.encryptionAlgorithm)
+    ret.put("persistSessionState", config.persistSessionState)
+    call.resolve(ret)
+  }
+
+  /**
+   * Applies runtime configuration already parsed at plugin load.
+   */
   @PluginMethod
   fun configure(call: PluginCall) {
     try {
+      call.getBoolean("verboseLogging")?.let { config.verboseLogging = it }
+      call.getString("logLevel")?.let { config.logLevel = it }
+      call.getInt("lockAfterMs")?.let { config.lockAfterMs = it }
+      call.getBoolean("enablePrivacyScreen")?.let { config.enablePrivacyScreen = it }
+      call.getString("privacyOverlayText")?.let { config.privacyOverlayText = it }
+      call.getString("privacyOverlayImageName")?.let { config.privacyOverlayImageName = it }
+      call.getBoolean("privacyOverlayShowText")?.let { config.privacyOverlayShowText = it }
+      call.getBoolean("privacyOverlayShowImage")?.let { config.privacyOverlayShowImage = it }
+      call.getString("privacyOverlayTextColor")?.let { config.privacyOverlayTextColor = it }
+      call.getString("privacyOverlayTheme")?.let { config.privacyOverlayTheme = it }
+      call.getDouble("privacyOverlayBackgroundOpacity")?.let {
+        config.privacyOverlayBackgroundOpacity = it
+      }
+      call.getString("fallbackStrategy")?.let { config.fallbackStrategy = it }
+      call.getBoolean("allowCachedAuthentication")?.let { config.allowCachedAuthentication = it }
+      call.getInt("cachedAuthenticationTimeoutMs")?.let { config.cachedAuthenticationTimeoutMs = it }
+      call.getInt("maxBiometricAttempts")?.let { config.maxBiometricAttempts = it }
+      call.getInt("lockoutDurationMs")?.let { config.lockoutDurationMs = it }
+      call.getInt("requireFreshAuthenticationMs")?.let { config.requireFreshAuthenticationMs = it }
+      call.getString("encryptionAlgorithm")?.let { config.encryptionAlgorithm = it }
+      call.getBoolean("persistSessionState")?.let { config.persistSessionState = it }
+
       implementation.configure(config)
+
+      if (config.enablePrivacyScreen) {
+        val locked = implementation.isLocked(activity)
+        implementation.setPrivacyProtection(activity, locked)
+      } else {
+        implementation.setPrivacyProtection(activity, false)
+      }
+
       call.resolve()
     } catch (error: Throwable) {
       handleError(call, error)
     }
   }
 
+  /**
+   * Stores a secure value in the encrypted vault.
+   */
   @PluginMethod
   fun setValue(call: PluginCall) {
     try {
@@ -307,6 +426,9 @@ class FortressPlugin :
     }
   }
 
+  /**
+   * Stores multiple secure values in a single operation.
+   */
   @PluginMethod
   fun setMany(call: PluginCall) {
     val values =
@@ -323,6 +445,9 @@ class FortressPlugin :
     }
   }
 
+  /**
+   * Reads a secure value from the encrypted vault.
+   */
   @PluginMethod
   fun getValue(call: PluginCall) {
     try {
@@ -334,6 +459,9 @@ class FortressPlugin :
     }
   }
 
+  /**
+   * Removes a secure value from the encrypted vault.
+   */
   @PluginMethod
   fun removeValue(call: PluginCall) {
     try {
@@ -345,6 +473,9 @@ class FortressPlugin :
     }
   }
 
+  /**
+   * Clears all secure values managed by the plugin.
+   */
   @PluginMethod
   fun clearAll(call: PluginCall) {
     try {
@@ -355,6 +486,9 @@ class FortressPlugin :
     }
   }
 
+  /**
+   * Unlocks the vault using biometric/device-credential authentication.
+   */
   @PluginMethod
   fun unlock(call: PluginCall) {
     val hostActivity = activity as? FragmentActivity
@@ -377,6 +511,9 @@ class FortressPlugin :
     }
   }
 
+  /**
+   * Locks the vault and applies privacy protection when configured.
+   */
   @PluginMethod
   fun lock(call: PluginCall) {
     try {
@@ -387,10 +524,13 @@ class FortressPlugin :
     }
   }
 
+  /**
+   * Returns whether the vault is currently locked.
+   */
   @PluginMethod
   fun isLocked(call: PluginCall) {
     try {
-      // Pass the activity ereditated from the Plugin class
+      // Use the activity inherited from the Capacitor Plugin base class.
       val isLocked = implementation.isLocked(activity)
       call.resolve(JSObject().apply { put("isLocked", isLocked) })
     } catch (error: Throwable) {
@@ -398,6 +538,9 @@ class FortressPlugin :
     }
   }
 
+  /**
+   * Returns the current session state snapshot.
+   */
   @PluginMethod
   fun getSession(call: PluginCall) {
     try {
@@ -413,6 +556,9 @@ class FortressPlugin :
     }
   }
 
+  /**
+   * Resets session state and enforces locked vault semantics.
+   */
   @PluginMethod
   fun resetSession(call: PluginCall) {
     try {
@@ -424,6 +570,9 @@ class FortressPlugin :
     }
   }
 
+  /**
+   * Refreshes session activity timestamp when vault is unlocked.
+   */
   @PluginMethod
   fun touchSession(call: PluginCall) {
     try {
@@ -687,5 +836,69 @@ class FortressPlugin :
     val status = implementation.checkBiometricStatus(context)
     lastSecurityStatus = status
     call.resolve(status)
+  }
+
+  /**
+   * Overrides the detected biometry type for development/testing flows.
+   *
+   * Accepted values: `none`, `touchId`, `faceId`, `fingerprint`, `iris`.
+   */
+  @PluginMethod
+  fun setBiometryType(call: PluginCall) {
+    val biometryType = call.getString("biometryType")
+    if (biometryType == null ||
+      (
+        biometryType != "none" &&
+          biometryType != "touchId" &&
+          biometryType != "faceId" &&
+          biometryType != "fingerprint" &&
+          biometryType != "iris"
+      )
+    ) {
+      reject(call, NativeError.InvalidInput(ErrorMessages.INVALID_INPUT))
+      return
+    }
+
+    implementation.setBiometryType(biometryType)
+    val status = implementation.checkBiometricStatus(context)
+    lastSecurityStatus = status
+    notifyListeners("onSecurityStateChanged", status)
+    call.resolve()
+  }
+
+  /**
+   * Overrides biometric enrollment state for development/testing flows.
+   */
+  @PluginMethod
+  fun setBiometryIsEnrolled(call: PluginCall) {
+    val isBiometricsEnabled = call.getBoolean("isBiometricsEnabled")
+    if (isBiometricsEnabled == null) {
+      reject(call, NativeError.InvalidInput(ErrorMessages.INVALID_INPUT))
+      return
+    }
+
+    implementation.setBiometryIsEnrolled(isBiometricsEnabled)
+    val status = implementation.checkBiometricStatus(context)
+    lastSecurityStatus = status
+    notifyListeners("onSecurityStateChanged", status)
+    call.resolve()
+  }
+
+  /**
+   * Overrides device secure-state for development/testing flows.
+   */
+  @PluginMethod
+  fun setDeviceIsSecure(call: PluginCall) {
+    val isDeviceSecure = call.getBoolean("isDeviceSecure")
+    if (isDeviceSecure == null) {
+      reject(call, NativeError.InvalidInput(ErrorMessages.INVALID_INPUT))
+      return
+    }
+
+    implementation.setDeviceIsSecure(isDeviceSecure)
+    val status = implementation.checkBiometricStatus(context)
+    lastSecurityStatus = status
+    notifyListeners("onSecurityStateChanged", status)
+    call.resolve()
   }
 }

@@ -3,6 +3,10 @@ import CryptoKit
 
 /**
  Utility helpers for the Fortress plugin.
+
+ Responsibilities:
+ - Provide deterministic SHA-256 hashing utilities
+ - Derive a stable, non-PII device identifier hash for payloads
  */
 enum Utils {
 

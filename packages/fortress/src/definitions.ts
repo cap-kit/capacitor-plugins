@@ -81,10 +81,94 @@ export interface FortressConfig {
   /**
    * Enables or disables privacy protection for app snapshots.
    *
+   * Platform behavior:
+   * - Android relies on window snapshot protection in recents/task switcher.
+   * - iOS uses a visual privacy overlay.
+   *
+   * Note: On Android recents previews, system-protected cards may not render
+   * custom overlay text/image and can appear as a blank/protected preview.
+   *
    * @default true
    * @since 8.0.0
    */
   enablePrivacyScreen?: boolean;
+
+  /**
+   * Optional text rendered on top of the privacy screen overlay.
+   *
+   * This is intended for lock-state messaging such as
+   * "Session Locked" or "Tap to Unlock".
+   *
+   * Platform note:
+   * - Android: text is shown on the in-app overlay.
+   * - Android recents/task switcher: system snapshot protection may hide
+   *   custom text in preview cards.
+   *
+   * @since 8.0.0
+   */
+  privacyOverlayText?: string;
+
+  /**
+   * Optional native asset name rendered on top of the privacy screen overlay.
+   *
+   * Asset lookup rules:
+   * - iOS: Image from app asset catalog by name
+   * - Android: Drawable resource by name
+   *
+   * Platform note:
+   * - Android: image is shown on the in-app overlay.
+   * - Android recents/task switcher: system snapshot protection may hide
+   *   custom images in preview cards.
+   *
+   * @since 8.0.0
+   */
+  privacyOverlayImageName?: string;
+
+  /**
+   * Controls whether privacy overlay text is visible.
+   *
+   * @default true
+   * @since 8.0.0
+   */
+  privacyOverlayShowText?: boolean;
+
+  /**
+   * Controls whether privacy overlay image is visible.
+   *
+   * @default true
+   * @since 8.0.0
+   */
+  privacyOverlayShowImage?: boolean;
+
+  /**
+   * Optional text color (hex string) for the privacy overlay label.
+   *
+   * Example: `#FFFFFF`
+   *
+   * @since 8.0.0
+   */
+  privacyOverlayTextColor?: string;
+
+  /**
+   * Optional background opacity for the privacy overlay scrim.
+   *
+   * Allowed range: `0.0` to `1.0`.
+   *
+   * @since 8.0.0
+   */
+  privacyOverlayBackgroundOpacity?: number;
+
+  /**
+   * Controls the privacy overlay visual theme.
+   *
+   * - `system`: follow device appearance (light/dark)
+   * - `light`: force light overlay appearance
+   * - `dark`: force dark overlay appearance
+   *
+   * @default 'system'
+   * @since 8.0.0
+   */
+  privacyOverlayTheme?: 'system' | 'light' | 'dark';
 
   /**
    * Prefix used by key obfuscation utilities.
@@ -191,6 +275,61 @@ export interface FortressConfig {
    * @since 8.0.0
    */
   enableICloudKeychainSync?: boolean;
+
+  /**
+   * Persists web session lock/auth state across page reloads.
+   *
+   * Platform behavior:
+   * - Web: when enabled, vault/session state is restored from persisted storage
+   * - iOS/Android: ignored (no-op)
+   *
+   * @default false
+   * @since 8.0.0
+   */
+  persistSessionState?: boolean;
+
+  /**
+   * Controls fallback behavior when biometric authentication is unavailable
+   * or fails during an interactive prompt.
+   *
+   * - `deviceCredential`: always allow device credential fallback when supported.
+   * - `none`: disallow device credential fallback and require biometrics only.
+   * - `systemDefault`: preserve legacy behavior (`allowDevicePasscode` on native).
+   *
+   * @default 'systemDefault'
+   * @since 8.0.0
+   */
+  fallbackStrategy?: 'deviceCredential' | 'none' | 'systemDefault';
+}
+
+/**
+ * Runtime configuration snapshot currently used by the plugin.
+ *
+ * This reflects static startup configuration merged with
+ * runtime overrides applied via `configure(...)`.
+ *
+ * @since 8.0.0
+ */
+export interface FortressRuntimeConfig {
+  verboseLogging: boolean;
+  logLevel: 'error' | 'warn' | 'debug' | 'verbose' | 'info';
+  lockAfterMs: number;
+  enablePrivacyScreen: boolean;
+  privacyOverlayText: string;
+  privacyOverlayImageName: string;
+  privacyOverlayShowText: boolean;
+  privacyOverlayShowImage: boolean;
+  privacyOverlayTextColor: string;
+  privacyOverlayBackgroundOpacity: number;
+  privacyOverlayTheme: 'system' | 'light' | 'dark';
+  fallbackStrategy: 'none' | 'deviceCredential' | 'systemDefault';
+  allowCachedAuthentication: boolean;
+  cachedAuthenticationTimeoutMs: number;
+  maxBiometricAttempts: number;
+  lockoutDurationMs: number;
+  requireFreshAuthenticationMs: number;
+  encryptionAlgorithm: 'AES-GCM' | 'AES-CBC';
+  persistSessionState: boolean;
 }
 
 /**
@@ -198,6 +337,7 @@ export interface FortressConfig {
  *
  * Platform note:
  * - Android uses title/subtitle/description/negativeButtonText directly.
+ * - Android BiometricPrompt layout/iconography remains system-controlled.
  * - iOS uses localized reason + cancel title best-effort mapping.
  * - Web keeps this shape for API parity.
  */
@@ -275,6 +415,27 @@ export interface DeviceSecurityStatus {
   isBiometricsEnabled: boolean;
   isDeviceSecure: boolean;
   biometryType: 'none' | 'touchId' | 'faceId' | 'fingerprint' | 'iris';
+}
+
+/**
+ * Input payload for overriding detected biometry type in development/testing.
+ */
+export interface SetBiometryTypeOptions {
+  biometryType: DeviceSecurityStatus['biometryType'];
+}
+
+/**
+ * Input payload for overriding biometrics enrollment state in development/testing.
+ */
+export interface SetBiometryIsEnrolledOptions {
+  isBiometricsEnabled: boolean;
+}
+
+/**
+ * Input payload for overriding device secure-state in development/testing.
+ */
+export interface SetDeviceIsSecureOptions {
+  isDeviceSecure: boolean;
 }
 
 /**
@@ -478,6 +639,14 @@ export interface FortressError {
  */
 export interface FortressPlugin {
   /**
+   * Returns the runtime configuration currently used by Fortress.
+   *
+   * @returns A snapshot of effective runtime configuration values.
+   * @since 8.0.0
+   */
+  getRuntimeConfig(): Promise<FortressRuntimeConfig>;
+
+  /**
    * Applies runtime-safe Fortress configuration values.
    *
    * Configuration values set here take precedence over
@@ -548,6 +717,29 @@ export interface FortressPlugin {
    * @since 8.0.0
    */
   checkStatus(): Promise<DeviceSecurityStatus>;
+
+  /**
+   * Overrides detected biometry type for development/testing scenarios.
+   *
+   * This method is intended for QA and simulator/device mocking flows.
+   *
+   * @since 8.0.0
+   */
+  setBiometryType(options: SetBiometryTypeOptions): Promise<void>;
+
+  /**
+   * Overrides biometrics enrollment state for development/testing scenarios.
+   *
+   * @since 8.0.0
+   */
+  setBiometryIsEnrolled(options: SetBiometryIsEnrolledOptions): Promise<void>;
+
+  /**
+   * Overrides device secure-state for development/testing scenarios.
+   *
+   * @since 8.0.0
+   */
+  setDeviceIsSecure(options: SetDeviceIsSecureOptions): Promise<void>;
 
   /**
    * Removes a secure value from the encrypted vault.

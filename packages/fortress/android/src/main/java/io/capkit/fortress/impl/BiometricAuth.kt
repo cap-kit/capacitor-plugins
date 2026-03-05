@@ -4,6 +4,8 @@ import android.app.KeyguardManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
@@ -94,7 +96,10 @@ class BiometricAuth(
       promptBuilder.setNegativeButtonText(promptOptions?.negativeButtonText ?: promptText)
     }
 
-    biometricPrompt.authenticate(promptBuilder.build())
+    val handler = Handler(Looper.getMainLooper())
+    handler.post {
+      biometricPrompt.authenticate(promptBuilder.build())
+    }
   }
 
   fun checkStatus(context: Context): JSObject {

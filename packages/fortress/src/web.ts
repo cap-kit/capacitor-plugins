@@ -11,6 +11,7 @@ import {
   FortressErrorCode,
   FortressConfig,
   FortressPlugin,
+  FortressRuntimeConfig,
   FortressSession,
   GenerateChallengePayloadOptions,
   GenerateChallengePayloadResult,
@@ -21,6 +22,9 @@ import {
   PluginVersionResult,
   RegisterWithChallengeResult,
   SecureValue,
+  SetBiometryIsEnrolledOptions,
+  SetBiometryTypeOptions,
+  SetDeviceIsSecureOptions,
   ValueResult,
   DeviceSecurityStatus,
 } from './definitions';
@@ -98,6 +102,7 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
   private lastSuccessfulAuthAt = 0;
   private failedBiometricAttempts = 0;
   private lockoutUntilMs = 0;
+  private securityOverrides: Partial<DeviceSecurityStatus> = {};
   private currentLogLevel: 'error' | 'warn' | 'info' | 'debug' | 'verbose' = 'info';
   private vaultState: VaultState = 'LOCKED';
   private readonly visibilityChangeHandler = (): void => {
@@ -123,10 +128,42 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
   // Configuration
   // -----------------------------------------------------------------------------
 
+  async getRuntimeConfig(): Promise<FortressRuntimeConfig> {
+    return {
+      verboseLogging: this.config.verboseLogging ?? false,
+      logLevel: this.resolveLogLevel(this.config.logLevel, this.config.verboseLogging),
+      lockAfterMs: this.config.lockAfterMs ?? 60000,
+      enablePrivacyScreen: this.config.enablePrivacyScreen ?? true,
+      privacyOverlayText: this.config.privacyOverlayText ?? '',
+      privacyOverlayImageName: this.config.privacyOverlayImageName ?? '',
+      privacyOverlayShowText: this.config.privacyOverlayShowText ?? true,
+      privacyOverlayShowImage: this.config.privacyOverlayShowImage ?? true,
+      privacyOverlayTextColor: this.config.privacyOverlayTextColor ?? '',
+      privacyOverlayBackgroundOpacity: this.config.privacyOverlayBackgroundOpacity ?? -1,
+      privacyOverlayTheme: this.config.privacyOverlayTheme ?? 'system',
+      fallbackStrategy: this.config.fallbackStrategy ?? 'systemDefault',
+      allowCachedAuthentication: this.config.allowCachedAuthentication ?? false,
+      cachedAuthenticationTimeoutMs: this.config.cachedAuthenticationTimeoutMs ?? 30000,
+      maxBiometricAttempts: this.config.maxBiometricAttempts ?? 5,
+      lockoutDurationMs: this.config.lockoutDurationMs ?? 30000,
+      requireFreshAuthenticationMs: this.config.requireFreshAuthenticationMs ?? 0,
+      encryptionAlgorithm: this.config.encryptionAlgorithm ?? 'AES-GCM',
+      persistSessionState: this.config.persistSessionState ?? false,
+    };
+  }
+
   async configure(config: FortressConfig): Promise<void> {
+    const wasPersisting = this.config.persistSessionState === true;
     this.config = config;
     this.currentLogLevel = this.resolveLogLevel(config.logLevel, config.verboseLogging);
     this.logDebug('Configuration applied', `logLevel=${this.currentLogLevel}`);
+
+    const isPersisting = this.config.persistSessionState === true;
+    if (isPersisting && !wasPersisting) {
+      this.restorePersistedSession();
+    } else if (!isPersisting && wasPersisting) {
+      localStorage.removeItem(FortressWeb.SESSION_KEY);
+    }
 
     if (config.lockAfterMs !== undefined && config.lockAfterMs > 0) {
       this.startAutoLockTimer(config.lockAfterMs);
@@ -575,12 +612,54 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
 
     const isDeviceSecure = globalThis.isSecureContext && isBiometricsAvailable;
 
-    return {
+    const status: DeviceSecurityStatus = {
       isBiometricsAvailable,
       isBiometricsEnabled,
       isDeviceSecure,
       biometryType: isBiometricsAvailable ? 'fingerprint' : 'none',
     };
+
+    return this.applySecurityOverrides(status);
+  }
+
+  /**
+   * Overrides the detected biometry type for development/testing flows.
+   */
+  async setBiometryType(options: SetBiometryTypeOptions): Promise<void> {
+    this.securityOverrides.biometryType = options.biometryType;
+
+    if (options.biometryType === 'none') {
+      this.securityOverrides.isBiometricsAvailable = false;
+      this.securityOverrides.isBiometricsEnabled = false;
+    } else {
+      this.securityOverrides.isBiometricsAvailable = true;
+    }
+
+    await this.refreshSecuritySignals(true);
+  }
+
+  /**
+   * Overrides biometric enrollment state for development/testing flows.
+   */
+  async setBiometryIsEnrolled(options: SetBiometryIsEnrolledOptions): Promise<void> {
+    this.securityOverrides.isBiometricsEnabled = options.isBiometricsEnabled;
+
+    if (options.isBiometricsEnabled) {
+      this.securityOverrides.isBiometricsAvailable = true;
+      if (this.securityOverrides.biometryType === 'none') {
+        this.securityOverrides.biometryType = 'fingerprint';
+      }
+    }
+
+    await this.refreshSecuritySignals(true);
+  }
+
+  /**
+   * Overrides device secure-state for development/testing flows.
+   */
+  async setDeviceIsSecure(options: SetDeviceIsSecureOptions): Promise<void> {
+    this.securityOverrides.isDeviceSecure = options.isDeviceSecure;
+    await this.refreshSecuritySignals(true);
   }
 
   private async handleVisibilityChange(): Promise<void> {
@@ -642,6 +721,15 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
     }
 
     this.lastKnownSecurityStatus = currentStatus;
+  }
+
+  private applySecurityOverrides(status: DeviceSecurityStatus): DeviceSecurityStatus {
+    return {
+      isBiometricsAvailable: this.securityOverrides.isBiometricsAvailable ?? status.isBiometricsAvailable,
+      isBiometricsEnabled: this.securityOverrides.isBiometricsEnabled ?? status.isBiometricsEnabled,
+      isDeviceSecure: this.securityOverrides.isDeviceSecure ?? status.isDeviceSecure,
+      biometryType: this.securityOverrides.biometryType ?? status.biometryType,
+    };
   }
 
   // -----------------------------------------------------------------------------
@@ -950,42 +1038,81 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
   // -----------------------------------------------------------------------------
 
   /**
-   * Loads session state from localStorage.
-   * Note: Lock state resets on page reload for security.
+   * Loads web session state from persisted storage when enabled.
+   * Falls back to a deterministic locked baseline if persistence is disabled
+   * or no valid persisted payload is available.
    */
   private loadSession(): void {
-    const stored = localStorage.getItem(FortressWeb.SESSION_KEY);
-
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        this.session.lastActiveAt = parsed.lastActiveAt ?? Date.now();
-        this.lastTouchAt = this.session.lastActiveAt;
-
-        // Always start locked on web for security
-        this.transitionToVaultState('LOCKED');
-      } catch {
-        this.session = { isLocked: true, lastActiveAt: Date.now() };
-        this.transitionToVaultState('LOCKED');
-        this.lastTouchAt = this.session.lastActiveAt;
-      }
-    } else {
-      this.session = { isLocked: true, lastActiveAt: Date.now() };
+    if (!this.restorePersistedSession()) {
+      const now = Date.now();
+      this.session = { isLocked: true, lastActiveAt: now };
       this.transitionToVaultState('LOCKED');
-      this.lastTouchAt = this.session.lastActiveAt;
+      this.lastTouchAt = now;
+      this.lastSuccessfulAuthAt = 0;
     }
   }
 
   /**
-   * Saves session state to localStorage.
+   * Saves web session state to localStorage when persistence is enabled.
+   * Removes persisted payload when persistence is disabled.
    */
   private saveSession(): void {
-    localStorage.setItem(
-      FortressWeb.SESSION_KEY,
-      JSON.stringify({
-        lastActiveAt: this.session.lastActiveAt,
-      }),
-    );
+    if (this.config.persistSessionState !== true) {
+      localStorage.removeItem(FortressWeb.SESSION_KEY);
+      return;
+    }
+
+    const persistedState: PersistedSessionState = {
+      persistSessionState: true,
+      isLocked: this.session.isLocked,
+      lastActiveAt: this.session.lastActiveAt,
+      lastSuccessfulAuthAt: this.lastSuccessfulAuthAt,
+      vaultState: this.vaultState,
+    };
+
+    localStorage.setItem(FortressWeb.SESSION_KEY, JSON.stringify(persistedState));
+  }
+
+  /**
+   * Restores persisted web session state from localStorage.
+   *
+   * Returns `true` only when a valid, opt-in payload is restored.
+   */
+  private restorePersistedSession(): boolean {
+    const stored = localStorage.getItem(FortressWeb.SESSION_KEY);
+    if (stored === null) {
+      return false;
+    }
+
+    try {
+      const parsed = JSON.parse(stored) as Partial<PersistedSessionState>;
+      if (parsed.persistSessionState !== true) {
+        return false;
+      }
+
+      const lastActiveAt = typeof parsed.lastActiveAt === 'number' ? parsed.lastActiveAt : Date.now();
+      const lastSuccessfulAuthAt = typeof parsed.lastSuccessfulAuthAt === 'number' ? parsed.lastSuccessfulAuthAt : 0;
+      const vaultState =
+        parsed.vaultState === 'LOCKED' ||
+        parsed.vaultState === 'UNLOCKING' ||
+        parsed.vaultState === 'UNLOCKED' ||
+        parsed.vaultState === 'EXPIRED'
+          ? parsed.vaultState
+          : parsed.isLocked === false
+            ? 'UNLOCKED'
+            : 'LOCKED';
+
+      this.vaultState = vaultState;
+      this.session = {
+        isLocked: this.isLockedState(vaultState),
+        lastActiveAt,
+      };
+      this.lastTouchAt = lastActiveAt;
+      this.lastSuccessfulAuthAt = lastSuccessfulAuthAt;
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   // -----------------------------------------------------------------------------
@@ -1417,6 +1544,14 @@ interface EncryptedWebPayload {
   alg?: 'AES-GCM' | 'AES-CBC';
   iv: string;
   cipher: string;
+}
+
+interface PersistedSessionState {
+  persistSessionState: boolean;
+  isLocked: boolean;
+  lastActiveAt: number;
+  lastSuccessfulAuthAt: number;
+  vaultState: VaultState;
 }
 
 class FortressWebError extends Error {

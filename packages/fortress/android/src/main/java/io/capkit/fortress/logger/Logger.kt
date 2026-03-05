@@ -42,6 +42,11 @@ object Logger {
 
   var level: Level = Level.INFO
 
+  /**
+   * Sets logger level from a configuration string.
+   *
+   * Unknown values fall back to `INFO`.
+   */
   fun setLevel(levelName: String?) {
     val normalized = levelName?.trim()?.lowercase()
     level =
