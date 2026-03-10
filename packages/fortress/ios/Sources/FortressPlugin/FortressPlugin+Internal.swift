@@ -67,40 +67,4 @@ extension FortressPlugin {
         ]
     }
 
-    func applyRuntimeStringOverrides(call: CAPPluginCall, to config: inout Config) {
-        if let value = call.getString("logLevel") { config.logLevel = value }
-        if let value = call.getString("privacyOverlayText") { config.privacyOverlayText = value }
-        if let value = call.getString("privacyOverlayImageName") { config.privacyOverlayImageName = value }
-        if let value = call.getString("privacyOverlayTextColor") { config.privacyOverlayTextColor = value }
-        if let value = call.getString("privacyOverlayTheme") { config.privacyOverlayTheme = value }
-        if let value = call.getString("fallbackStrategy") { config.fallbackStrategy = value }
-        if let value = call.getString("encryptionAlgorithm") { config.encryptionAlgorithm = value }
-    }
-
-    func applyRuntimeBoolOverrides(call: CAPPluginCall, to config: inout Config) {
-        if let value = call.getBool("verboseLogging") { config.verboseLogging = value }
-        if let value = call.getBool("enablePrivacyScreen") { config.enablePrivacyScreen = value }
-        if let value = call.getBool("privacyOverlayShowText") { config.privacyOverlayShowText = value }
-        if let value = call.getBool("privacyOverlayShowImage") { config.privacyOverlayShowImage = value }
-        if let value = call.getBool("allowCachedAuthentication") { config.allowCachedAuthentication = value }
-        if let value = call.getBool("persistSessionState") { config.persistSessionState = value }
-    }
-
-    func applyRuntimeIntOverrides(call: CAPPluginCall, to config: inout Config) {
-        if let value = call.getInt("lockAfterMs") { config.lockAfterMs = value }
-        if let value = call.getInt("cachedAuthenticationTimeoutMs") { config.cachedAuthenticationTimeoutMs = value }
-        if let value = call.getInt("maxBiometricAttempts") { config.maxBiometricAttempts = value }
-        if let value = call.getInt("lockoutDurationMs") { config.lockoutDurationMs = value }
-        if let value = call.getInt("requireFreshAuthenticationMs") { config.requireFreshAuthenticationMs = value }
-    }
-
-    func applyRuntimeConfigOverrides(call: CAPPluginCall, to config: inout Config) {
-        applyRuntimeStringOverrides(call: call, to: &config)
-        applyRuntimeBoolOverrides(call: call, to: &config)
-        applyRuntimeIntOverrides(call: call, to: &config)
-
-        if let value = call.getDouble("privacyOverlayBackgroundOpacity") {
-            config.privacyOverlayBackgroundOpacity = value
-        }
-    }
 }

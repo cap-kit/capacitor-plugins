@@ -29,6 +29,7 @@ public final class FortressPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "getPluginVersion", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getRuntimeConfig", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "configure", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "resetRuntimeConfig", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setValue", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getValue", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "removeValue", returnType: CAPPluginReturnPromise),
@@ -65,6 +66,8 @@ public final class FortressPlugin: CAPPlugin, CAPBridgedPlugin {
 
     /// Configuration instance
     var config: Config?
+    var staticConfigBaseline: Config?
+    let runtimeConfigStore = RuntimeConfigStore()
     var lastSecurityStatus: [String: Any]?
     private var isPrivacyTapUnlockInProgress = false
     private let privacyTapNotification = Notification.Name("FortressPrivacyScreenTapUnlock")
@@ -85,7 +88,7 @@ public final class FortressPlugin: CAPPlugin, CAPBridgedPlugin {
      */
     override public func load() {
         // Initialize Config with the correct type
-        let cfg = Config(plugin: self)
+        let cfg = initialRuntimeConfig()
         self.config = cfg
         implementation.applyConfig(cfg)
 
@@ -262,6 +265,18 @@ public final class FortressPlugin: CAPPlugin, CAPBridgedPlugin {
         let isBiometricsEnabled = current["isBiometricsEnabled"] as? Bool ?? false
 
         return (wasDeviceSecure && !isDeviceSecure) || (wasBiometricsEnabled && !isBiometricsEnabled)
+    }
+
+    private func initialRuntimeConfig() -> Config {
+        let baselineConfig = Config(plugin: self)
+        staticConfigBaseline = baselineConfig
+
+        var config = baselineConfig
+        if let persistedOverrides = runtimeConfigStore.loadOverrides() {
+            config.applyRuntimeOverrides(persistedOverrides)
+        }
+
+        return config
     }
 
 }

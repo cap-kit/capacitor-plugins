@@ -52,6 +52,7 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
 
   private static readonly SECURE_STORAGE_PREFIX = 'fortress_secure_';
   private static readonly SESSION_KEY = 'fortress_session';
+  private static readonly RUNTIME_CONFIG_KEY = 'fortress_runtime_config_v1';
   private static readonly WEBAUTHN_STATE_KEY = 'fortress_webauthn_state';
   private static readonly WEBAUTHN_RP_NAME = 'Fortress';
   private static readonly WEBAUTHN_USER_NAME = 'fortress-user';
@@ -115,6 +116,8 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
 
   constructor() {
     super();
+    this.config = this.loadPersistedRuntimeConfig();
+    this.currentLogLevel = this.resolveLogLevel(this.config.logLevel, this.config.verboseLogging);
     this.loadSession();
 
     if (typeof document !== 'undefined') {
@@ -153,9 +156,16 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
   }
 
   async configure(config: FortressConfig): Promise<void> {
+    const sanitizedOverrides = this.sanitizeRuntimeConfigOverrides(config as Record<string, unknown>);
+    const nextConfig: FortressConfig = {
+      ...this.config,
+      ...sanitizedOverrides,
+    };
+
     const wasPersisting = this.config.persistSessionState === true;
-    this.config = config;
-    this.currentLogLevel = this.resolveLogLevel(config.logLevel, config.verboseLogging);
+    this.config = nextConfig;
+    this.saveRuntimeConfigOverrides(nextConfig);
+    this.currentLogLevel = this.resolveLogLevel(nextConfig.logLevel, nextConfig.verboseLogging);
     this.logDebug('Configuration applied', `logLevel=${this.currentLogLevel}`);
 
     const isPersisting = this.config.persistSessionState === true;
@@ -165,8 +175,21 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
       localStorage.removeItem(FortressWeb.SESSION_KEY);
     }
 
-    if (config.lockAfterMs !== undefined && config.lockAfterMs > 0) {
-      this.startAutoLockTimer(config.lockAfterMs);
+    if (nextConfig.lockAfterMs !== undefined && nextConfig.lockAfterMs > 0) {
+      this.startAutoLockTimer(nextConfig.lockAfterMs);
+    }
+  }
+
+  async resetRuntimeConfig(): Promise<void> {
+    const wasPersisting = this.config.persistSessionState === true;
+
+    localStorage.removeItem(FortressWeb.RUNTIME_CONFIG_KEY);
+    this.config = {};
+    this.currentLogLevel = this.resolveLogLevel(this.config.logLevel, this.config.verboseLogging);
+
+    const isPersisting = this.config.persistSessionState === true;
+    if (!isPersisting && wasPersisting) {
+      localStorage.removeItem(FortressWeb.SESSION_KEY);
     }
   }
 
@@ -1050,6 +1073,129 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
       this.lastTouchAt = now;
       this.lastSuccessfulAuthAt = 0;
     }
+  }
+
+  private saveRuntimeConfigOverrides(config: FortressConfig): void {
+    const overrides = this.sanitizeRuntimeConfigOverrides(config as Record<string, unknown>);
+    const payload = {
+      version: 1,
+      updatedAt: Date.now(),
+      overrides,
+    };
+
+    localStorage.setItem(FortressWeb.RUNTIME_CONFIG_KEY, JSON.stringify(payload));
+  }
+
+  private loadPersistedRuntimeConfig(): FortressConfig {
+    const rawPayload = localStorage.getItem(FortressWeb.RUNTIME_CONFIG_KEY);
+    if (rawPayload === null) {
+      return {};
+    }
+
+    try {
+      const payload = JSON.parse(rawPayload) as {
+        version?: number;
+        overrides?: Record<string, unknown>;
+      };
+
+      if (payload.version !== 1 || payload.overrides === undefined) {
+        return {};
+      }
+
+      return this.sanitizeRuntimeConfigOverrides(payload.overrides);
+    } catch {
+      return {};
+    }
+  }
+
+  private sanitizeRuntimeConfigOverrides(overrides: Record<string, unknown>): FortressConfig {
+    const sanitized: FortressConfig = {};
+    const allowedLogLevels = new Set(['error', 'warn', 'info', 'debug', 'verbose']);
+    const allowedOverlayThemes = new Set(['system', 'light', 'dark']);
+    const allowedFallbackStrategies = new Set(['deviceCredential', 'none', 'systemDefault']);
+    const allowedEncryptionAlgorithms = new Set(['AES-GCM', 'AES-CBC']);
+
+    if (typeof overrides.verboseLogging === 'boolean') sanitized.verboseLogging = overrides.verboseLogging;
+    if (typeof overrides.logLevel === 'string' && allowedLogLevels.has(overrides.logLevel)) {
+      sanitized.logLevel = overrides.logLevel as FortressConfig['logLevel'];
+    }
+    if (
+      typeof overrides.lockAfterMs === 'number' &&
+      Number.isInteger(overrides.lockAfterMs) &&
+      overrides.lockAfterMs >= 0
+    ) {
+      sanitized.lockAfterMs = overrides.lockAfterMs;
+    }
+    if (typeof overrides.enablePrivacyScreen === 'boolean')
+      sanitized.enablePrivacyScreen = overrides.enablePrivacyScreen;
+    if (typeof overrides.privacyOverlayText === 'string') sanitized.privacyOverlayText = overrides.privacyOverlayText;
+    if (typeof overrides.privacyOverlayImageName === 'string') {
+      sanitized.privacyOverlayImageName = overrides.privacyOverlayImageName;
+    }
+    if (typeof overrides.privacyOverlayShowText === 'boolean') {
+      sanitized.privacyOverlayShowText = overrides.privacyOverlayShowText;
+    }
+    if (typeof overrides.privacyOverlayShowImage === 'boolean') {
+      sanitized.privacyOverlayShowImage = overrides.privacyOverlayShowImage;
+    }
+    if (typeof overrides.privacyOverlayTextColor === 'string') {
+      sanitized.privacyOverlayTextColor = overrides.privacyOverlayTextColor;
+    }
+    if (
+      typeof overrides.privacyOverlayBackgroundOpacity === 'number' &&
+      (overrides.privacyOverlayBackgroundOpacity === -1 ||
+        (overrides.privacyOverlayBackgroundOpacity >= 0 && overrides.privacyOverlayBackgroundOpacity <= 1))
+    ) {
+      sanitized.privacyOverlayBackgroundOpacity = overrides.privacyOverlayBackgroundOpacity;
+    }
+    if (typeof overrides.privacyOverlayTheme === 'string' && allowedOverlayThemes.has(overrides.privacyOverlayTheme)) {
+      sanitized.privacyOverlayTheme = overrides.privacyOverlayTheme as FortressConfig['privacyOverlayTheme'];
+    }
+    if (typeof overrides.fallbackStrategy === 'string' && allowedFallbackStrategies.has(overrides.fallbackStrategy)) {
+      sanitized.fallbackStrategy = overrides.fallbackStrategy as FortressConfig['fallbackStrategy'];
+    }
+    if (typeof overrides.allowCachedAuthentication === 'boolean') {
+      sanitized.allowCachedAuthentication = overrides.allowCachedAuthentication;
+    }
+    if (
+      typeof overrides.cachedAuthenticationTimeoutMs === 'number' &&
+      Number.isInteger(overrides.cachedAuthenticationTimeoutMs) &&
+      overrides.cachedAuthenticationTimeoutMs >= 0
+    ) {
+      sanitized.cachedAuthenticationTimeoutMs = overrides.cachedAuthenticationTimeoutMs;
+    }
+    if (
+      typeof overrides.maxBiometricAttempts === 'number' &&
+      Number.isInteger(overrides.maxBiometricAttempts) &&
+      overrides.maxBiometricAttempts >= 1
+    ) {
+      sanitized.maxBiometricAttempts = overrides.maxBiometricAttempts;
+    }
+    if (
+      typeof overrides.lockoutDurationMs === 'number' &&
+      Number.isInteger(overrides.lockoutDurationMs) &&
+      overrides.lockoutDurationMs >= 0
+    ) {
+      sanitized.lockoutDurationMs = overrides.lockoutDurationMs;
+    }
+    if (
+      typeof overrides.requireFreshAuthenticationMs === 'number' &&
+      Number.isInteger(overrides.requireFreshAuthenticationMs) &&
+      overrides.requireFreshAuthenticationMs >= 0
+    ) {
+      sanitized.requireFreshAuthenticationMs = overrides.requireFreshAuthenticationMs;
+    }
+    if (
+      typeof overrides.encryptionAlgorithm === 'string' &&
+      allowedEncryptionAlgorithms.has(overrides.encryptionAlgorithm)
+    ) {
+      sanitized.encryptionAlgorithm = overrides.encryptionAlgorithm as FortressConfig['encryptionAlgorithm'];
+    }
+    if (typeof overrides.persistSessionState === 'boolean') {
+      sanitized.persistSessionState = overrides.persistSessionState;
+    }
+
+    return sanitized;
   }
 
   /**

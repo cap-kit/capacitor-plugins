@@ -10,6 +10,7 @@ import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 import io.capkit.fortress.config.Config
+import io.capkit.fortress.config.RuntimeConfigStore
 import io.capkit.fortress.error.ErrorMessages
 import io.capkit.fortress.error.NativeError
 import io.capkit.fortress.impl.BiometricAuth
@@ -54,6 +55,7 @@ class FortressPlugin :
    * - MUST NOT be accessed by the Impl layer
    */
   private lateinit var config: Config
+  private lateinit var staticConfigBaseline: JSObject
 
   /**
    * Native implementation layer.
@@ -65,6 +67,7 @@ class FortressPlugin :
    * - MUST NOT perform UI operations
    */
   private lateinit var implementation: Fortress
+  private lateinit var runtimeConfigStore: RuntimeConfigStore
   private var lastSecurityStatus: JSObject? = null
   private var overlayUnlockInProgress = false
 
@@ -93,7 +96,10 @@ class FortressPlugin :
   override fun load() {
     super.load()
 
+    staticConfigBaseline = Config(this).toRuntimeOverrides()
     config = Config(this)
+    runtimeConfigStore = RuntimeConfigStore(context)
+    runtimeConfigStore.loadOverrides()?.let { config.applyRuntimeOverrides(it) }
     implementation = Fortress(context)
     implementation.updateConfig(config)
 
@@ -374,29 +380,31 @@ class FortressPlugin :
   @PluginMethod
   fun configure(call: PluginCall) {
     try {
-      call.getBoolean("verboseLogging")?.let { config.verboseLogging = it }
-      call.getString("logLevel")?.let { config.logLevel = it }
-      call.getInt("lockAfterMs")?.let { config.lockAfterMs = it }
-      call.getBoolean("enablePrivacyScreen")?.let { config.enablePrivacyScreen = it }
-      call.getString("privacyOverlayText")?.let { config.privacyOverlayText = it }
-      call.getString("privacyOverlayImageName")?.let { config.privacyOverlayImageName = it }
-      call.getBoolean("privacyOverlayShowText")?.let { config.privacyOverlayShowText = it }
-      call.getBoolean("privacyOverlayShowImage")?.let { config.privacyOverlayShowImage = it }
-      call.getString("privacyOverlayTextColor")?.let { config.privacyOverlayTextColor = it }
-      call.getString("privacyOverlayTheme")?.let { config.privacyOverlayTheme = it }
-      call.getDouble("privacyOverlayBackgroundOpacity")?.let {
-        config.privacyOverlayBackgroundOpacity = it
-      }
-      call.getString("fallbackStrategy")?.let { config.fallbackStrategy = it }
-      call.getBoolean("allowCachedAuthentication")?.let { config.allowCachedAuthentication = it }
-      call.getInt("cachedAuthenticationTimeoutMs")?.let { config.cachedAuthenticationTimeoutMs = it }
-      call.getInt("maxBiometricAttempts")?.let { config.maxBiometricAttempts = it }
-      call.getInt("lockoutDurationMs")?.let { config.lockoutDurationMs = it }
-      call.getInt("requireFreshAuthenticationMs")?.let { config.requireFreshAuthenticationMs = it }
-      call.getString("encryptionAlgorithm")?.let { config.encryptionAlgorithm = it }
-      call.getBoolean("persistSessionState")?.let { config.persistSessionState = it }
+      config.applyRuntimeOverrides(call.data)
 
       implementation.configure(config)
+      runtimeConfigStore.saveOverrides(config.toRuntimeOverrides())
+
+      if (config.enablePrivacyScreen) {
+        val locked = implementation.isLocked(activity)
+        implementation.setPrivacyProtection(activity, locked)
+      } else {
+        implementation.setPrivacyProtection(activity, false)
+      }
+
+      call.resolve()
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  @PluginMethod
+  fun resetRuntimeConfig(call: PluginCall) {
+    try {
+      config = Config(this)
+      config.applyRuntimeOverrides(staticConfigBaseline)
+      implementation.configure(config)
+      runtimeConfigStore.clearOverrides()
 
       if (config.enablePrivacyScreen) {
         val locked = implementation.isLocked(activity)

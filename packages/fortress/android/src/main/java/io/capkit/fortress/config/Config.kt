@@ -1,5 +1,6 @@
 package io.capkit.fortress.config
 
+import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 
 /**
@@ -54,6 +55,13 @@ class Config(
     const val REQUIRE_FRESH_AUTHENTICATION_MS = "requireFreshAuthenticationMs"
     const val ENCRYPTION_ALGORITHM = "encryptionAlgorithm"
     const val PERSIST_SESSION_STATE = "persistSessionState"
+  }
+
+  private companion object {
+    val ALLOWED_LOG_LEVELS = setOf("error", "warn", "info", "debug", "verbose")
+    val ALLOWED_OVERLAY_THEMES = setOf("system", "light", "dark")
+    val ALLOWED_FALLBACK_STRATEGIES = setOf("deviceCredential", "none", "systemDefault")
+    val ALLOWED_ENCRYPTION_ALGORITHMS = setOf("AES-GCM", "AES-CBC")
   }
 
   // -----------------------------------------------------------------------------
@@ -186,5 +194,149 @@ class Config(
 
     persistSessionState =
       config.getBoolean(Keys.PERSIST_SESSION_STATE, false)
+  }
+
+  fun applyRuntimeOverrides(overrides: JSObject) {
+    getBooleanOverride(overrides, Keys.VERBOSE_LOGGING)?.let { verboseLogging = it }
+    getStringOverride(overrides, Keys.LOG_LEVEL)?.let {
+      if (ALLOWED_LOG_LEVELS.contains(it)) {
+        logLevel = it
+      }
+    }
+    getIntOverride(overrides, Keys.LOCK_AFTER_MS)?.let {
+      if (it >= 0) {
+        lockAfterMs = it
+      }
+    }
+    getBooleanOverride(overrides, Keys.ENABLE_PRIVACY_SCREEN)?.let { enablePrivacyScreen = it }
+    getStringOverride(overrides, Keys.PRIVACY_OVERLAY_TEXT)?.let { privacyOverlayText = it }
+    getStringOverride(overrides, Keys.PRIVACY_OVERLAY_IMAGE_NAME)?.let { privacyOverlayImageName = it }
+    getBooleanOverride(overrides, Keys.PRIVACY_OVERLAY_SHOW_TEXT)?.let { privacyOverlayShowText = it }
+    getBooleanOverride(overrides, Keys.PRIVACY_OVERLAY_SHOW_IMAGE)?.let { privacyOverlayShowImage = it }
+    getStringOverride(overrides, Keys.PRIVACY_OVERLAY_TEXT_COLOR)?.let { privacyOverlayTextColor = it }
+    getDoubleOverride(overrides, Keys.PRIVACY_OVERLAY_BACKGROUND_OPACITY)?.let {
+      if (it == -1.0 || (it >= 0.0 && it <= 1.0)) {
+        privacyOverlayBackgroundOpacity = it
+      }
+    }
+    getStringOverride(overrides, Keys.PRIVACY_OVERLAY_THEME)?.let {
+      if (ALLOWED_OVERLAY_THEMES.contains(it)) {
+        privacyOverlayTheme = it
+      }
+    }
+    getStringOverride(overrides, Keys.FALLBACK_STRATEGY)?.let {
+      if (ALLOWED_FALLBACK_STRATEGIES.contains(it)) {
+        fallbackStrategy = it
+      }
+    }
+    getBooleanOverride(overrides, Keys.ALLOW_CACHED_AUTHENTICATION)?.let { allowCachedAuthentication = it }
+    getIntOverride(overrides, Keys.CACHED_AUTHENTICATION_TIMEOUT_MS)?.let {
+      if (it >= 0) {
+        cachedAuthenticationTimeoutMs = it
+      }
+    }
+    getIntOverride(overrides, Keys.MAX_BIOMETRIC_ATTEMPTS)?.let {
+      if (it >= 1) {
+        maxBiometricAttempts = it
+      }
+    }
+    getIntOverride(overrides, Keys.LOCKOUT_DURATION_MS)?.let {
+      if (it >= 0) {
+        lockoutDurationMs = it
+      }
+    }
+    getIntOverride(overrides, Keys.REQUIRE_FRESH_AUTHENTICATION_MS)?.let {
+      if (it >= 0) {
+        requireFreshAuthenticationMs = it
+      }
+    }
+    getStringOverride(overrides, Keys.ENCRYPTION_ALGORITHM)?.let {
+      if (ALLOWED_ENCRYPTION_ALGORITHMS.contains(it)) {
+        encryptionAlgorithm = it
+      }
+    }
+    getBooleanOverride(overrides, Keys.PERSIST_SESSION_STATE)?.let { persistSessionState = it }
+  }
+
+  fun toRuntimeOverrides(): JSObject {
+    val overrides = JSObject()
+    overrides.put(Keys.VERBOSE_LOGGING, verboseLogging)
+    overrides.put(Keys.LOG_LEVEL, logLevel)
+    overrides.put(Keys.LOCK_AFTER_MS, lockAfterMs)
+    overrides.put(Keys.ENABLE_PRIVACY_SCREEN, enablePrivacyScreen)
+    overrides.put(Keys.PRIVACY_OVERLAY_TEXT, privacyOverlayText)
+    overrides.put(Keys.PRIVACY_OVERLAY_IMAGE_NAME, privacyOverlayImageName)
+    overrides.put(Keys.PRIVACY_OVERLAY_SHOW_TEXT, privacyOverlayShowText)
+    overrides.put(Keys.PRIVACY_OVERLAY_SHOW_IMAGE, privacyOverlayShowImage)
+    overrides.put(Keys.PRIVACY_OVERLAY_TEXT_COLOR, privacyOverlayTextColor)
+    overrides.put(Keys.PRIVACY_OVERLAY_BACKGROUND_OPACITY, privacyOverlayBackgroundOpacity)
+    overrides.put(Keys.PRIVACY_OVERLAY_THEME, privacyOverlayTheme)
+    overrides.put(Keys.FALLBACK_STRATEGY, fallbackStrategy)
+    overrides.put(Keys.ALLOW_CACHED_AUTHENTICATION, allowCachedAuthentication)
+    overrides.put(Keys.CACHED_AUTHENTICATION_TIMEOUT_MS, cachedAuthenticationTimeoutMs)
+    overrides.put(Keys.MAX_BIOMETRIC_ATTEMPTS, maxBiometricAttempts)
+    overrides.put(Keys.LOCKOUT_DURATION_MS, lockoutDurationMs)
+    overrides.put(Keys.REQUIRE_FRESH_AUTHENTICATION_MS, requireFreshAuthenticationMs)
+    overrides.put(Keys.ENCRYPTION_ALGORITHM, encryptionAlgorithm)
+    overrides.put(Keys.PERSIST_SESSION_STATE, persistSessionState)
+    return overrides
+  }
+
+  private fun getBooleanOverride(
+    source: JSObject,
+    key: String,
+  ): Boolean? {
+    if (!source.has(key) || source.isNull(key)) {
+      return null
+    }
+
+    val value = source.opt(key)
+    return value as? Boolean
+  }
+
+  private fun getStringOverride(
+    source: JSObject,
+    key: String,
+  ): String? {
+    if (!source.has(key) || source.isNull(key)) {
+      return null
+    }
+
+    val value = source.opt(key)
+    return value as? String
+  }
+
+  private fun getIntOverride(
+    source: JSObject,
+    key: String,
+  ): Int? {
+    if (!source.has(key) || source.isNull(key)) {
+      return null
+    }
+
+    val value = source.opt(key)
+    return when (value) {
+      is Int -> value
+      is Long -> value.toInt()
+      is Double -> value.toInt()
+      else -> null
+    }
+  }
+
+  private fun getDoubleOverride(
+    source: JSObject,
+    key: String,
+  ): Double? {
+    if (!source.has(key) || source.isNull(key)) {
+      return null
+    }
+
+    val value = source.opt(key)
+    return when (value) {
+      is Double -> value
+      is Int -> value.toDouble()
+      is Long -> value.toDouble()
+      else -> null
+    }
   }
 }

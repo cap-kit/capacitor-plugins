@@ -668,6 +668,16 @@ export interface FortressPlugin {
   configure(config: FortressConfig): Promise<void>;
 
   /**
+   * Resets runtime overrides to the startup static baseline.
+   *
+   * This clears persisted runtime overrides and reapplies the
+   * baseline values originally loaded at plugin startup.
+   *
+   * @since 8.0.0
+   */
+  resetRuntimeConfig(): Promise<void>;
+
+  /**
    * Stores a secure value in the encrypted vault.
    *
    * Values are encrypted using hardware-backed security

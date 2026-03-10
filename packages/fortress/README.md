@@ -139,13 +139,41 @@ await Fortress.configure({
 });
 ```
 
-**Note**: Some configuration changes take effect immediately (e.g., privacy overlay), while others apply on the next lifecycle transition (e.g., session timeout).
+Runtime precedence is deterministic:
+
+1. Static baseline loaded from `capacitor.config.ts`
+2. Persisted runtime overrides (if present and valid)
+3. Baseline fallback for missing/invalid persisted fields
+
+Runtime overrides are persisted in standard platform storage (not secure storage):
+
+- iOS: `UserDefaults`
+- Android: `SharedPreferences`
+- Web: `localStorage`
+
+Some configuration changes take effect immediately (for example privacy overlay UI), while others apply on the next lifecycle transition (for example session timeout).
+
+To clear runtime overrides and return to startup baseline:
+
+```ts
+await Fortress.resetRuntimeConfig();
+```
+
+#### Migration Note (v8 runtime persistence)
+
+Before runtime-config persistence, values set via `configure()` were session-scoped and reset on app restart.
+
+From this version onward:
+
+- Valid runtime overrides persist across app restarts
+- Invalid values are ignored and baseline values are used
+- `resetRuntimeConfig()` clears persisted overrides and restores startup baseline
 
 ## Native Requirements
 
 ### Android
 
-- Android API 23+ (for BiometricPrompt)
+- Android API 24+ (for BiometricPrompt)
 - AndroidX Biometric library (included via Gradle)
 - StrongBox hardware (optional, for enhanced security)
 - Recommended: `compileSdkVersion` 34, `targetSdkVersion` 34
@@ -197,6 +225,7 @@ This enables the `enableICloudKeychainSync` configuration option.
 
 - [`getRuntimeConfig()`](#getruntimeconfig)
 - [`configure(...)`](#configure)
+- [`resetRuntimeConfig()`](#resetruntimeconfig)
 - [`setValue(...)`](#setvalue)
 - [`getValue(...)`](#getvalue)
 - [`setMany(...)`](#setmany)
@@ -282,6 +311,21 @@ await Fortress.configure({
   enablePrivacyScreen: true,
 });
 ```
+
+---
+
+### resetRuntimeConfig()
+
+```typescript
+resetRuntimeConfig() => Promise<void>
+```
+
+Resets runtime overrides to the startup static baseline.
+
+This clears persisted runtime overrides and reapplies the
+baseline values originally loaded at plugin startup.
+
+**Since:** 8.0.0
 
 ---
 

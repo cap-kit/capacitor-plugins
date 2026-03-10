@@ -2,47 +2,13 @@ import Foundation
 import Capacitor
 
 extension FortressPlugin {
-
     // MARK: - Version
-
     /// Retrieves the plugin version synchronized from package.json.
     @objc func getPluginVersion(_ call: CAPPluginCall) {
         // Standardized enum name across all CapKit plugins
         call.resolve([
             "version": PluginVersion.number
         ])
-    }
-
-    @objc func getRuntimeConfig(_ call: CAPPluginCall) {
-        guard let runtimeConfig = self.config else {
-            call.reject(ErrorMessages.initFailed, NativeError.initFailed(ErrorMessages.initFailed).errorCode)
-            return
-        }
-
-        call.resolve(runtimeConfigSnapshot(runtimeConfig))
-    }
-
-    @objc func configure(_ call: CAPPluginCall) {
-        guard var runtimeConfig = self.config else {
-            call.reject(ErrorMessages.initFailed, NativeError.initFailed(ErrorMessages.initFailed).errorCode)
-            return
-        }
-
-        applyRuntimeConfigOverrides(call: call, to: &runtimeConfig)
-
-        self.config = runtimeConfig
-        implementation.configure(runtimeConfig)
-
-        implementation.setRuntimeEnablePrivacyScreen(runtimeConfig.enablePrivacyScreen)
-
-        if runtimeConfig.enablePrivacyScreen {
-            let isLocked = (try? implementation.isLocked()) ?? true
-            implementation.setPrivacyScreenVisible(isLocked)
-        } else {
-            implementation.setPrivacyScreenVisible(false)
-        }
-
-        call.resolve()
     }
 
     @objc func setValue(_ call: CAPPluginCall) {
