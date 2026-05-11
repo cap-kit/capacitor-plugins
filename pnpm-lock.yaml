@@ -4,11 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-patchedDependencies:
-  '@capacitor/docgen@0.3.1':
-    hash: c6b48fe4092e47ae4d84b802d6d1404500f33eace93b0fee32763cdd2e8822fd
-    path: patches/@capacitor__docgen@0.3.1.patch
-
 importers:
 
   .:
@@ -48,7 +43,7 @@ importers:
         version: 8.3.1
       '@capacitor/docgen':
         specifier: ^0.3.1
-        version: 0.3.1(patch_hash=c6b48fe4092e47ae4d84b802d6d1404500f33eace93b0fee32763cdd2e8822fd)
+        version: 0.3.1
       '@capacitor/ios':
         specifier: ^8.1.0
         version: 8.3.1(@capacitor/core@8.3.1)
@@ -102,7 +97,7 @@ importers:
         version: 8.3.1
       '@capacitor/docgen':
         specifier: ^0.3.1
-        version: 0.3.1(patch_hash=c6b48fe4092e47ae4d84b802d6d1404500f33eace93b0fee32763cdd2e8822fd)
+        version: 0.3.1
       '@capacitor/ios':
         specifier: ^8.1.0
         version: 8.3.1(@capacitor/core@8.3.1)
@@ -156,7 +151,7 @@ importers:
         version: 8.3.1
       '@capacitor/docgen':
         specifier: ^0.3.1
-        version: 0.3.1(patch_hash=c6b48fe4092e47ae4d84b802d6d1404500f33eace93b0fee32763cdd2e8822fd)
+        version: 0.3.1
       '@capacitor/ios':
         specifier: ^8.1.0
         version: 8.3.1(@capacitor/core@8.3.1)
@@ -210,7 +205,7 @@ importers:
         version: 8.3.1
       '@capacitor/docgen':
         specifier: ^0.3.1
-        version: 0.3.1(patch_hash=c6b48fe4092e47ae4d84b802d6d1404500f33eace93b0fee32763cdd2e8822fd)
+        version: 0.3.1
       '@capacitor/ios':
         specifier: ^8.1.0
         version: 8.3.1(@capacitor/core@8.3.1)
@@ -264,7 +259,7 @@ importers:
         version: 8.3.1
       '@capacitor/docgen':
         specifier: ^0.3.1
-        version: 0.3.1(patch_hash=c6b48fe4092e47ae4d84b802d6d1404500f33eace93b0fee32763cdd2e8822fd)
+        version: 0.3.1
       '@capacitor/ios':
         specifier: ^8.1.0
         version: 8.3.1(@capacitor/core@8.3.1)
@@ -322,7 +317,7 @@ importers:
         version: 8.3.1
       '@capacitor/docgen':
         specifier: ^0.3.1
-        version: 0.3.1(patch_hash=c6b48fe4092e47ae4d84b802d6d1404500f33eace93b0fee32763cdd2e8822fd)
+        version: 0.3.1
       '@capacitor/ios':
         specifier: ^8.1.0
         version: 8.3.1(@capacitor/core@8.3.1)
@@ -2735,7 +2730,7 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@capacitor/docgen@0.3.1(patch_hash=c6b48fe4092e47ae4d84b802d6d1404500f33eace93b0fee32763cdd2e8822fd)':
+  '@capacitor/docgen@0.3.1':
     dependencies:
       colorette: 2.0.20
       github-slugger: 1.5.0
