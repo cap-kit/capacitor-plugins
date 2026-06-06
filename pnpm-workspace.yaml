@@ -1,2 +1,8 @@
 packages:
   - 'packages/*'
+allowBuilds:
+  esbuild: true
+  swiftlint: true
+minimumReleaseAgeExclude:
+  - prettier-plugin-java@2.9.4
+  - '@types/node@25.9.2'

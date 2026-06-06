@@ -214,7 +214,7 @@ Android-only. On other platforms, it resolves as unavailable.
 ### requestReview(...)
 
 ```typescript
-requestReview(options?: ReviewOptions | undefined) => Promise<void>
+requestReview(options?: ReviewOptions) => Promise<void>
 ```
 
 Requests the display of the native review popup.
@@ -241,7 +241,7 @@ await Rank.requestReview({ fireAndForget: true });
 ### presentProductPage(...)
 
 ```typescript
-presentProductPage(options?: StoreOptions | undefined) => Promise<void>
+presentProductPage(options?: StoreOptions) => Promise<void>
 ```
 
 Opens the App Store product page internally (iOS) or redirects to the Store (Android/Web).
@@ -271,7 +271,7 @@ await Rank.presentProductPage({
 ### openStore(...)
 
 ```typescript
-openStore(options?: StoreOptions | undefined) => Promise<void>
+openStore(options?: StoreOptions) => Promise<void>
 ```
 
 Opens the app's page in the App Store (iOS) or Play Store (Android).
@@ -298,7 +298,7 @@ await Rank.openStore({
 ### openStoreListing(...)
 
 ```typescript
-openStoreListing(options?: { appId?: string | undefined; } | undefined) => Promise<void>
+openStoreListing(options?: { appId?: string; }) => Promise<void>
 ```
 
 Opens the App Store listing page for a specific app.
