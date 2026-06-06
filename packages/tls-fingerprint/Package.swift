@@ -10,7 +10,7 @@ let package = Package(
             targets: ["TlsFingerprintPlugin"])
     ],
     dependencies: [
-        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", from: "8.1.0")
+        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", from: "8.4.0")
     ],
     targets: [
         .target(

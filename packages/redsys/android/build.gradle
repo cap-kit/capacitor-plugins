@@ -5,7 +5,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.13.2'
+        classpath 'com.android.tools.build:gradle:9.2.0'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
@@ -23,7 +23,7 @@ ext {
 }
 
 apply plugin: 'com.android.library'
-apply plugin: 'kotlin-android'
+// apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-parcelize'
 apply plugin: 'org.jlleitschuh.gradle.ktlint'
 
@@ -107,11 +107,11 @@ dependencies {
     implementation "androidx.core:core-ktx:$androidxCoreKTXVersion"
 
     // SDK mandatory dependencies
-    implementation "androidx.webkit:webkit:1.15.0"
+    implementation "androidx.webkit:webkit:1.16.0"
     implementation "com.android.volley:volley:1.2.1"
-    implementation "com.google.code.gson:gson:2.13.2"
+    implementation "com.google.code.gson:gson:2.14.0"
     implementation "androidx.constraintlayout:constraintlayout:2.2.1"
-    implementation "com.google.android.material:material:1.13.0"
+    implementation "com.google.android.material:material:1.14.0"
     implementation "androidx.cardview:cardview:1.0.0"
     implementation "androidx.legacy:legacy-support-v4:1.0.0"
 

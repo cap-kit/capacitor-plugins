@@ -294,7 +294,7 @@ createContact(options: CreateContactOptions) => Promise<CreateContactResult>
 [CRUD]
 Creates a new contact in the device's address book.
 
-- @throws {PeopleError} PERMISSION_DENIED if contacts permission is missing.
+-
 
 | Param         | Type                                                                  |
 | ------------- | --------------------------------------------------------------------- |
@@ -333,7 +333,7 @@ updateContact(options: UpdateContactOptions) => Promise<UpdateContactResult>
 [CRUD]
 Updates an existing contact using a patch-based approach.
 
-- @throws {PeopleError} PERMISSION_DENIED if permission is missing.
+-
 
 | Param         | Type                                                                  |
 | ------------- | --------------------------------------------------------------------- |
@@ -373,7 +373,7 @@ deleteContact(options: DeleteContactOptions) => Promise<void>
 Deletes a contact from the device's address book.
 Only contacts owned by the app can be deleted.
 
-- @throws {PeopleError} UNAVAILABLE if deletion fails or contact is not app-owned.
+-
 
 | Param         | Type                                                                  |
 | ------------- | --------------------------------------------------------------------- |
@@ -401,7 +401,7 @@ mergeContacts(options: MergeContactsOptions) => Promise<MergeContactsResult>
 Merges a source contact into a destination contact.
 The source contact is deleted after the merge.
 
-- @throws {PeopleError} PERMISSION_DENIED if permission is missing.
+-
 
 | Param         | Type                                                                  |
 | ------------- | --------------------------------------------------------------------- |
@@ -455,11 +455,7 @@ createGroup(options: CreateGroupOptions) => Promise<CreateGroupResult>
 [GROUPS]
 Creates a new contact group.
 
-- @example
-
-```typescript
-const { group } = await People.createGroup({ name: 'Family' });
-```
+-
 
 | Param         | Type                                                              |
 | ------------- | ----------------------------------------------------------------- |
@@ -468,6 +464,12 @@ const { group } = await People.createGroup({ name: 'Family' });
 **Returns:** <code>Promise&lt;<a href="#creategroupresult">CreateGroupResult</a>&gt;</code>
 
 **Since:** 8.0.0
+
+#### Example
+
+```typescript
+const { group } = await People.createGroup({ name: 'Family' });
+```
 
 ---
 
@@ -577,7 +579,7 @@ console.log(permissions.contacts); // Output: 'granted' | 'denied' | 'prompt'
 ### requestPermissions(...)
 
 ```typescript
-requestPermissions(permissions?: { permissions: 'contacts'[]; } | undefined) => Promise<PeoplePluginPermissions>
+requestPermissions(permissions?: { permissions: "contacts"[]; }) => Promise<PeoplePluginPermissions>
 ```
 
 Request permissions.
@@ -605,7 +607,7 @@ console.log(permissions.contacts); // Output: 'granted' | 'denied'
 ### pickContact(...)
 
 ```typescript
-pickContact(options?: { projection?: PeopleProjection[] | undefined; } | undefined) => Promise<PickContactResult>
+pickContact(options?: { projection?: PeopleProjection[]; }) => Promise<PickContactResult>
 ```
 
 [ZERO-PERMISSION]
@@ -641,7 +643,7 @@ try {
 ### getContacts(...)
 
 ```typescript
-getContacts(options?: GetContactsOptions | undefined) => Promise<GetContactsResult>
+getContacts(options?: GetContactsOptions) => Promise<GetContactsResult>
 ```
 
 [SYSTEMIC-ACCESS]
@@ -677,7 +679,7 @@ getContact(options: { id: string; projection?: PeopleProjection[]; }) => Promise
 
 Retrieves a single contact by ID.
 
-- @throws {PeopleError} UNAVAILABLE if contact is not found.
+-
 
 | Param         | Type                                                          |
 | ------------- | ------------------------------------------------------------- |
@@ -778,13 +780,13 @@ console.log('Fetched contacts:', result.contacts);
 ### addListener('peopleChange', ...)
 
 ```typescript
-addListener(eventName: 'peopleChange', listenerFunc: (payload: PeopleChangeEvent) => void) => Promise<PluginListenerHandle>
+addListener(eventName: "peopleChange", listenerFunc: (payload: PeopleChangeEvent) => void) => Promise<PluginListenerHandle>
 ```
 
 Listen for changes in the system address book.
 REQUIRES 'contacts' permission.
 
-- @returns A promise that resolves to a handle to remove the listener.
+-
 
 | Param              | Type                                                                                  |
 | ------------------ | ------------------------------------------------------------------------------------- |

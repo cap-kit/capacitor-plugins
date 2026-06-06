@@ -549,7 +549,7 @@ All methods behave consistently across Android, iOS, and Web.
 ### check(...)
 
 ```typescript
-check(options?: IntegrityCheckOptions | undefined) => Promise<IntegrityReport>
+check(options?: IntegrityCheckOptions) => Promise<IntegrityReport>
 ```
 
 Executes a runtime integrity check.
@@ -573,7 +573,7 @@ const report = await Integrity.check();
 ### presentBlockPage(...)
 
 ```typescript
-presentBlockPage(options?: PresentBlockPageOptions | undefined) => Promise<PresentBlockPageResult>
+presentBlockPage(options?: PresentBlockPageOptions) => Promise<PresentBlockPageResult>
 ```
 
 Presents the configured integrity block page, if enabled.
@@ -623,7 +623,7 @@ const { version } = await Integrity.getPluginVersion();
 ### addListener('integritySignal', ...)
 
 ```typescript
-addListener(eventName: 'integritySignal', listenerFunc: (signal: IntegritySignalEvent) => void) => Promise<PluginListenerHandle>
+addListener(eventName: "integritySignal", listenerFunc: (signal: IntegritySignalEvent) => void) => Promise<PluginListenerHandle>
 ```
 
 Registers a listener for real-time integrity signals.
