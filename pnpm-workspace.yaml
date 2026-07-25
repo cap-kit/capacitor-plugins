@@ -6,3 +6,4 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - prettier-plugin-java@2.9.4
   - '@types/node@25.9.2'
+  - eslint@10.8.0
