@@ -504,7 +504,7 @@ await Fortress.clearAll();
 ### unlock(...)
 
 ```typescript
-unlock(options?: UnlockOptions | undefined) => Promise<void>
+unlock(options?: UnlockOptions) => Promise<void>
 ```
 
 Triggers the secure unlock flow using biometrics or device credentials.
@@ -640,7 +640,7 @@ document.addEventListener('click', () => {
 ### biometricKeysExist(...)
 
 ```typescript
-biometricKeysExist(options?: KeyAliasOptions | undefined) => Promise<BiometricKeysExistResult>
+biometricKeysExist(options?: KeyAliasOptions) => Promise<BiometricKeysExistResult>
 ```
 
 Checks whether a biometric key pair already exists.
@@ -658,7 +658,7 @@ Checks whether a biometric key pair already exists.
 ### createKeys(...)
 
 ```typescript
-createKeys(options?: KeyAliasOptions | undefined) => Promise<CreateKeysResult>
+createKeys(options?: KeyAliasOptions) => Promise<CreateKeysResult>
 ```
 
 Creates (or replaces) a biometric key pair and returns the public key.
@@ -676,7 +676,7 @@ Creates (or replaces) a biometric key pair and returns the public key.
 ### deleteKeys(...)
 
 ```typescript
-deleteKeys(options?: KeyAliasOptions | undefined) => Promise<void>
+deleteKeys(options?: KeyAliasOptions) => Promise<void>
 ```
 
 Deletes the biometric key pair if it exists.
@@ -902,7 +902,7 @@ const { exists } = await Fortress.hasKey({ key: 'auth_token', secure: true });
 ### addListener('sessionLocked' | 'sessionUnlocked', ...)
 
 ```typescript
-addListener(eventName: 'sessionLocked' | 'sessionUnlocked', listenerFunc: () => void) => Promise<PluginListenerHandle>
+addListener(eventName: "sessionLocked" | "sessionUnlocked", listenerFunc: () => void) => Promise<PluginListenerHandle>
 ```
 
 Adds listeners for lock state change events.
@@ -932,7 +932,7 @@ await handle.remove();
 ### addListener('onSecurityStateChanged', ...)
 
 ```typescript
-addListener(eventName: 'onSecurityStateChanged', listenerFunc: (status: DeviceSecurityStatus) => void) => Promise<PluginListenerHandle>
+addListener(eventName: "onSecurityStateChanged", listenerFunc: (status: DeviceSecurityStatus) => void) => Promise<PluginListenerHandle>
 ```
 
 Adds a listener for security posture changes.
@@ -951,7 +951,7 @@ Adds a listener for security posture changes.
 ### addListener('onLockStatusChanged', ...)
 
 ```typescript
-addListener(eventName: 'onLockStatusChanged', listenerFunc: (state: { isLocked: boolean; }) => void) => Promise<PluginListenerHandle>
+addListener(eventName: "onLockStatusChanged", listenerFunc: (state: { isLocked: boolean; }) => void) => Promise<PluginListenerHandle>
 ```
 
 Adds a listener for lock-state changes with payload.
@@ -970,7 +970,7 @@ Adds a listener for lock-state changes with payload.
 ### addListener('onVaultInvalidated', ...)
 
 ```typescript
-addListener(eventName: 'onVaultInvalidated', listenerFunc: (event: VaultInvalidatedEvent) => void) => Promise<PluginListenerHandle>
+addListener(eventName: "onVaultInvalidated", listenerFunc: (event: VaultInvalidatedEvent) => void) => Promise<PluginListenerHandle>
 ```
 
 Adds a listener for vault invalidation events.
@@ -989,7 +989,7 @@ Adds a listener for vault invalidation events.
 ### addListener('onAppResume', ...)
 
 ```typescript
-addListener(eventName: 'onAppResume', listenerFunc: () => void) => Promise<PluginListenerHandle>
+addListener(eventName: "onAppResume", listenerFunc: () => void) => Promise<PluginListenerHandle>
 ```
 
 Adds a listener for app resume events.
