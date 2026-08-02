@@ -15,6 +15,22 @@ import io.capkit.fortress.error.ErrorMessages
 import io.capkit.fortress.error.NativeError
 import io.capkit.fortress.impl.BiometricAuth
 import io.capkit.fortress.logger.Logger
+import io.capkit.fortress.model.AuthenticateWithChallengeResult
+import io.capkit.fortress.model.BiometricKeysExistResult
+import io.capkit.fortress.model.CreateKeysResult
+import io.capkit.fortress.model.CreateSignatureResult
+import io.capkit.fortress.model.DeviceSecurityStatusResult
+import io.capkit.fortress.model.FortressRuntimeConfig
+import io.capkit.fortress.model.FortressSessionResult
+import io.capkit.fortress.model.GenerateChallengePayloadResult
+import io.capkit.fortress.model.HasKeyResult
+import io.capkit.fortress.model.IsLockedResult
+import io.capkit.fortress.model.ObfuscatedKeyResult
+import io.capkit.fortress.model.PluginVersionResult
+import io.capkit.fortress.model.RegisterWithChallengeResult
+import io.capkit.fortress.model.ValueResult
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 /**
  * Capacitor bridge for the Fortress plugin (Android).
@@ -71,7 +87,23 @@ class FortressPlugin :
   private var lastSecurityStatus: JSObject? = null
   private var overlayUnlockInProgress = false
 
+  /**
+   * Serializer instance configured to encode result models into JSObject string payloads.
+   *
+   * NOTE: encodeDefaults is intentionally NOT set so nullable/defaulted fields
+   * are omitted from the emitted JSON, matching the optional TypeScript types.
+   */
+  private val json = Json
+
   private fun currentActivityOrNull(): android.app.Activity? = activity ?: bridge.activity
+
+  /**
+   * Converts a serializable result model directly into a Capacitor JSObject.
+   */
+  private inline fun <reified T> toJSObject(value: T): JSObject {
+    val jsonString = json.encodeToString(value)
+    return JSObject(jsonString)
+  }
 
   // ---------------------------------------------------------------------------
   // Companion Object
@@ -255,8 +287,22 @@ class FortressPlugin :
     call: PluginCall,
     error: NativeError,
   ) {
+    val code =
+      when (error) {
+        is NativeError.Unavailable -> "UNAVAILABLE"
+        is NativeError.Cancelled -> "CANCELLED"
+        is NativeError.PermissionDenied -> "PERMISSION_DENIED"
+        is NativeError.InitFailed -> "INIT_FAILED"
+        is NativeError.InvalidInput -> "INVALID_INPUT"
+        is NativeError.NotFound -> "NOT_FOUND"
+        is NativeError.Conflict -> "CONFLICT"
+        is NativeError.Timeout -> "TIMEOUT"
+        is NativeError.SecurityViolation -> "SECURITY_VIOLATION"
+        is NativeError.VaultLocked -> "VAULT_LOCKED"
+      }
+
     val message = error.message ?: ErrorMessages.INTERNAL_ERROR
-    call.reject(message, error.errorCode)
+    call.reject(message, code)
   }
 
   private fun handleError(
@@ -341,9 +387,7 @@ class FortressPlugin :
    */
   @PluginMethod
   fun getPluginVersion(call: PluginCall) {
-    val ret = JSObject()
-    ret.put("version", BuildConfig.PLUGIN_VERSION)
-    call.resolve(ret)
+    call.resolve(toJSObject(PluginVersionResult(version = BuildConfig.PLUGIN_VERSION)))
   }
 
   /**
@@ -351,27 +395,31 @@ class FortressPlugin :
    */
   @PluginMethod
   fun getRuntimeConfig(call: PluginCall) {
-    val ret = JSObject()
-    ret.put("verboseLogging", config.verboseLogging)
-    ret.put("logLevel", config.logLevel)
-    ret.put("lockAfterMs", config.lockAfterMs)
-    ret.put("enablePrivacyScreen", config.enablePrivacyScreen)
-    ret.put("privacyOverlayText", config.privacyOverlayText)
-    ret.put("privacyOverlayImageName", config.privacyOverlayImageName)
-    ret.put("privacyOverlayShowText", config.privacyOverlayShowText)
-    ret.put("privacyOverlayShowImage", config.privacyOverlayShowImage)
-    ret.put("privacyOverlayTextColor", config.privacyOverlayTextColor)
-    ret.put("privacyOverlayBackgroundOpacity", config.privacyOverlayBackgroundOpacity)
-    ret.put("privacyOverlayTheme", config.privacyOverlayTheme)
-    ret.put("fallbackStrategy", config.fallbackStrategy)
-    ret.put("allowCachedAuthentication", config.allowCachedAuthentication)
-    ret.put("cachedAuthenticationTimeoutMs", config.cachedAuthenticationTimeoutMs)
-    ret.put("maxBiometricAttempts", config.maxBiometricAttempts)
-    ret.put("lockoutDurationMs", config.lockoutDurationMs)
-    ret.put("requireFreshAuthenticationMs", config.requireFreshAuthenticationMs)
-    ret.put("encryptionAlgorithm", config.encryptionAlgorithm)
-    ret.put("persistSessionState", config.persistSessionState)
-    call.resolve(ret)
+    call.resolve(
+      toJSObject(
+        FortressRuntimeConfig(
+          verboseLogging = config.verboseLogging,
+          logLevel = config.logLevel,
+          lockAfterMs = config.lockAfterMs,
+          enablePrivacyScreen = config.enablePrivacyScreen,
+          privacyOverlayText = config.privacyOverlayText,
+          privacyOverlayImageName = config.privacyOverlayImageName,
+          privacyOverlayShowText = config.privacyOverlayShowText,
+          privacyOverlayShowImage = config.privacyOverlayShowImage,
+          privacyOverlayTextColor = config.privacyOverlayTextColor,
+          privacyOverlayBackgroundOpacity = config.privacyOverlayBackgroundOpacity,
+          privacyOverlayTheme = config.privacyOverlayTheme,
+          fallbackStrategy = config.fallbackStrategy,
+          allowCachedAuthentication = config.allowCachedAuthentication,
+          cachedAuthenticationTimeoutMs = config.cachedAuthenticationTimeoutMs,
+          maxBiometricAttempts = config.maxBiometricAttempts,
+          lockoutDurationMs = config.lockoutDurationMs,
+          requireFreshAuthenticationMs = config.requireFreshAuthenticationMs,
+          encryptionAlgorithm = config.encryptionAlgorithm,
+          persistSessionState = config.persistSessionState,
+        ),
+      ),
+    )
   }
 
   /**
@@ -461,7 +509,7 @@ class FortressPlugin :
     try {
       val key = call.getString("key") ?: throw NativeError.InvalidInput(ErrorMessages.INVALID_INPUT)
       val value = implementation.getValue(key)
-      call.resolve(JSObject().apply { put("value", value) })
+      call.resolve(toJSObject(ValueResult(value = value)))
     } catch (error: Throwable) {
       handleError(call, error)
     }
@@ -540,7 +588,7 @@ class FortressPlugin :
     try {
       // Use the activity inherited from the Capacitor Plugin base class.
       val isLocked = implementation.isLocked(activity)
-      call.resolve(JSObject().apply { put("isLocked", isLocked) })
+      call.resolve(toJSObject(IsLockedResult(isLocked = isLocked)))
     } catch (error: Throwable) {
       handleError(call, error)
     }
@@ -554,10 +602,12 @@ class FortressPlugin :
     try {
       val session = implementation.getSession()
       call.resolve(
-        JSObject().apply {
-          put("isLocked", session.isLocked)
-          put("lastActiveAt", session.lastActiveAt)
-        },
+        toJSObject(
+          FortressSessionResult(
+            isLocked = session.isLocked,
+            lastActiveAt = session.lastActiveAt,
+          ),
+        ),
       )
     } catch (error: Throwable) {
       handleError(call, error)
@@ -619,10 +669,12 @@ class FortressPlugin :
       result
         .onSuccess { signature ->
           call.resolve(
-            JSObject().apply {
-              put("success", true)
-              put("signature", signature)
-            },
+            toJSObject(
+              CreateSignatureResult(
+                success = true,
+                signature = signature,
+              ),
+            ),
           )
         }.onFailure { error ->
           if (error is NativeError.NotFound) {
@@ -638,11 +690,7 @@ class FortressPlugin :
     try {
       val keyAlias = call.getString("keyAlias")
       val keysExist = implementation.biometricKeysExist(keyAlias)
-      call.resolve(
-        JSObject().apply {
-          put("keysExist", keysExist)
-        },
-      )
+      call.resolve(toJSObject(BiometricKeysExistResult(keysExist = keysExist)))
     } catch (error: Throwable) {
       handleError(call, error)
     }
@@ -653,11 +701,7 @@ class FortressPlugin :
     try {
       val keyAlias = call.getString("keyAlias")
       val publicKey = implementation.createKeys(keyAlias)
-      call.resolve(
-        JSObject().apply {
-          put("publicKey", publicKey)
-        },
-      )
+      call.resolve(toJSObject(CreateKeysResult(publicKey = publicKey)))
     } catch (error: Throwable) {
       handleError(call, error)
     }
@@ -708,10 +752,12 @@ class FortressPlugin :
       result
         .onSuccess { pair ->
           call.resolve(
-            JSObject().apply {
-              put("publicKey", pair.first)
-              put("signature", pair.second)
-            },
+            toJSObject(
+              RegisterWithChallengeResult(
+                publicKey = pair.first,
+                signature = pair.second,
+              ),
+            ),
           )
         }.onFailure { error ->
           if (error is NativeError.NotFound) {
@@ -749,11 +795,7 @@ class FortressPlugin :
     ) { result ->
       result
         .onSuccess { signature ->
-          call.resolve(
-            JSObject().apply {
-              put("signature", signature)
-            },
-          )
+          call.resolve(toJSObject(AuthenticateWithChallengeResult(signature = signature)))
         }.onFailure { error ->
           if (error is NativeError.NotFound) {
             notifyVaultInvalidated(REASON_KEYPAIR_INVALIDATED)
@@ -772,11 +814,7 @@ class FortressPlugin :
       }
 
       val payload = implementation.generateChallengePayload(nonce)
-      call.resolve(
-        JSObject().apply {
-          put("payload", payload)
-        },
-      )
+      call.resolve(toJSObject(GenerateChallengePayloadResult(payload = payload)))
     } catch (error: Throwable) {
       handleError(call, error)
     }
@@ -799,7 +837,7 @@ class FortressPlugin :
     try {
       val key = call.getString("key") ?: throw NativeError.InvalidInput(ErrorMessages.INVALID_INPUT)
       val value = implementation.getInsecureValue(key)
-      call.resolve(JSObject().apply { put("value", value) })
+      call.resolve(toJSObject(ValueResult(value = value)))
     } catch (error: Throwable) {
       handleError(call, error)
     }
@@ -821,7 +859,7 @@ class FortressPlugin :
     try {
       val key = call.getString("key") ?: throw NativeError.InvalidInput(ErrorMessages.INVALID_INPUT)
       val obfuscated = implementation.getObfuscatedKey(key)
-      call.resolve(JSObject().apply { put("obfuscated", obfuscated) })
+      call.resolve(toJSObject(ObfuscatedKeyResult(obfuscated = obfuscated)))
     } catch (error: Throwable) {
       handleError(call, error)
     }
@@ -833,7 +871,7 @@ class FortressPlugin :
       val key = call.getString("key") ?: throw NativeError.InvalidInput(ErrorMessages.INVALID_INPUT)
       val secure = call.getBoolean("secure", true) ?: true
       val exists = implementation.hasKey(key, secure)
-      call.resolve(JSObject().apply { put("exists", exists) })
+      call.resolve(toJSObject(HasKeyResult(exists = exists)))
     } catch (error: Throwable) {
       handleError(call, error)
     }
@@ -843,8 +881,16 @@ class FortressPlugin :
   fun checkStatus(call: PluginCall) {
     val status = implementation.checkBiometricStatus(context)
     lastSecurityStatus = status
-    call.resolve(status)
+    call.resolve(toJSObject(toDeviceSecurityStatus(status)))
   }
+
+  private fun toDeviceSecurityStatus(status: JSObject): DeviceSecurityStatusResult =
+    DeviceSecurityStatusResult(
+      isBiometricsAvailable = status.getBool("isBiometricsAvailable") ?: false,
+      isBiometricsEnabled = status.getBool("isBiometricsEnabled") ?: false,
+      isDeviceSecure = status.getBool("isDeviceSecure") ?: false,
+      biometryType = status.getString("biometryType") ?: "none",
+    )
 
   /**
    * Overrides the detected biometry type for development/testing flows.

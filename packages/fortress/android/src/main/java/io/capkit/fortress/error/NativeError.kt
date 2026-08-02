@@ -11,25 +11,7 @@ package io.capkit.fortress.error
  */
 sealed class NativeError(
   message: String,
-  val errorCode: String,
 ) : Throwable(message) {
-  // -----------------------------------------------------------------------------
-  // Error Code Constants
-  // -----------------------------------------------------------------------------
-
-  companion object {
-    const val UNAVAILABLE = "UNAVAILABLE"
-    const val CANCELLED = "CANCELLED"
-    const val PERMISSION_DENIED = "PERMISSION_DENIED"
-    const val INIT_FAILED = "INIT_FAILED"
-    const val INVALID_INPUT = "INVALID_INPUT"
-    const val NOT_FOUND = "NOT_FOUND"
-    const val CONFLICT = "CONFLICT"
-    const val TIMEOUT = "TIMEOUT"
-    const val SECURITY_VIOLATION = "SECURITY_VIOLATION"
-    const val VAULT_LOCKED = "VAULT_LOCKED"
-  }
-
   // -----------------------------------------------------------------------------
   // Specific Error Types
   // -----------------------------------------------------------------------------
@@ -40,7 +22,7 @@ sealed class NativeError(
    */
   class Unavailable(
     message: String,
-  ) : NativeError(message, UNAVAILABLE)
+  ) : NativeError(message)
 
   /**
    * The user cancelled an interactive flow.
@@ -48,7 +30,7 @@ sealed class NativeError(
    */
   class Cancelled(
     message: String,
-  ) : NativeError(message, CANCELLED)
+  ) : NativeError(message)
 
   /**
    * Required permission was denied or not granted by the user.
@@ -56,7 +38,7 @@ sealed class NativeError(
    */
   class PermissionDenied(
     message: String,
-  ) : NativeError(message, PERMISSION_DENIED)
+  ) : NativeError(message)
 
   /**
    * Plugin failed to initialize or perform
@@ -64,14 +46,14 @@ sealed class NativeError(
    */
   class InitFailed(
     message: String,
-  ) : NativeError(message, INIT_FAILED)
+  ) : NativeError(message)
 
   /**
    * Invalid input provided (e.g., exceeds max length).
    */
   class InvalidInput(
     message: String,
-  ) : NativeError(message, INVALID_INPUT)
+  ) : NativeError(message)
 
   /**
    * The requested resource does not exist.
@@ -79,7 +61,7 @@ sealed class NativeError(
    */
   class NotFound(
     message: String,
-  ) : NativeError(message, NOT_FOUND)
+  ) : NativeError(message)
 
   /**
    * The operation conflicts with the current state.
@@ -87,7 +69,7 @@ sealed class NativeError(
    */
   class Conflict(
     message: String,
-  ) : NativeError(message, CONFLICT)
+  ) : NativeError(message)
 
   /**
    * The operation did not complete within the expected time.
@@ -95,19 +77,19 @@ sealed class NativeError(
    */
   class Timeout(
     message: String,
-  ) : NativeError(message, TIMEOUT)
+  ) : NativeError(message)
 
   /**
    * Security validation failed in cryptographic or integrity checks.
    */
   class SecurityViolation(
     message: String,
-  ) : NativeError(message, SECURITY_VIOLATION)
+  ) : NativeError(message)
 
   /**
    * Secure operation requested while vault is locked.
    */
   class VaultLocked(
     message: String,
-  ) : NativeError(message, VAULT_LOCKED)
+  ) : NativeError(message)
 }

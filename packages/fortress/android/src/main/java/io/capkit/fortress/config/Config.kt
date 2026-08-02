@@ -1,81 +1,91 @@
 package io.capkit.fortress.config
 
-import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
-/**
- * Plugin configuration container.
- *
- * This class is responsible for reading and exposing
- * static configuration values defined under the
- * `Fortress` key in capacitor.config.ts.
- *
- * Configuration rules:
- * - Read once during plugin initialization
- * - Treated as immutable runtime input
- * - Accessible only from native code
- *
- * @property verboseLogging Enables verbose native logging.
- */
+@Serializable
+private data class RawConfigData(
+  @SerialName("verboseLogging")
+  val verboseLogging: Boolean = false,
+  @SerialName("logLevel")
+  val logLevel: String? = null,
+  @SerialName("lockAfterMs")
+  val lockAfterMs: Int? = null,
+  @SerialName("enablePrivacyScreen")
+  val enablePrivacyScreen: Boolean? = null,
+  @SerialName("privacyOverlayText")
+  val privacyOverlayText: String? = null,
+  @SerialName("privacyOverlayImageName")
+  val privacyOverlayImageName: String? = null,
+  @SerialName("privacyOverlayShowText")
+  val privacyOverlayShowText: Boolean? = null,
+  @SerialName("privacyOverlayShowImage")
+  val privacyOverlayShowImage: Boolean? = null,
+  @SerialName("privacyOverlayTextColor")
+  val privacyOverlayTextColor: String? = null,
+  @SerialName("privacyOverlayBackgroundOpacity")
+  val privacyOverlayBackgroundOpacity: Double? = null,
+  @SerialName("privacyOverlayTheme")
+  val privacyOverlayTheme: String? = null,
+  @SerialName("obfuscationPrefix")
+  val obfuscationPrefix: String? = null,
+  @SerialName("requireStrongBox")
+  val requireStrongBox: Boolean? = null,
+  @SerialName("allowDevicePasscode")
+  val allowDevicePasscode: Boolean? = null,
+  @SerialName("fallbackStrategy")
+  val fallbackStrategy: String? = null,
+  @SerialName("biometricPromptText")
+  val biometricPromptText: String? = null,
+  @SerialName("prefix")
+  val prefix: String? = null,
+  @SerialName("allowCachedAuthentication")
+  val allowCachedAuthentication: Boolean? = null,
+  @SerialName("cachedAuthenticationTimeoutMs")
+  val cachedAuthenticationTimeoutMs: Int? = null,
+  @SerialName("cryptoStrategy")
+  val cryptoStrategy: String? = null,
+  @SerialName("keySize")
+  val keySize: Int? = null,
+  @SerialName("maxBiometricAttempts")
+  val maxBiometricAttempts: Int? = null,
+  @SerialName("lockoutDurationMs")
+  val lockoutDurationMs: Int? = null,
+  @SerialName("requireFreshAuthenticationMs")
+  val requireFreshAuthenticationMs: Int? = null,
+  @SerialName("encryptionAlgorithm")
+  val encryptionAlgorithm: String? = null,
+  @SerialName("persistSessionState")
+  val persistSessionState: Boolean? = null,
+)
+
 class Config(
   plugin: Plugin,
 ) {
-  // -----------------------------------------------------------------------------
-  // Configuration Keys
-  // -----------------------------------------------------------------------------
-
-  /**
-   * Centralized definition of configuration keys.
-   * Avoids string duplication and typos.
-   */
-  private object Keys {
-    const val VERBOSE_LOGGING = "verboseLogging"
-    const val LOG_LEVEL = "logLevel"
-    const val LOCK_AFTER_MS = "lockAfterMs"
-    const val ENABLE_PRIVACY_SCREEN = "enablePrivacyScreen"
-    const val PRIVACY_OVERLAY_TEXT = "privacyOverlayText"
-    const val PRIVACY_OVERLAY_IMAGE_NAME = "privacyOverlayImageName"
-    const val PRIVACY_OVERLAY_SHOW_TEXT = "privacyOverlayShowText"
-    const val PRIVACY_OVERLAY_SHOW_IMAGE = "privacyOverlayShowImage"
-    const val PRIVACY_OVERLAY_TEXT_COLOR = "privacyOverlayTextColor"
-    const val PRIVACY_OVERLAY_BACKGROUND_OPACITY = "privacyOverlayBackgroundOpacity"
-    const val PRIVACY_OVERLAY_THEME = "privacyOverlayTheme"
-    const val OBFUSCATION_PREFIX = "obfuscationPrefix"
-    const val REQUIRE_STRONGBOX = "requireStrongBox"
-    const val ALLOW_DEVICE_PASSCODE = "allowDevicePasscode"
-    const val FALLBACK_STRATEGY = "fallbackStrategy"
-    const val BIOMETRIC_PROMPT_TEXT = "biometricPromptText"
-    const val PREFIX = "prefix"
-    const val ALLOW_CACHED_AUTHENTICATION = "allowCachedAuthentication"
-    const val CACHED_AUTHENTICATION_TIMEOUT_MS = "cachedAuthenticationTimeoutMs"
-    const val CRYPTO_STRATEGY = "cryptoStrategy"
-    const val KEY_SIZE = "keySize"
-    const val MAX_BIOMETRIC_ATTEMPTS = "maxBiometricAttempts"
-    const val LOCKOUT_DURATION_MS = "lockoutDurationMs"
-    const val REQUIRE_FRESH_AUTHENTICATION_MS = "requireFreshAuthenticationMs"
-    const val ENCRYPTION_ALGORITHM = "encryptionAlgorithm"
-    const val PERSIST_SESSION_STATE = "persistSessionState"
-  }
-
   private companion object {
     val ALLOWED_LOG_LEVELS = setOf("error", "warn", "info", "debug", "verbose")
     val ALLOWED_OVERLAY_THEMES = setOf("system", "light", "dark")
     val ALLOWED_FALLBACK_STRATEGIES = setOf("deviceCredential", "none", "systemDefault")
     val ALLOWED_ENCRYPTION_ALGORITHMS = setOf("AES-GCM", "AES-CBC")
+
+    private val json =
+      Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+      }
+
+    private fun parseConfig(jsonString: String?): RawConfigData {
+      if (jsonString.isNullOrBlank()) return RawConfigData()
+      return try {
+        json.decodeFromString<RawConfigData>(jsonString)
+      } catch (_: Exception) {
+        RawConfigData()
+      }
+    }
   }
 
-  // -----------------------------------------------------------------------------
-  // Public Configuration Values
-  // -----------------------------------------------------------------------------
-
-  /**
-   * Enables verbose native logging.
-   *
-   * When enabled, additional debug information
-   * is printed to Logcat.
-   *
-   * @default false
-   */
   var verboseLogging: Boolean
   var logLevel: String
   var lockAfterMs: Int
@@ -103,217 +113,184 @@ class Config(
   var encryptionAlgorithm: String
   var persistSessionState: Boolean
 
-  // ---------------------------------------------------------------------------
-  // Initialization
-  // ---------------------------------------------------------------------------
-
   init {
-    val config = plugin.config
+    val configObject = plugin.config.getConfigJSON()
+    val parsedConfig = parseConfig(configObject?.toString())
 
-    // Verbose logging flag
-    verboseLogging =
-      config.getBoolean(Keys.VERBOSE_LOGGING, false)
+    verboseLogging = parsedConfig.verboseLogging
 
     logLevel =
-      config.getString(Keys.LOG_LEVEL, if (verboseLogging) "debug" else "info")
+      parsedConfig.logLevel
         ?: if (verboseLogging) {
           "debug"
         } else {
           "info"
         }
 
-    lockAfterMs =
-      config.getInt(Keys.LOCK_AFTER_MS, 60000)
+    lockAfterMs = parsedConfig.lockAfterMs ?: 60000
 
-    enablePrivacyScreen =
-      config.getBoolean(Keys.ENABLE_PRIVACY_SCREEN, true)
+    enablePrivacyScreen = parsedConfig.enablePrivacyScreen ?: true
 
-    privacyOverlayText =
-      config.getString(Keys.PRIVACY_OVERLAY_TEXT, "") ?: ""
+    privacyOverlayText = parsedConfig.privacyOverlayText?.takeIf { it.isNotBlank() } ?: ""
 
-    privacyOverlayImageName =
-      config.getString(Keys.PRIVACY_OVERLAY_IMAGE_NAME, "") ?: ""
+    privacyOverlayImageName = parsedConfig.privacyOverlayImageName?.takeIf { it.isNotBlank() } ?: ""
 
-    privacyOverlayShowText =
-      config.getBoolean(Keys.PRIVACY_OVERLAY_SHOW_TEXT, true)
+    privacyOverlayShowText = parsedConfig.privacyOverlayShowText ?: true
 
-    privacyOverlayShowImage =
-      config.getBoolean(Keys.PRIVACY_OVERLAY_SHOW_IMAGE, true)
+    privacyOverlayShowImage = parsedConfig.privacyOverlayShowImage ?: true
 
-    privacyOverlayTextColor =
-      config.getString(Keys.PRIVACY_OVERLAY_TEXT_COLOR, "") ?: ""
+    privacyOverlayTextColor = parsedConfig.privacyOverlayTextColor?.takeIf { it.isNotBlank() } ?: ""
 
-    privacyOverlayBackgroundOpacity =
-      config.getString(Keys.PRIVACY_OVERLAY_BACKGROUND_OPACITY, "")?.toDoubleOrNull() ?: -1.0
+    privacyOverlayBackgroundOpacity = parsedConfig.privacyOverlayBackgroundOpacity ?: -1.0
 
-    privacyOverlayTheme =
-      config.getString(Keys.PRIVACY_OVERLAY_THEME, "system") ?: "system"
+    privacyOverlayTheme = parsedConfig.privacyOverlayTheme ?: "system"
 
-    obfuscationPrefix =
-      config.getString(Keys.OBFUSCATION_PREFIX, "ftrss_")
+    obfuscationPrefix = parsedConfig.obfuscationPrefix?.takeIf { it.isNotBlank() } ?: "ftrss_"
 
-    // Read requireStrongBox from capacitor.config.ts
-    requireStrongBox =
-      config.getBoolean(Keys.REQUIRE_STRONGBOX, false)
+    requireStrongBox = parsedConfig.requireStrongBox ?: false
 
-    allowDevicePasscode =
-      config.getBoolean(Keys.ALLOW_DEVICE_PASSCODE, true)
+    allowDevicePasscode = parsedConfig.allowDevicePasscode ?: true
 
-    fallbackStrategy =
-      config.getString(Keys.FALLBACK_STRATEGY, "systemDefault") ?: "systemDefault"
+    fallbackStrategy = parsedConfig.fallbackStrategy ?: "systemDefault"
 
-    biometricPromptText =
-      config.getString(Keys.BIOMETRIC_PROMPT_TEXT, "Cancel") ?: "Cancel"
+    biometricPromptText = parsedConfig.biometricPromptText?.takeIf { it.isNotBlank() } ?: "Cancel"
 
-    prefix =
-      config.getString(Keys.PREFIX, "") ?: ""
+    prefix = parsedConfig.prefix?.takeIf { it.isNotBlank() } ?: ""
 
-    allowCachedAuthentication =
-      config.getBoolean(Keys.ALLOW_CACHED_AUTHENTICATION, false)
+    allowCachedAuthentication = parsedConfig.allowCachedAuthentication ?: false
 
-    cachedAuthenticationTimeoutMs =
-      config.getInt(Keys.CACHED_AUTHENTICATION_TIMEOUT_MS, 30000)
+    cachedAuthenticationTimeoutMs = parsedConfig.cachedAuthenticationTimeoutMs ?: 30000
 
-    cryptoStrategy =
-      config.getString(Keys.CRYPTO_STRATEGY, "auto") ?: "auto"
+    cryptoStrategy = parsedConfig.cryptoStrategy ?: "auto"
 
-    keySize =
-      config.getInt(Keys.KEY_SIZE, 2048)
+    keySize = parsedConfig.keySize ?: 2048
 
-    maxBiometricAttempts =
-      config.getInt(Keys.MAX_BIOMETRIC_ATTEMPTS, 5)
+    maxBiometricAttempts = parsedConfig.maxBiometricAttempts ?: 5
 
-    lockoutDurationMs =
-      config.getInt(Keys.LOCKOUT_DURATION_MS, 30000)
+    lockoutDurationMs = parsedConfig.lockoutDurationMs ?: 30000
 
-    requireFreshAuthenticationMs =
-      config.getInt(Keys.REQUIRE_FRESH_AUTHENTICATION_MS, 0)
+    requireFreshAuthenticationMs = parsedConfig.requireFreshAuthenticationMs ?: 0
 
-    encryptionAlgorithm =
-      config.getString(Keys.ENCRYPTION_ALGORITHM, "AES-GCM") ?: "AES-GCM"
+    encryptionAlgorithm = parsedConfig.encryptionAlgorithm ?: "AES-GCM"
 
-    persistSessionState =
-      config.getBoolean(Keys.PERSIST_SESSION_STATE, false)
+    persistSessionState = parsedConfig.persistSessionState ?: false
   }
 
-  fun applyRuntimeOverrides(overrides: JSObject) {
-    getBooleanOverride(overrides, Keys.VERBOSE_LOGGING)?.let { verboseLogging = it }
-    getStringOverride(overrides, Keys.LOG_LEVEL)?.let {
+  fun applyRuntimeOverrides(overrides: com.getcapacitor.JSObject) {
+    getBooleanOverride(overrides, "verboseLogging")?.let { verboseLogging = it }
+    getStringOverride(overrides, "logLevel")?.let {
       if (ALLOWED_LOG_LEVELS.contains(it)) {
         logLevel = it
       }
     }
-    getIntOverride(overrides, Keys.LOCK_AFTER_MS)?.let {
+    getIntOverride(overrides, "lockAfterMs")?.let {
       if (it >= 0) {
         lockAfterMs = it
       }
     }
-    getBooleanOverride(overrides, Keys.ENABLE_PRIVACY_SCREEN)?.let { enablePrivacyScreen = it }
-    getStringOverride(overrides, Keys.PRIVACY_OVERLAY_TEXT)?.let { privacyOverlayText = it }
-    getStringOverride(overrides, Keys.PRIVACY_OVERLAY_IMAGE_NAME)?.let { privacyOverlayImageName = it }
-    getBooleanOverride(overrides, Keys.PRIVACY_OVERLAY_SHOW_TEXT)?.let { privacyOverlayShowText = it }
-    getBooleanOverride(overrides, Keys.PRIVACY_OVERLAY_SHOW_IMAGE)?.let { privacyOverlayShowImage = it }
-    getStringOverride(overrides, Keys.PRIVACY_OVERLAY_TEXT_COLOR)?.let { privacyOverlayTextColor = it }
-    getDoubleOverride(overrides, Keys.PRIVACY_OVERLAY_BACKGROUND_OPACITY)?.let {
+    getBooleanOverride(overrides, "enablePrivacyScreen")?.let { enablePrivacyScreen = it }
+    getStringOverride(overrides, "privacyOverlayText")?.let { privacyOverlayText = it }
+    getStringOverride(overrides, "privacyOverlayImageName")?.let { privacyOverlayImageName = it }
+    getBooleanOverride(overrides, "privacyOverlayShowText")?.let { privacyOverlayShowText = it }
+    getBooleanOverride(overrides, "privacyOverlayShowImage")?.let { privacyOverlayShowImage = it }
+    getStringOverride(overrides, "privacyOverlayTextColor")?.let { privacyOverlayTextColor = it }
+    getDoubleOverride(overrides, "privacyOverlayBackgroundOpacity")?.let {
       if (it == -1.0 || (it >= 0.0 && it <= 1.0)) {
         privacyOverlayBackgroundOpacity = it
       }
     }
-    getStringOverride(overrides, Keys.PRIVACY_OVERLAY_THEME)?.let {
+    getStringOverride(overrides, "privacyOverlayTheme")?.let {
       if (ALLOWED_OVERLAY_THEMES.contains(it)) {
         privacyOverlayTheme = it
       }
     }
-    getStringOverride(overrides, Keys.FALLBACK_STRATEGY)?.let {
+    getStringOverride(overrides, "fallbackStrategy")?.let {
       if (ALLOWED_FALLBACK_STRATEGIES.contains(it)) {
         fallbackStrategy = it
       }
     }
-    getBooleanOverride(overrides, Keys.ALLOW_CACHED_AUTHENTICATION)?.let { allowCachedAuthentication = it }
-    getIntOverride(overrides, Keys.CACHED_AUTHENTICATION_TIMEOUT_MS)?.let {
+    getBooleanOverride(overrides, "allowCachedAuthentication")?.let { allowCachedAuthentication = it }
+    getIntOverride(overrides, "cachedAuthenticationTimeoutMs")?.let {
       if (it >= 0) {
         cachedAuthenticationTimeoutMs = it
       }
     }
-    getIntOverride(overrides, Keys.MAX_BIOMETRIC_ATTEMPTS)?.let {
+    getIntOverride(overrides, "maxBiometricAttempts")?.let {
       if (it >= 1) {
         maxBiometricAttempts = it
       }
     }
-    getIntOverride(overrides, Keys.LOCKOUT_DURATION_MS)?.let {
+    getIntOverride(overrides, "lockoutDurationMs")?.let {
       if (it >= 0) {
         lockoutDurationMs = it
       }
     }
-    getIntOverride(overrides, Keys.REQUIRE_FRESH_AUTHENTICATION_MS)?.let {
+    getIntOverride(overrides, "requireFreshAuthenticationMs")?.let {
       if (it >= 0) {
         requireFreshAuthenticationMs = it
       }
     }
-    getStringOverride(overrides, Keys.ENCRYPTION_ALGORITHM)?.let {
+    getStringOverride(overrides, "encryptionAlgorithm")?.let {
       if (ALLOWED_ENCRYPTION_ALGORITHMS.contains(it)) {
         encryptionAlgorithm = it
       }
     }
-    getBooleanOverride(overrides, Keys.PERSIST_SESSION_STATE)?.let { persistSessionState = it }
+    getBooleanOverride(overrides, "persistSessionState")?.let { persistSessionState = it }
   }
 
-  fun toRuntimeOverrides(): JSObject {
-    val overrides = JSObject()
-    overrides.put(Keys.VERBOSE_LOGGING, verboseLogging)
-    overrides.put(Keys.LOG_LEVEL, logLevel)
-    overrides.put(Keys.LOCK_AFTER_MS, lockAfterMs)
-    overrides.put(Keys.ENABLE_PRIVACY_SCREEN, enablePrivacyScreen)
-    overrides.put(Keys.PRIVACY_OVERLAY_TEXT, privacyOverlayText)
-    overrides.put(Keys.PRIVACY_OVERLAY_IMAGE_NAME, privacyOverlayImageName)
-    overrides.put(Keys.PRIVACY_OVERLAY_SHOW_TEXT, privacyOverlayShowText)
-    overrides.put(Keys.PRIVACY_OVERLAY_SHOW_IMAGE, privacyOverlayShowImage)
-    overrides.put(Keys.PRIVACY_OVERLAY_TEXT_COLOR, privacyOverlayTextColor)
-    overrides.put(Keys.PRIVACY_OVERLAY_BACKGROUND_OPACITY, privacyOverlayBackgroundOpacity)
-    overrides.put(Keys.PRIVACY_OVERLAY_THEME, privacyOverlayTheme)
-    overrides.put(Keys.FALLBACK_STRATEGY, fallbackStrategy)
-    overrides.put(Keys.ALLOW_CACHED_AUTHENTICATION, allowCachedAuthentication)
-    overrides.put(Keys.CACHED_AUTHENTICATION_TIMEOUT_MS, cachedAuthenticationTimeoutMs)
-    overrides.put(Keys.MAX_BIOMETRIC_ATTEMPTS, maxBiometricAttempts)
-    overrides.put(Keys.LOCKOUT_DURATION_MS, lockoutDurationMs)
-    overrides.put(Keys.REQUIRE_FRESH_AUTHENTICATION_MS, requireFreshAuthenticationMs)
-    overrides.put(Keys.ENCRYPTION_ALGORITHM, encryptionAlgorithm)
-    overrides.put(Keys.PERSIST_SESSION_STATE, persistSessionState)
+  fun toRuntimeOverrides(): com.getcapacitor.JSObject {
+    val overrides = com.getcapacitor.JSObject()
+    overrides.put("verboseLogging", verboseLogging)
+    overrides.put("logLevel", logLevel)
+    overrides.put("lockAfterMs", lockAfterMs)
+    overrides.put("enablePrivacyScreen", enablePrivacyScreen)
+    overrides.put("privacyOverlayText", privacyOverlayText)
+    overrides.put("privacyOverlayImageName", privacyOverlayImageName)
+    overrides.put("privacyOverlayShowText", privacyOverlayShowText)
+    overrides.put("privacyOverlayShowImage", privacyOverlayShowImage)
+    overrides.put("privacyOverlayTextColor", privacyOverlayTextColor)
+    overrides.put("privacyOverlayBackgroundOpacity", privacyOverlayBackgroundOpacity)
+    overrides.put("privacyOverlayTheme", privacyOverlayTheme)
+    overrides.put("fallbackStrategy", fallbackStrategy)
+    overrides.put("allowCachedAuthentication", allowCachedAuthentication)
+    overrides.put("cachedAuthenticationTimeoutMs", cachedAuthenticationTimeoutMs)
+    overrides.put("maxBiometricAttempts", maxBiometricAttempts)
+    overrides.put("lockoutDurationMs", lockoutDurationMs)
+    overrides.put("requireFreshAuthenticationMs", requireFreshAuthenticationMs)
+    overrides.put("encryptionAlgorithm", encryptionAlgorithm)
+    overrides.put("persistSessionState", persistSessionState)
     return overrides
   }
 
   private fun getBooleanOverride(
-    source: JSObject,
+    source: com.getcapacitor.JSObject,
     key: String,
   ): Boolean? {
     if (!source.has(key) || source.isNull(key)) {
       return null
     }
-
     val value = source.opt(key)
     return value as? Boolean
   }
 
   private fun getStringOverride(
-    source: JSObject,
+    source: com.getcapacitor.JSObject,
     key: String,
   ): String? {
     if (!source.has(key) || source.isNull(key)) {
       return null
     }
-
     val value = source.opt(key)
     return value as? String
   }
 
   private fun getIntOverride(
-    source: JSObject,
+    source: com.getcapacitor.JSObject,
     key: String,
   ): Int? {
     if (!source.has(key) || source.isNull(key)) {
       return null
     }
-
     val value = source.opt(key)
     return when (value) {
       is Int -> value
@@ -324,13 +301,12 @@ class Config(
   }
 
   private fun getDoubleOverride(
-    source: JSObject,
+    source: com.getcapacitor.JSObject,
     key: String,
   ): Double? {
     if (!source.has(key) || source.isNull(key)) {
       return null
     }
-
     val value = source.opt(key)
     return when (value) {
       is Double -> value
