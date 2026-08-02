@@ -8,6 +8,9 @@ import com.getcapacitor.annotation.CapacitorPlugin
 import io.capkit.settings.config.SettingsConfig
 import io.capkit.settings.error.SettingsError
 import io.capkit.settings.logger.SettingsLogger
+import io.capkit.settings.model.PluginVersionResult
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 /**
  * Capacitor bridge for the Settings plugin (Android).
@@ -42,6 +45,14 @@ class SettingsPlugin : Plugin() {
    */
   private lateinit var implementation: SettingsImpl
 
+  /**
+   * Serializer instance configured to encode result models into JSObject string payloads.
+   *
+   * NOTE: encodeDefaults is intentionally NOT set so nullable/defaulted fields
+   * are omitted from the emitted JSON, matching the optional TypeScript types.
+   */
+  private val json = Json
+
   // ---------------------------------------------------------------------------
   // Lifecycle
   // ---------------------------------------------------------------------------
@@ -62,6 +73,18 @@ class SettingsPlugin : Plugin() {
     implementation.updateConfig(config)
 
     SettingsLogger.debug("Plugin loaded. Version: ", BuildConfig.PLUGIN_VERSION)
+  }
+
+  // ---------------------------------------------------------------------------
+  // Helper Methods for Serialization
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Converts a serializable result model directly into a Capacitor JSObject.
+   */
+  private inline fun <reified T> toJSObject(value: T): JSObject {
+    val jsonString = json.encodeToString(value)
+    return JSObject(jsonString)
   }
 
   // ---------------------------------------------------------------------------
@@ -157,8 +180,6 @@ class SettingsPlugin : Plugin() {
    */
   @PluginMethod
   fun getPluginVersion(call: PluginCall) {
-    val ret = JSObject()
-    ret.put("version", BuildConfig.PLUGIN_VERSION)
-    call.resolve(ret)
+    call.resolve(toJSObject(PluginVersionResult(BuildConfig.PLUGIN_VERSION)))
   }
 }

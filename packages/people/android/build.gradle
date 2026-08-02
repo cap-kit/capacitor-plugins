@@ -1,5 +1,5 @@
 buildscript {
-    ext.kotlin_version = project.hasProperty("kotlin_version") ? rootProject.ext.kotlin_version : '2.2.20'
+    ext.kotlin_version = project.hasProperty("kotlin_version") ? project.property("kotlin_version") : '2.3.21'
     repositories {
         google()
         mavenCentral()
@@ -7,6 +7,7 @@ buildscript {
     dependencies {
         classpath 'com.android.tools.build:gradle:9.3.1'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "org.jetbrains.kotlin:kotlin-serialization:$kotlin_version"
     }
 }
 
@@ -15,11 +16,11 @@ plugins {
 }
 
 ext {
-    junitVersion = project.hasProperty('junitVersion') ? rootProject.ext.junitVersion : '4.13.2'
-    androidxAppCompatVersion = project.hasProperty('androidxAppCompatVersion') ? rootProject.ext.androidxAppCompatVersion : '1.7.1'
-    androidxJunitVersion = project.hasProperty('androidxJunitVersion') ? rootProject.ext.androidxJunitVersion : '1.3.0'
-    androidxEspressoCoreVersion = project.hasProperty('androidxEspressoCoreVersion') ? rootProject.ext.androidxEspressoCoreVersion : '3.7.0'
-    androidxCoreKTXVersion = project.hasProperty('androidxCoreKTXVersion') ? rootProject.ext.androidxCoreKTXVersion : '1.17.0'
+    junitVersion = project.hasProperty('junitVersion') ? project.property('junitVersion') : '4.13.2'
+    androidxAppCompatVersion = project.hasProperty('androidxAppCompatVersion') ? project.property('androidxAppCompatVersion') : '1.7.1'
+    androidxJunitVersion = project.hasProperty('androidxJunitVersion') ? project.property('androidxJunitVersion') : '1.3.0'
+    androidxEspressoCoreVersion = project.hasProperty('androidxEspressoCoreVersion') ? project.property('androidxEspressoCoreVersion') : '3.7.0'
+    androidxCoreKTXVersion = project.hasProperty('androidxCoreKTXVersion') ? project.property('androidxCoreKTXVersion') : '1.18.0'
 }
 
 apply plugin: 'com.android.library'
@@ -28,6 +29,9 @@ if (project.extensions.findByName('kotlin') == null) {
 }
 apply plugin: 'kotlin-parcelize'
 apply plugin: 'org.jlleitschuh.gradle.ktlint'
+if (!project.plugins.hasPlugin('kotlinx-serialization')) {
+    apply plugin: 'kotlinx-serialization'
+}
 
 import groovy.json.JsonSlurper
 
@@ -51,7 +55,7 @@ def pluginVersion = getPluginVersion()
 
 android {
     namespace = "io.capkit.people"
-    compileSdk = project.hasProperty('compileSdkVersion') ? rootProject.ext.compileSdkVersion as Integer : 36
+    compileSdk = Math.max(36, project.hasProperty('compileSdkVersion') ? project.property('compileSdkVersion') as int : 36)
 
     // AGP 8.0+ disables BuildConfig by default for libraries.
     // We need to enable it to inject the plugin version.
@@ -60,8 +64,8 @@ android {
     }
 
     defaultConfig {
-        minSdkVersion project.hasProperty('minSdkVersion') ? rootProject.ext.minSdkVersion as Integer : 24
-        targetSdkVersion project.hasProperty('targetSdkVersion') ? rootProject.ext.targetSdkVersion as Integer : 36
+        minSdkVersion Math.max(24, project.hasProperty('minSdkVersion') ? project.property('minSdkVersion') as int : 24)
+        targetSdkVersion Math.max(36, project.hasProperty('targetSdkVersion') ? project.property('targetSdkVersion') as int : 36)
         versionCode 1
 
         // Dynamic versioning (feature enabled)
@@ -98,6 +102,7 @@ dependencies {
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     implementation "androidx.core:core-ktx:$androidxCoreKTXVersion"
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0"
 
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"

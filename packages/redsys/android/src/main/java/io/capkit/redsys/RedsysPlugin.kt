@@ -9,8 +9,15 @@ import com.getcapacitor.annotation.Permission
 import com.redsys.tpvvinapplibrary.ErrorResponse
 import com.redsys.tpvvinapplibrary.IPaymentResult
 import com.redsys.tpvvinapplibrary.ResultResponse
+import io.capkit.redsys.model.HashResult
+import io.capkit.redsys.model.PluginVersionResult
+import io.capkit.redsys.model.RedsysPaymentResponseOK
+import io.capkit.redsys.model.RedsysWebPaymentInitResult
 import io.capkit.redsys.utils.RedsysLogger
 import io.capkit.redsys.utils.RedsysUtils
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import org.json.JSONObject
 
 /**
  * Redsys Capacitor Plugin (Android Bridge Layer)
@@ -48,6 +55,14 @@ class RedsysPlugin : Plugin() {
    * Contains SDK interaction and platform-specific logic.
    */
   private lateinit var implementation: RedsysImpl
+
+  /**
+   * Serializer instance configured to encode result models into JSObject string payloads.
+   *
+   * NOTE: encodeDefaults is intentionally NOT set so nullable/defaulted fields
+   * are omitted from the emitted JSON, matching the optional TypeScript types.
+   */
+  private val json = Json
 
   // ---------------------------------------------------------------------------
   // Companion Object
@@ -123,6 +138,18 @@ class RedsysPlugin : Plugin() {
   }
 
   // ---------------------------------------------------------------------------
+  // Serialization helpers
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Converts a serializable result model directly into a Capacitor JSObject.
+   */
+  private inline fun <reified T> toJSObject(value: T): JSObject {
+    val jsonString = json.encodeToString(value)
+    return JSObject(jsonString)
+  }
+
+  // ---------------------------------------------------------------------------
   // Direct Payment
   // ---------------------------------------------------------------------------
 
@@ -146,8 +173,7 @@ class RedsysPlugin : Plugin() {
       callback =
         object : IPaymentResult {
           override fun paymentResultOK(res: ResultResponse) {
-            val ret = RedsysUtils.resultToJSObject(res)
-            call.resolve(ret)
+            call.resolve(toJSObject(mapPaymentResult(res)))
           }
 
           override fun paymentResultKO(err: ErrorResponse) {
@@ -183,9 +209,7 @@ class RedsysPlugin : Plugin() {
       desc = call.getString("description"),
       extra = RedsysUtils.toHashMap(call.getObject("extraParams")),
       onResult = { base64 ->
-        val ret = JSObject()
-        ret.put("base64Data", base64)
-        call.resolve(ret)
+        call.resolve(toJSObject(RedsysWebPaymentInitResult(base64Data = base64)))
       },
       onError = { error ->
         reject(call, error)
@@ -213,8 +237,7 @@ class RedsysPlugin : Plugin() {
       signature,
       object : IPaymentResult {
         override fun paymentResultOK(res: ResultResponse) {
-          val ret = RedsysUtils.resultToJSObject(res)
-          call.resolve(ret)
+          call.resolve(toJSObject(mapPaymentResult(res)))
         }
 
         override fun paymentResultKO(err: ErrorResponse) {
@@ -242,9 +265,7 @@ class RedsysPlugin : Plugin() {
     val signature = RedsysUtils.calculateHMAC(data, key, alg)
 
     if (signature != null) {
-      val ret = JSObject()
-      ret.put("signature", signature)
-      call.resolve(ret)
+      call.resolve(toJSObject(HashResult(signature = signature)))
     } else {
       val error = RedsysError.CryptoError("Hash computation failed. Verify Base64 key format.")
       reject(call, error)
@@ -260,8 +281,66 @@ class RedsysPlugin : Plugin() {
    */
   @PluginMethod
   fun getPluginVersion(call: PluginCall) {
-    val ret = JSObject()
-    ret.put("version", BuildConfig.PLUGIN_VERSION)
-    call.resolve(ret)
+    call.resolve(toJSObject(PluginVersionResult(version = BuildConfig.PLUGIN_VERSION)))
+  }
+
+  // ---------------------------------------------------------------------------
+  // Result mapping
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Converts the SDK [ResultResponse] into the typed bridge result DTO
+   * [RedsysPaymentResponseOK].
+   *
+   * This is the ONLY place that translates the SDK's generic response
+   * into the bridge DTO, so the hand-rolled Map-to-JSObject conversion
+   * in [RedsysUtils.resultToJSObject] is no longer needed.
+   */
+  private fun mapPaymentResult(res: ResultResponse): RedsysPaymentResponseOK {
+    return RedsysPaymentResponseOK(
+      code = res.responseCode?.toIntOrNull() ?: 0,
+      desc = res.desc ?: "",
+      amount = res.amount ?: "",
+      currency = res.currency ?: "",
+      order = res.order ?: "",
+      merchantCode = res.merchantCode ?: "",
+      terminal = res.terminal ?: "",
+      responseCode = res.responseCode ?: "",
+      authorisationCode = res.authorisationCode ?: "",
+      transactionType = res.transactionType ?: "",
+      securePayment = res.securePayment ?: "",
+      signature = res.signature ?: "",
+      cardNumber = if (res.cardNumber != null) RedsysUtils.maskCardNumber(res.cardNumber) else "",
+      cardBrand = res.cardBrand ?: "",
+      cardCountry = res.cardCountry ?: "",
+      cardType = res.cardType ?: "",
+      expiryDate = res.expiryDate ?: "",
+      merchantIdentifier = res.identifier,
+      consumerLanguage = res.language,
+      date = res.date,
+      hour = res.hour,
+      merchantData = res.merchantData,
+      extraParams = parseExtraParams(res.extraParams),
+    )
+  }
+
+  /**
+   * Parses the SDK's extraParams JSON string into a typed map.
+   * Returns null when the input is null or empty.
+   */
+  private fun parseExtraParams(extraParams: String?): Map<String, String>? {
+    if (extraParams.isNullOrEmpty()) return null
+    return try {
+      val json = JSONObject(extraParams)
+      val map = mutableMapOf<String, String>()
+      val keys = json.keys()
+      while (keys.hasNext()) {
+        val key = keys.next()
+        map[key] = json.get(key).toString()
+      }
+      map
+    } catch (_: Exception) {
+      null
+    }
   }
 }

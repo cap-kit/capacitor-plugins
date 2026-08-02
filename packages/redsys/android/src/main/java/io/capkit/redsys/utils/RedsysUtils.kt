@@ -2,9 +2,7 @@ package io.capkit.redsys.utils
 
 import android.util.Base64
 import com.getcapacitor.JSObject
-import com.redsys.tpvvinapplibrary.ResultResponse
 import com.redsys.tpvvinapplibrary.TPVVConstants
-import org.json.JSONObject
 import java.util.HashMap
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
@@ -14,7 +12,6 @@ import javax.crypto.spec.SecretKeySpec
  *
  * This object belongs to the Utils Layer.
  * It provides stateless helper functions for:
- * - SDK → JS response mapping
  * - Enum conversion
  * - Data transformation
  * - Cryptographic operations
@@ -40,67 +37,6 @@ object RedsysUtils {
       "authentication" -> TPVVConstants.PAYMENT_TYPE_AUTHENTICATION
       else -> TPVVConstants.PAYMENT_TYPE_NORMAL
     }
-
-  // ---------------------------------------------------------------------------
-  // Response Mapping
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Converts SDK ResultResponse into a standardized JS-compatible object.
-   * Maintains a stable cross-platform response shape.
-   */
-  fun resultToJSObject(res: ResultResponse): JSObject {
-    val js = JSObject()
-
-    // Base result info
-    js.put("code", res.responseCode?.toIntOrNull() ?: 0)
-    js.put("desc", "") // Description is usually handled in the reject path for errors
-
-    // Transaction details
-    js.put("amount", res.amount ?: "")
-    js.put("currency", res.currency ?: "")
-    js.put("order", res.order ?: "")
-    js.put("merchantCode", res.merchantCode ?: "")
-    js.put("terminal", res.terminal ?: "")
-    js.put("responseCode", res.responseCode ?: "")
-    js.put("authorisationCode", res.authorisationCode ?: "")
-    js.put("transactionType", res.transactionType ?: "")
-    js.put("securePayment", res.securePayment ?: "")
-    js.put("signature", res.signature ?: "")
-
-    // Card details (ensuring empty string if null for JS parity)
-    js.put("cardNumber", if (res.cardNumber != null) maskCardNumber(res.cardNumber) else "")
-    js.put("cardBrand", res.cardBrand ?: "")
-    js.put("cardCountry", res.cardCountry ?: "")
-    js.put("cardType", res.cardType ?: "")
-    js.put("expiryDate", res.expiryDate ?: "")
-
-    // Merchant and metadata
-    js.put("merchantIdentifier", res.identifier ?: "")
-    js.put("consumerLanguage", res.language ?: "")
-    js.put("date", res.date ?: "")
-    js.put("hour", res.hour ?: "")
-    js.put("merchantData", res.merchantData ?: "")
-
-    // Add extraParams if present
-    val extraParamsJS = JSObject()
-    if (!res.extraParams.isNullOrEmpty()) {
-      try {
-        // Parse JSON string manually to avoid SDK-specific utility errors
-        val json = JSONObject(res.extraParams)
-        val keys = json.keys()
-        while (keys.hasNext()) {
-          val key = keys.next()
-          extraParamsJS.put(key, json.get(key).toString())
-        }
-      } catch (e: Exception) {
-        // Fallback to empty object on parse error
-      }
-    }
-    js.put("extraParams", extraParamsJS)
-
-    return js
-  }
 
   // ---------------------------------------------------------------------------
   // Data Conversion

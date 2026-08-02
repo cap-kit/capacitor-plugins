@@ -2,6 +2,22 @@ package io.capkit.rank
 
 import android.content.Context
 import com.getcapacitor.Plugin
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+
+/**
+ * Data Transfer Object (DTO) for parsing capacitor.config.ts configuration.
+ */
+@Serializable
+private data class RankConfigData(
+  @SerialName("verboseLogging")
+  val verboseLogging: Boolean = false,
+  @SerialName("androidPackageName")
+  val androidPackageName: String? = null,
+  @SerialName("fireAndForget")
+  val fireAndForget: Boolean = false,
+)
 
 /**
  * Plugin configuration holder for the Rank plugin.
@@ -58,17 +74,30 @@ class RankConfig(
   // ---------------------------------------------------------------------------
 
   init {
-    // Access the plugin-specific configuration object
-    val config = plugin.getConfig()
+    val parsedConfig = parseConfig(plugin)
 
-    // Extract verboseLogging flag
-    verboseLogging = config.getBoolean("verboseLogging", false)
+    verboseLogging = parsedConfig.verboseLogging
+    androidPackageName = parsedConfig.androidPackageName?.ifBlank { null }
+    fireAndForget = parsedConfig.fireAndForget
+  }
 
-    // Extract and validate the Android Package Name
-    val apm = config.getString("androidPackageName")
-    androidPackageName = if (!apm.isNullOrBlank()) apm else null
+  private companion object {
+    private val json =
+      Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+      }
 
-    // Extract the fireAndForget resolution policy
-    fireAndForget = config.getBoolean("fireAndForget", false)
+    private fun parseConfig(plugin: Plugin): RankConfigData =
+      try {
+        val configJsonObject = plugin.config.getConfigJSON()
+        if (configJsonObject != null) {
+          json.decodeFromString<RankConfigData>(configJsonObject.toString())
+        } else {
+          RankConfigData()
+        }
+      } catch (_: Exception) {
+        RankConfigData()
+      }
   }
 }
