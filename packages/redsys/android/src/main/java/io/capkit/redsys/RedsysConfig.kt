@@ -2,6 +2,75 @@ package io.capkit.redsys
 
 import android.content.Context
 import com.getcapacitor.Plugin
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+
+/**
+ * Data Transfer Object (DTO) for parsing capacitor.config.ts configuration.
+ *
+ * The keys mirror the TypeScript `RedsysConfig` interface
+ * (packages/redsys/src/definitions.ts).
+ */
+@Serializable
+private data class RawConfigData(
+  @SerialName("verboseLogging")
+  val verboseLogging: Boolean = false,
+  @SerialName("signature")
+  val signature: String? = null,
+  @SerialName("license")
+  val license: String = "",
+  @SerialName("environment")
+  val environment: String = "Integration",
+  @SerialName("fuc")
+  val fuc: String = "",
+  @SerialName("terminal")
+  val terminal: String = "1",
+  @SerialName("currency")
+  val currency: String = "978",
+  @SerialName("merchantName")
+  val merchantName: String? = null,
+  @SerialName("merchantUrl")
+  val merchantUrl: String? = null,
+  @SerialName("titular")
+  val titular: String? = null,
+  @SerialName("merchantConsumerLanguage")
+  val merchantConsumerLanguage: String? = null,
+  @SerialName("enableRedirection")
+  val enableRedirection: Boolean = true,
+  @SerialName("enableResultAlert")
+  val enableResultAlert: Boolean = false,
+  @SerialName("ui")
+  val ui: RawUIOptions? = null,
+)
+
+@Serializable
+private data class RawUIOptions(
+  @SerialName("logo")
+  val logo: String? = null,
+  @SerialName("backgroundColor")
+  val backgroundColor: String? = null,
+  @SerialName("androidProgressBarColor")
+  val androidProgressBarColor: String? = null,
+  @SerialName("androidTopBarColor")
+  val androidTopBarColor: String? = null,
+  @SerialName("confirmButtonText")
+  val confirmButtonText: String? = null,
+  @SerialName("labelTextColor")
+  val labelTextColor: String? = null,
+  @SerialName("cardHeaderBackgroundColor")
+  val cardHeaderBackgroundColor: String? = null,
+  @SerialName("androidCardHeaderText")
+  val androidCardHeaderText: String? = null,
+  @SerialName("androidResultAlertTextOk")
+  val androidResultAlertTextOk: String? = null,
+  @SerialName("androidResultAlertTextKo")
+  val androidResultAlertTextKo: String? = null,
+  @SerialName("androidResultAlertButtonTextOk")
+  val androidResultAlertButtonTextOk: String? = null,
+  @SerialName("androidResultAlertButtonTextKo")
+  val androidResultAlertButtonTextKo: String? = null,
+)
 
 /**
  * Redsys Plugin Configuration (Android)
@@ -110,44 +179,56 @@ class RedsysConfig(
   // ---------------------------------------------------------------------------
 
   init {
+    val configObject = plugin.config.getConfigJSON()
+    val parsedConfig = parseConfig(configObject?.toString())
 
-    val config = plugin.getConfig()
+    verboseLogging = parsedConfig.verboseLogging
+    license = parsedConfig.license
+    environment = parsedConfig.environment
+    fuc = parsedConfig.fuc
+    terminal = parsedConfig.terminal
+    currency = parsedConfig.currency
 
-    // Core flags
-    verboseLogging = config.getBoolean("verboseLogging", false)
+    // Sanitize optional strings: treat blank strings as null
+    merchantName = parsedConfig.merchantName?.takeIf { it.isNotBlank() }
+    merchantUrl = parsedConfig.merchantUrl?.takeIf { it.isNotBlank() }
+    titular = parsedConfig.titular?.takeIf { it.isNotBlank() }
+    merchantConsumerLanguage = parsedConfig.merchantConsumerLanguage?.takeIf { it.isNotBlank() }
+    signature = parsedConfig.signature?.takeIf { it.isNotBlank() }
 
-    // Base configuration
-    license = config.getString("license", "")
-    environment = config.getString("environment", "Integration")
-    fuc = config.getString("fuc", "")
-    terminal = config.getString("terminal", "1")
-    currency = config.getString("currency", "978")
+    enableRedirection = parsedConfig.enableRedirection
+    enableResultAlert = parsedConfig.enableResultAlert
 
-    // Merchant metadata
-    merchantName = config.getString("merchantName")
-    merchantUrl = config.getString("merchantUrl")
-    titular = config.getString("titular")
-    merchantConsumerLanguage = config.getString("merchantConsumerLanguage")
-    signature = config.getString("signature")
+    // Map nested UI configuration with sanitization
+    val ui = parsedConfig.ui
+    uiLogo = ui?.logo?.takeIf { it.isNotBlank() }
+    uiBackgroundColor = ui?.backgroundColor?.takeIf { it.isNotBlank() }
+    uiProgressBarColor = ui?.androidProgressBarColor?.takeIf { it.isNotBlank() }
+    uiTopBarColor = ui?.androidTopBarColor?.takeIf { it.isNotBlank() }
+    uiConfirmButtonText = ui?.confirmButtonText?.takeIf { it.isNotBlank() }
+    uiLabelTextColor = ui?.labelTextColor?.takeIf { it.isNotBlank() }
+    uiCardHeaderBgColor = ui?.cardHeaderBackgroundColor?.takeIf { it.isNotBlank() }
+    uiCardHeaderText = ui?.androidCardHeaderText?.takeIf { it.isNotBlank() }
+    uiResultAlertTextOk = ui?.androidResultAlertTextOk?.takeIf { it.isNotBlank() }
+    uiResultAlertTextKo = ui?.androidResultAlertTextKo?.takeIf { it.isNotBlank() }
+    uiResultAlertButtonTextOk = ui?.androidResultAlertButtonTextOk?.takeIf { it.isNotBlank() }
+    uiResultAlertButtonTextKo = ui?.androidResultAlertButtonTextKo?.takeIf { it.isNotBlank() }
+  }
 
-    // Flow behavior
-    enableRedirection = config.getBoolean("enableRedirection", true)
-    enableResultAlert = config.getBoolean("enableResultAlert", false)
+  private companion object {
+    private val json =
+      Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+      }
 
-    // Optional nested UI configuration
-    val ui = config.getObject("ui")
-
-    uiLogo = ui?.getString("logo")
-    uiBackgroundColor = ui?.getString("backgroundColor")
-    uiProgressBarColor = ui?.getString("androidProgressBarColor")
-    uiTopBarColor = ui?.getString("androidTopBarColor")
-    uiConfirmButtonText = ui?.getString("confirmButtonText")
-    uiLabelTextColor = ui?.getString("labelTextColor")
-    uiCardHeaderBgColor = ui?.getString("cardHeaderBackgroundColor")
-    uiCardHeaderText = ui?.getString("androidCardHeaderText")
-    uiResultAlertTextOk = ui?.getString("androidResultAlertTextOk")
-    uiResultAlertTextKo = ui?.getString("androidResultAlertTextKo")
-    uiResultAlertButtonTextOk = ui?.getString("androidResultAlertButtonTextOk")
-    uiResultAlertButtonTextKo = ui?.getString("androidResultAlertButtonTextKo")
+    private fun parseConfig(jsonString: String?): RawConfigData {
+      if (jsonString.isNullOrBlank()) return RawConfigData()
+      return try {
+        json.decodeFromString<RawConfigData>(jsonString)
+      } catch (_: Exception) {
+        RawConfigData()
+      }
+    }
   }
 }

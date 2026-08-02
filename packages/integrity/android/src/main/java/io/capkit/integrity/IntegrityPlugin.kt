@@ -17,8 +17,17 @@ import io.capkit.integrity.config.Config
 import io.capkit.integrity.error.ErrorMessages
 import io.capkit.integrity.error.NativeError
 import io.capkit.integrity.logger.Logger
+import io.capkit.integrity.model.BlockPageResult
+import io.capkit.integrity.model.IntegrityConfidenceBreakdownResult
+import io.capkit.integrity.model.IntegrityEnvironmentResult
+import io.capkit.integrity.model.IntegrityResultModel
+import io.capkit.integrity.model.IntegrityScoreExplanationResult
+import io.capkit.integrity.model.IntegritySignalResult
+import io.capkit.integrity.model.PluginVersionResult
 import io.capkit.integrity.models.CheckOptions
 import io.capkit.integrity.utils.Utils
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 /**
  * Capacitor bridge for the Integrity plugin (Android).
@@ -73,6 +82,14 @@ class IntegrityPlugin : Plugin() {
    * - MUST NOT perform UI operations
    */
   private lateinit var implementation: Integrity
+
+  /**
+   * Serializer instance configured to encode result models into JSObject string payloads.
+   *
+   * NOTE: encodeDefaults is intentionally NOT set so nullable/defaulted fields
+   * are omitted from the emitted JSON, matching the optional TypeScript types.
+   */
+  private val json = Json
 
   // ---------------------------------------------------------------------------
   // Event-related properties
@@ -291,22 +308,25 @@ class IntegrityPlugin : Plugin() {
   // ---------------------------------------------------------------------------
 
   /**
-   * Maps native NativeError values to JavaScript-facing error codes.
-   *
-   * CONTRACT:
-   * - This method is the ONLY place where native errors
-   *   are translated into JS-visible failures.
-   * - Error codes MUST be:
-   *   - stable
-   *   - documented
-   *   - identical across platforms
+   * Rejects the call with a message and a standardized error code.
+   * Ensure consistency with the JS IntegrityErrorCode enum.
    */
   private fun reject(
     call: PluginCall,
     error: NativeError,
   ) {
+    val code =
+      when (error) {
+        is NativeError.Unavailable -> "UNAVAILABLE"
+        is NativeError.PermissionDenied -> "PERMISSION_DENIED"
+        is NativeError.InitFailed -> "INIT_FAILED"
+        is NativeError.UnknownType -> "UNKNOWN_TYPE"
+        is NativeError.InvalidInput -> "INVALID_INPUT"
+      }
+
+    // Always use the message from the NativeError instance
     val message = error.message ?: ErrorMessages.INTERNAL_ERROR
-    call.reject(message, error.errorCode)
+    call.reject(message, code)
   }
 
   private fun handleError(
@@ -319,6 +339,82 @@ class IntegrityPlugin : Plugin() {
       val message = throwable.message ?: ErrorMessages.UNEXPECTED_NATIVE_ERROR
       reject(call, NativeError.InitFailed(message))
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Serialization helpers
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Converts a serializable result model directly into a Capacitor JSObject.
+   */
+  private inline fun <reified T> toJSObject(value: T): JSObject {
+    val jsonString = json.encodeToString(value)
+    return JSObject(jsonString)
+  }
+
+  /**
+   * Converts the platform-agnostic integrity report map built by the business
+   * layer into the typed bridge result model.
+   *
+   * The report is produced as a `Map<String, Any>` by [Integrity.performCheck]
+   * and the assemble layer. This mapper is the ONLY place that translates that
+   * generic structure into the bridge DTO, so the hand-rolled recursive
+   * Map-to-JSObject conversion is no longer needed for the check result.
+   */
+  private fun toIntegrityResult(report: Map<String, Any>): IntegrityResultModel {
+    val signals = (report["signals"] as? List<*>) ?: emptyList<Any?>()
+    val environment = (report["environment"] as? Map<*, *>) ?: emptyMap<Any?, Any?>()
+    val explanation = report["scoreExplanation"] as? Map<*, *>
+
+    return IntegrityResultModel(
+      signals =
+        signals
+          .mapNotNull { it as? Map<*, *> }
+          .map { signal ->
+            IntegritySignalResult(
+              id = signal["id"] as? String ?: "",
+              category = signal["category"] as? String ?: "",
+              confidence = signal["confidence"] as? String ?: "",
+              description = signal["description"] as? String,
+              metadata =
+                (signal["metadata"] as? Map<*, *>)
+                  ?.mapKeys { it.key as String }
+                  ?.mapValues { it.value as String },
+            )
+          },
+      score = report["score"] as? Int ?: 0,
+      compromised = report["compromised"] as? Boolean ?: false,
+      environment =
+        IntegrityEnvironmentResult(
+          platform = environment["platform"] as? String ?: "android",
+          isEmulator = environment["isEmulator"] as? Boolean ?: false,
+          isDebugBuild = environment["isDebugBuild"] as? Boolean ?: false,
+        ),
+      scoreExplanation = explanation?.let(::toScoreExplanation),
+      timestamp = report["timestamp"] as? Long ?: System.currentTimeMillis(),
+    )
+  }
+
+  /**
+   * Converts the score explanation map into a typed DTO.
+   */
+  private fun toScoreExplanation(explanation: Map<*, *>): IntegrityScoreExplanationResult {
+    val byConfidence = (explanation["byConfidence"] as? Map<*, *>) ?: emptyMap<Any?, Any?>()
+
+    return IntegrityScoreExplanationResult(
+      totalSignals = explanation["totalSignals"] as? Int ?: 0,
+      byConfidence =
+        IntegrityConfidenceBreakdownResult(
+          high = byConfidence["high"] as? Int ?: 0,
+          medium = byConfidence["medium"] as? Int ?: 0,
+          low = byConfidence["low"] as? Int ?: 0,
+        ),
+      contributors =
+        (explanation["contributors"] as? List<*>)
+          ?.mapNotNull { it as? String }
+          ?: emptyList(),
+    )
   }
 
   // ---------------------------------------------------------------------------
@@ -349,8 +445,7 @@ class IntegrityPlugin : Plugin() {
     execute {
       try {
         val result = implementation.performCheck(options)
-        val jsResult = Utils.toJSObject(result)
-        call.resolve(jsResult)
+        call.resolve(toJSObject(toIntegrityResult(result)))
       } catch (e: NativeError) {
         handleError(call, e)
       } catch (e: Exception) {
@@ -382,7 +477,7 @@ class IntegrityPlugin : Plugin() {
   fun presentBlockPage(call: PluginCall) {
     val blockPage = config.blockPage
     if (blockPage == null || !blockPage.enabled || blockPage.url == null) {
-      call.resolve(JSObject().put("presented", false))
+      call.resolve(toJSObject(BlockPageResult(presented = false)))
       return
     }
 
@@ -443,7 +538,7 @@ class IntegrityPlugin : Plugin() {
 
     context.startActivity(intent)
 
-    call.resolve(JSObject().put("presented", true))
+    call.resolve(toJSObject(BlockPageResult(presented = true)))
   }
 
   // ---------------------------------------------------------------------------
@@ -459,9 +554,7 @@ class IntegrityPlugin : Plugin() {
    */
   @PluginMethod
   fun getPluginVersion(call: PluginCall) {
-    val ret = JSObject()
-    ret.put("version", BuildConfig.PLUGIN_VERSION)
-    call.resolve(ret)
+    call.resolve(toJSObject(PluginVersionResult(version = BuildConfig.PLUGIN_VERSION)))
   }
 
   // ---------------------------------------------------------------------------

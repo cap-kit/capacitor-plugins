@@ -1,6 +1,24 @@
 package io.capkit.tlsfingerprint.config
 
 import com.getcapacitor.Plugin
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+
+/**
+ * Data Transfer Object (DTO) for parsing capacitor.config.ts configuration.
+ */
+@Serializable
+private data class RawConfigData(
+  @SerialName("verboseLogging")
+  val verboseLogging: Boolean = false,
+  @SerialName("fingerprint")
+  val fingerprint: String? = null,
+  @SerialName("fingerprints")
+  val fingerprints: List<String> = emptyList(),
+  @SerialName("excludedDomains")
+  val excludedDomains: List<String> = emptyList(),
+)
 
 /**
  * Plugin configuration container.
@@ -17,21 +35,6 @@ import com.getcapacitor.Plugin
 class TLSFingerprintConfig(
   plugin: Plugin,
 ) {
-  // -----------------------------------------------------------------------------
-  // Configuration Keys
-  // -----------------------------------------------------------------------------
-
-  /**
-   * Centralized definition of configuration keys.
-   * Avoids string duplication and typos.
-   */
-  private object Keys {
-    const val VERBOSE_LOGGING = "verboseLogging"
-    const val FINGERPRINT = "fingerprint"
-    const val FINGERPRINTS = "fingerprints"
-    const val EXCLUDED_DOMAINS = "excludedDomains"
-  }
-
   // -----------------------------------------------------------------------------
   // Properties
   // -----------------------------------------------------------------------------
@@ -71,32 +74,29 @@ class TLSFingerprintConfig(
   // -----------------------------------------------------------------------------
 
   init {
-    val config = plugin.getConfig()
+    val configObject = plugin.config.getConfigJSON()
+    val parsedConfig = parseConfig(configObject?.toString())
 
-    // Verbose logging flag
-    verboseLogging =
-      config.getBoolean(Keys.VERBOSE_LOGGING, false)
+    verboseLogging = parsedConfig.verboseLogging
+    fingerprint = parsedConfig.fingerprint?.takeIf { it.isNotBlank() }
+    fingerprints = parsedConfig.fingerprints.filter { it.isNotBlank() }
+    excludedDomains = parsedConfig.excludedDomains.filter { it.isNotBlank() }
+  }
 
-    // Single fingerprint (optional)
-    val fp = config.getString(Keys.FINGERPRINT)
-    fingerprint =
-      if (!fp.isNullOrBlank()) fp else null
+  private companion object {
+    private val json =
+      Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+      }
 
-    // Multiple fingerprints (optional)
-    fingerprints =
-      config
-        .getArray(Keys.FINGERPRINTS)
-        ?.toList()
-        ?.mapNotNull { it as? String }
-        ?.filter { it.isNotBlank() }
-        ?: emptyList()
-
-    excludedDomains =
-      config
-        .getArray(Keys.EXCLUDED_DOMAINS)
-        ?.toList()
-        ?.mapNotNull { it as? String }
-        ?.filter { it.isNotBlank() }
-        ?: emptyList()
+    private fun parseConfig(jsonString: String?): RawConfigData {
+      if (jsonString.isNullOrBlank()) return RawConfigData()
+      return try {
+        json.decodeFromString<RawConfigData>(jsonString)
+      } catch (_: Exception) {
+        RawConfigData()
+      }
+    }
   }
 }

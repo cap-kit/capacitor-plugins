@@ -1,5 +1,7 @@
 package io.capkit.tlsfingerprint.model
 
+import kotlinx.serialization.Serializable
+
 /**
  * Canonical, nominal result model for TLS fingerprint validation operations on Android.
  * This data class is exchanged between the native implementation (TLSFingerprintImpl)
@@ -14,6 +16,7 @@ package io.capkit.tlsfingerprint.model
  * - error: human-readable error (empty on success/match)
  * - errorCode: canonical error code string (empty on success)
  */
+@Serializable
 data class TLSFingerprintResultModel(
   /** Actual server fingerprint used for matching (if available). */
   val actualFingerprint: String?,

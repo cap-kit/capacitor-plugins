@@ -7,7 +7,12 @@ import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 import io.capkit.rank.error.RankErrorMessages
 import io.capkit.rank.logger.RankLogger
+import io.capkit.rank.model.RankAvailabilityResult
+import io.capkit.rank.model.RankPluginVersionResult
+import io.capkit.rank.model.RankReviewEnvironmentResult
 import io.capkit.rank.utils.RankValidators
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 /**
  * Capacitor bridge for the Rank plugin.
@@ -39,6 +44,14 @@ class RankPlugin : Plugin() {
    */
   private lateinit var implementation: RankImpl
 
+  /**
+   * Serializer instance configured to encode result models into JSObject string payloads.
+   *
+   * NOTE: encodeDefaults is intentionally NOT set so nullable/defaulted fields
+   * are omitted from the emitted JSON, matching the optional TypeScript types.
+   */
+  private val json = Json
+
   // ---------------------------------------------------------------------------
   // Lifecycle
   // ---------------------------------------------------------------------------
@@ -62,6 +75,18 @@ class RankPlugin : Plugin() {
 
     // RULE: Perform pre-warm of native resources to improve UX
     implementation.preloadReviewInfo()
+  }
+
+  // ---------------------------------------------------------------------------
+  // Helper Methods for Serialization
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Converts a serializable result model directly into a Capacitor JSObject.
+   */
+  private inline fun <reified T> toJSObject(value: T): JSObject {
+    val jsonString = json.encodeToString(value)
+    return JSObject(jsonString)
   }
 
   // ---------------------------------------------------------------------------
@@ -104,9 +129,7 @@ class RankPlugin : Plugin() {
   @PluginMethod
   fun isAvailable(call: PluginCall) {
     implementation.isAvailable { available ->
-      val ret = JSObject()
-      ret.put("value", available)
-      call.resolve(ret)
+      call.resolve(toJSObject(RankAvailabilityResult(available)))
     }
   }
 
@@ -134,14 +157,14 @@ class RankPlugin : Plugin() {
         return@checkReviewEnvironment
       }
 
-      val ret = JSObject()
-      ret.put("canRequestReview", diagnostic.canRequestReview)
-
-      if (!diagnostic.canRequestReview && diagnostic.reason != null) {
-        ret.put("reason", diagnostic.reason)
-      }
-
-      call.resolve(ret)
+      call.resolve(
+        toJSObject(
+          RankReviewEnvironmentResult(
+            canRequestReview = diagnostic.canRequestReview,
+            reason = diagnostic.reason,
+          ),
+        ),
+      )
     }
   }
 
@@ -366,8 +389,6 @@ class RankPlugin : Plugin() {
    */
   @PluginMethod
   fun getPluginVersion(call: PluginCall) {
-    val ret = JSObject()
-    ret.put("version", BuildConfig.PLUGIN_VERSION)
-    call.resolve(ret)
+    call.resolve(toJSObject(RankPluginVersionResult(BuildConfig.PLUGIN_VERSION)))
   }
 }

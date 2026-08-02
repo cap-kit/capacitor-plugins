@@ -8,10 +8,13 @@ package io.capkit.rank
  * - Must NOT reference JavaScript directly.
  * - Must be throwable from the Implementation (Impl) layer.
  * - Mapping to JS-facing error codes happens ONLY in the Plugin layer.
+ *
+ * Errors are intentionally NOT @Serializable: they are conveyed to JavaScript
+ * exclusively via the bridge rejection path (message + code) and never serialized.
  */
 sealed class RankError(
-  message: String,
-) : Throwable(message) {
+  val errorMessage: String,
+) : Throwable(errorMessage) {
   // -----------------------------------------------------------------------------
   // Specific Error Types
   // -----------------------------------------------------------------------------
@@ -21,70 +24,70 @@ sealed class RankError(
    * Maps to the 'UNAVAILABLE' error code in JavaScript.
    */
   class Unavailable(
-    message: String,
-  ) : RankError(message)
+    val msg: String,
+  ) : RankError(msg)
 
   /**
    * The user cancelled an interactive flow.
    * Maps to the 'CANCELLED' error code in JavaScript.
    */
   class Cancelled(
-    message: String,
-  ) : RankError(message)
+    val msg: String,
+  ) : RankError(msg)
 
   /**
    * Required permission was denied or not granted by the user.
    * Maps to the 'PERMISSION_DENIED' error code in JavaScript.
    */
   class PermissionDenied(
-    message: String,
-  ) : RankError(message)
+    val msg: String,
+  ) : RankError(msg)
 
   /**
    * Plugin failed to initialize or perform a required native operation.
    * Maps to the 'INIT_FAILED' error code in JavaScript.
    */
   class InitFailed(
-    message: String,
-  ) : RankError(message)
+    val msg: String,
+  ) : RankError(msg)
 
   /**
    * Invalid or malformed input was provided by the caller.
    * Maps to the 'INVALID_INPUT' error code in JavaScript.
    */
   class InvalidInput(
-    message: String,
-  ) : RankError(message)
+    val msg: String,
+  ) : RankError(msg)
 
   /**
    * Invalid or unsupported input type was provided to the native implementation.
    * Maps to the 'UNKNOWN_TYPE' error code in JavaScript.
    */
   class UnknownType(
-    message: String,
-  ) : RankError(message)
+    val msg: String,
+  ) : RankError(msg)
 
   /**
    * The requested resource does not exist.
    * Maps to the 'NOT_FOUND' error code in JavaScript.
    */
   class NotFound(
-    message: String,
-  ) : RankError(message)
+    val msg: String,
+  ) : RankError(msg)
 
   /**
    * The operation conflicts with the current state.
    * Maps to the 'CONFLICT' error code in JavaScript.
    */
   class Conflict(
-    message: String,
-  ) : RankError(message)
+    val msg: String,
+  ) : RankError(msg)
 
   /**
    * The operation did not complete within the expected time.
    * Maps to the 'TIMEOUT' error code in JavaScript.
    */
   class Timeout(
-    message: String,
-  ) : RankError(message)
+    val msg: String,
+  ) : RankError(msg)
 }

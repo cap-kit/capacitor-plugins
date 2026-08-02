@@ -13,6 +13,8 @@ import io.capkit.tlsfingerprint.error.TLSFingerprintErrorMessages
 import io.capkit.tlsfingerprint.logger.TLSFingerprintLogger
 import io.capkit.tlsfingerprint.model.TLSFingerprintResultModel
 import io.capkit.tlsfingerprint.utils.TLSFingerprintUtils
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.net.UnknownHostException
 import javax.net.ssl.SSLException
 
@@ -56,6 +58,11 @@ class TLSFingerprintPlugin : Plugin() {
    */
   private lateinit var implementation: TLSFingerprintImpl
 
+  /**
+   * Serializer instance configured to encode model objects into JSObject string payloads.
+   */
+  private val json = Json
+
   // -----------------------------------------------------------------------------
   // Companion Object
   // -----------------------------------------------------------------------------
@@ -93,6 +100,18 @@ class TLSFingerprintPlugin : Plugin() {
   }
 
   // -----------------------------------------------------------------------------
+  // Helper Methods for Serialization
+  // -----------------------------------------------------------------------------
+
+  /**
+   * Converts a serializable model directly into a Capacitor JSObject.
+   */
+  private inline fun <reified T> toJSObject(value: T): JSObject {
+    val jsonString = json.encodeToString(value)
+    return JSObject(jsonString)
+  }
+
+  // -----------------------------------------------------------------------------
   // Error Mapping
   // -----------------------------------------------------------------------------
 
@@ -120,8 +139,7 @@ class TLSFingerprintPlugin : Plugin() {
         is TLSFingerprintError.SslError -> "SSL_ERROR"
       }
 
-    // Always use the message from the TLSFingerprintError instance
-    val message = error.message ?: "Unknown native error"
+    val message = error.errorMessage.ifBlank { "Unknown native error" }
     call.reject(message, code)
   }
 
@@ -166,20 +184,11 @@ class TLSFingerprintPlugin : Plugin() {
         try {
           val result: TLSFingerprintResultModel =
             implementation.checkCertificate(
-              urlString = url ?: "",
+              urlString = url,
               fingerprintFromArgs = fingerprint,
             )
 
-          val jsResult = JSObject()
-          jsResult.put("actualFingerprint", result.actualFingerprint)
-          jsResult.put("fingerprintMatched", result.fingerprintMatched)
-          jsResult.put("matchedFingerprint", result.matchedFingerprint)
-          jsResult.put("excludedDomain", result.excludedDomain)
-          jsResult.put("mode", result.mode)
-          jsResult.put("error", result.error)
-          jsResult.put("errorCode", result.errorCode)
-
-          call.resolve(jsResult)
+          call.resolve(toJSObject(result))
         } catch (error: TLSFingerprintError) {
           reject(call, error)
         } catch (error: IllegalArgumentException) {
@@ -230,18 +239,11 @@ class TLSFingerprintPlugin : Plugin() {
 
     // Parsing JSArray to a clean Kotlin List
     val fingerprints: List<String>? =
-      if (jsArray != null && jsArray.length() > 0) {
-        val list = ArrayList<String>()
-        for (i in 0 until jsArray.length()) {
-          val value = jsArray.getString(i)
-          if (!value.isNullOrBlank()) {
-            list.add(value)
-          }
-        }
-        if (list.isNotEmpty()) list else null
-      } else {
-        null
-      }
+      jsArray
+        ?.toList<Any>()
+        ?.mapNotNull { it as? String }
+        ?.filter { it.isNotBlank() }
+        ?.takeIf { it.isNotEmpty() }
 
     if (url.isNullOrBlank()) {
       call.reject(TLSFingerprintErrorMessages.URL_REQUIRED, "INVALID_INPUT")
@@ -273,20 +275,11 @@ class TLSFingerprintPlugin : Plugin() {
         try {
           val result: TLSFingerprintResultModel =
             implementation.checkCertificates(
-              urlString = url ?: "",
+              urlString = url,
               fingerprintsFromArgs = fingerprints,
             )
 
-          val jsResult = JSObject()
-          jsResult.put("actualFingerprint", result.actualFingerprint)
-          jsResult.put("fingerprintMatched", result.fingerprintMatched)
-          jsResult.put("matchedFingerprint", result.matchedFingerprint)
-          jsResult.put("excludedDomain", result.excludedDomain)
-          jsResult.put("mode", result.mode)
-          jsResult.put("error", result.error)
-          jsResult.put("errorCode", result.errorCode)
-
-          call.resolve(jsResult)
+          call.resolve(toJSObject(result))
         } catch (error: TLSFingerprintError) {
           reject(call, error)
         } catch (error: IllegalArgumentException) {
