@@ -20,7 +20,23 @@ import io.capkit.people.config.PeopleConfig
 import io.capkit.people.error.PeopleError
 import io.capkit.people.error.PeopleErrorMessages
 import io.capkit.people.logger.PeopleLogger
+import io.capkit.people.models.AddressResult
+import io.capkit.people.models.ContactData
+import io.capkit.people.models.ContactResult
+import io.capkit.people.models.CreateGroupResult
+import io.capkit.people.models.EmailResult
+import io.capkit.people.models.GetContactsResult
+import io.capkit.people.models.GroupData
+import io.capkit.people.models.GroupResult
+import io.capkit.people.models.ListGroupsResult
+import io.capkit.people.models.NameResult
+import io.capkit.people.models.OrganizationResult
+import io.capkit.people.models.PhoneResult
+import io.capkit.people.models.PluginVersionResult
+import io.capkit.people.models.UnifiedContactResult
 import io.capkit.people.utils.PeopleUtils
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 /**
  * Capacitor bridge for the People plugin.
@@ -64,6 +80,14 @@ class PeoplePlugin : Plugin() {
    * Observer state for monitoring system-wide contact changes.
    */
   private var observer: PeopleObserver? = null
+
+  /**
+   * Serializer instance used to encode result models into JSObject string payloads.
+   *
+   * NOTE: encodeDefaults is intentionally NOT set so nullable/defaulted fields
+   * are omitted from the emitted JSON, matching the optional TypeScript types.
+   */
+  private val json = Json
 
   // -----------------------------------------------------------------------------
   // Lifecycle
@@ -225,9 +249,7 @@ class PeoplePlugin : Plugin() {
 
             val contact = implementation.getContactFromUri(contactUri, projection)
             if (contact != null) {
-              val ret = JSObject()
-              ret.put("contact", contactToJS(contact))
-              savedCall.resolve(ret)
+              savedCall.resolve(toJSObject(ContactResult(contact = contactToResult(contact))))
             } else {
               reject(savedCall, PeopleError.NotFound(PeopleErrorMessages.CONTACT_NOT_FOUND))
             }
@@ -347,11 +369,7 @@ class PeoplePlugin : Plugin() {
         offset,
       )
 
-    val ret = JSObject()
-    ret.put("contacts", contactsToJSArray(contacts))
-    ret.put("totalCount", total)
-
-    call.resolve(ret)
+    call.resolve(toJSObject(GetContactsResult(contacts = contacts.map(::contactToResult), totalCount = total)))
   }
 
   /**
@@ -385,9 +403,7 @@ class PeoplePlugin : Plugin() {
     val contact = implementation.getContactById(id, projection)
     if (contact == null) return reject(call, PeopleError.NotFound(PeopleErrorMessages.CONTACT_NOT_FOUND))
 
-    val ret = JSObject()
-    ret.put("contact", contactToJS(contact))
-    call.resolve(ret)
+    call.resolve(toJSObject(ContactResult(contact = contactToResult(contact))))
   }
 
   /**
@@ -428,11 +444,7 @@ class PeoplePlugin : Plugin() {
         limit,
       )
 
-    val ret = JSObject()
-    ret.put("contacts", contactsToJSArray(contacts))
-    ret.put("totalCount", total)
-
-    call.resolve(ret)
+    call.resolve(toJSObject(GetContactsResult(contacts = contacts.map(::contactToResult), totalCount = total)))
   }
 
   // -----------------------------------------------------------------------------
@@ -445,13 +457,7 @@ class PeoplePlugin : Plugin() {
 
     try {
       val groups = implementation.listGroups()
-      val groupsArray = JSArray()
-      for (group in groups) {
-        groupsArray.put(groupToJS(group))
-      }
-      val ret = JSObject()
-      ret.put("groups", groupsArray)
-      call.resolve(ret)
+      call.resolve(toJSObject(ListGroupsResult(groups = groups.map(::groupToResult))))
     } catch (e: PeopleError) {
       reject(call, e)
     }
@@ -466,9 +472,7 @@ class PeoplePlugin : Plugin() {
 
     try {
       val group = implementation.createGroup(name)
-      val ret = JSObject()
-      ret.put("group", groupToJS(group))
-      call.resolve(ret)
+      call.resolve(toJSObject(CreateGroupResult(group = groupToResult(group))))
     } catch (e: PeopleError) {
       reject(call, e)
     }
@@ -553,10 +557,8 @@ class PeoplePlugin : Plugin() {
 
     try {
       val contact = implementation.createContact(givenName, familyName, phones, emails)
-      val ret = JSObject()
-      // Use Mapper to return JSObject to the Bridge
-      ret.put("contact", contactToJS(contact))
-      call.resolve(ret)
+      // Use the result DTO to return the contact to the Bridge
+      call.resolve(toJSObject(ContactResult(contact = contactToResult(contact))))
     } catch (e: PeopleError) {
       reject(call, e)
     }
@@ -586,10 +588,8 @@ class PeoplePlugin : Plugin() {
           nameObj?.getString("given"),
           nameObj?.getString("family"),
         )
-      val ret = JSObject()
-      // Map native model back to JSObject via Utils
-      ret.put("contact", contactToJS(updatedContact))
-      call.resolve(ret)
+      // Map native model back to the Bridge via the result DTO
+      call.resolve(toJSObject(ContactResult(contact = contactToResult(updatedContact))))
     } catch (e: PeopleError) {
       reject(call, e)
     }
@@ -631,9 +631,7 @@ class PeoplePlugin : Plugin() {
     }
     try {
       val mergedContact = implementation.mergeContacts(sourceId, destId)
-      val ret = JSObject()
-      ret.put("contact", contactToJS(mergedContact))
-      call.resolve(ret)
+      call.resolve(toJSObject(ContactResult(contact = contactToResult(mergedContact))))
     } catch (e: PeopleError) {
       reject(call, e)
     }
@@ -676,92 +674,77 @@ class PeoplePlugin : Plugin() {
    */
   @PluginMethod
   fun getPluginVersion(call: PluginCall) {
-    val ret = JSObject()
-    ret.put("version", BuildConfig.PLUGIN_VERSION)
-    call.resolve(ret)
+    call.resolve(toJSObject(PluginVersionResult(version = BuildConfig.PLUGIN_VERSION)))
   }
 
   // -----------------------------------------------------------------------------
   // Bridge Marshalling (Native -> JS)
   // -----------------------------------------------------------------------------
 
-  // Add these private helpers at the end of PeoplePlugin class
-  private fun contactToJS(contact: io.capkit.people.models.ContactData): JSObject {
-    val js = JSObject()
-    js.put("id", contact.id)
-
-    contact.displayName?.let {
-      val nameObj = JSObject()
-      nameObj.put("display", it)
-      js.put("name", nameObj)
-    }
-
-    if (contact.phones.isNotEmpty()) {
-      val phonesArr = JSArray()
-      for (phone in contact.phones) {
-        val p = JSObject()
-        p.put("number", phone.value)
-        p.put("label", phone.label)
-        phonesArr.put(p)
-      }
-      js.put("phones", phonesArr)
-    }
-
-    if (contact.emails.isNotEmpty()) {
-      val emailsArr = JSArray()
-      for (email in contact.emails) {
-        val e = JSObject()
-        e.put("address", email.value)
-        e.put("label", email.label)
-        emailsArr.put(e)
-      }
-      js.put("emails", emailsArr)
-    }
-
-    contact.organization?.let { org ->
-      val orgObj = JSObject()
-      orgObj.put("company", org.company)
-      orgObj.put("title", org.title)
-      orgObj.put("department", org.department)
-      js.put("organization", orgObj)
-    }
-
-    if (contact.addresses.isNotEmpty()) {
-      val addrArr = JSArray()
-      for (addr in contact.addresses) {
-        val a = JSObject()
-        a.put("label", addr.label)
-        a.put("street", addr.street)
-        a.put("city", addr.city)
-        a.put("region", addr.region)
-        a.put("postcode", addr.postcode)
-        a.put("country", addr.country)
-        addrArr.put(a)
-      }
-      js.put("addresses", addrArr)
-    }
-    return js
-  }
-
-  private fun groupToJS(group: io.capkit.people.models.GroupData): JSObject {
-    val js = JSObject()
-    js.put("id", group.id)
-    js.put("name", group.name)
-    js.put("source", group.source)
-    js.put("readOnly", group.readOnly)
-    return js
+  /**
+   * Converts a serializable result model directly into a Capacitor JSObject.
+   */
+  private inline fun <reified T> toJSObject(value: T): JSObject {
+    val jsonString = json.encodeToString(value)
+    return JSObject(jsonString)
   }
 
   /**
-   * JS marshalling helper for UnifiedContact payloads.
-   * Responsibility: bridge layer only (ContactData → JSObject / JSArray).
-   * Native contact mapping from platform types → ContactData is handled in the Impl/Utils layer.
+   * Maps the native [ContactData] business model to the bridge [UnifiedContactResult] DTO.
+   *
+   * Nullable sub-objects and empty collections are intentionally set to null so
+   * they are omitted by the encoder (encodeDefaults is not enabled), matching the
+   * optional TypeScript properties.
    */
-  private fun contactsToJSArray(contacts: List<io.capkit.people.models.ContactData>): JSArray {
-    val arr = JSArray()
-    for (contact in contacts) {
-      arr.put(contactToJS(contact))
-    }
-    return arr
-  }
+  private fun contactToResult(contact: ContactData): UnifiedContactResult =
+    UnifiedContactResult(
+      id = contact.id,
+      name = contact.displayName?.let { display -> NameResult(display = display) },
+      phones =
+        if (contact.phones.isEmpty()) {
+          null
+        } else {
+          contact.phones.map { phone -> PhoneResult(number = phone.value, label = phone.label) }
+        },
+      emails =
+        if (contact.emails.isEmpty()) {
+          null
+        } else {
+          contact.emails.map { email -> EmailResult(address = email.value, label = email.label) }
+        },
+      organization =
+        contact.organization?.let { org ->
+          OrganizationResult(
+            company = org.company,
+            title = org.title,
+            department = org.department,
+          )
+        },
+      addresses =
+        if (contact.addresses.isEmpty()) {
+          null
+        } else {
+          contact.addresses.map { addr ->
+            AddressResult(
+              label = addr.label,
+              street = addr.street,
+              city = addr.city,
+              region = addr.region,
+              postcode = addr.postcode,
+              country = addr.country,
+            )
+          }
+        },
+    )
+
+  /**
+   * Maps the native [GroupData] business model to the bridge [GroupResult] DTO.
+   */
+  private fun groupToResult(group: GroupData): GroupResult =
+    GroupResult(
+      id = group.id,
+      name = group.name,
+      source = group.source,
+      readOnly = group.readOnly,
+    )
 }
