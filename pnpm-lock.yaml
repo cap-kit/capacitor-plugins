@@ -48,6 +48,60 @@ importers:
         specifier: ^8.66.0
         version: 8.66.0(eslint@10.8.1(jiti@2.6.1))(typescript@6.0.3)
 
+  packages/fortress:
+    devDependencies:
+      '@capacitor/android':
+        specifier: ^8.5.0
+        version: 8.5.0(@capacitor/core@8.5.0)
+      '@capacitor/cli':
+        specifier: ^8.5.0
+        version: 8.5.0
+      '@capacitor/core':
+        specifier: ^8.5.0
+        version: 8.5.0
+      '@capacitor/ios':
+        specifier: ^8.5.0
+        version: 8.5.0(@capacitor/core@8.5.0)
+      '@capkit/docgen':
+        specifier: file:./../../local_lib/cap-kit-docgen-0.3.1.tgz
+        version: '@cap-kit/docgen@file:local_lib/cap-kit-docgen-0.3.1.tgz'
+      '@eslint/eslintrc':
+        specifier: ^3.3.6
+        version: 3.3.6
+      '@eslint/js':
+        specifier: ^10.0.1
+        version: 10.0.1(eslint@10.8.0(jiti@2.6.1))
+      eslint:
+        specifier: ^10.8.0
+        version: 10.8.0(jiti@2.6.1)
+      eslint-plugin-import:
+        specifier: ^2.32.0
+        version: 2.32.0(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.6.1))(typescript@6.0.3))(eslint@10.8.0(jiti@2.6.1))
+      globals:
+        specifier: ^17.8.0
+        version: 17.8.0
+      prettier:
+        specifier: ^3.9.6
+        version: 3.9.6
+      prettier-plugin-java:
+        specifier: ^2.10.3
+        version: 2.10.3(prettier@3.9.6)
+      rimraf:
+        specifier: ^6.1.3
+        version: 6.1.3
+      rollup:
+        specifier: ^4.62.4
+        version: 4.62.4
+      swiftlint:
+        specifier: ^2.0.0
+        version: 2.0.0(typescript@6.0.3)
+      typescript:
+        specifier: ^6.0.0
+        version: 6.0.3
+      typescript-eslint:
+        specifier: ^8.65.0
+        version: 8.65.0(eslint@10.8.0(jiti@2.6.1))(typescript@6.0.3)
+
   packages/integrity:
     devDependencies:
       '@capacitor/android':
