@@ -3,6 +3,7 @@ packages:
 allowBuilds:
   esbuild: true
   swiftlint: true
+  unrs-resolver: true
 minimumReleaseAgeExclude:
   - '@rollup/rollup-android-arm-eabi@4.62.3 || 4.62.4'
   - '@rollup/rollup-android-arm64@4.62.3 || 4.62.4'
@@ -30,15 +31,16 @@ minimumReleaseAgeExclude:
   - '@rollup/rollup-win32-x64-gnu@4.62.3 || 4.62.4'
   - '@rollup/rollup-win32-x64-msvc@4.62.3 || 4.62.4'
   - rollup@4.62.3 || 4.62.4
-  - '@typescript-eslint/eslint-plugin@8.66.0'
-  - '@typescript-eslint/parser@8.66.0'
-  - '@typescript-eslint/project-service@8.66.0'
-  - '@typescript-eslint/scope-manager@8.66.0'
-  - '@typescript-eslint/tsconfig-utils@8.66.0'
-  - '@typescript-eslint/type-utils@8.66.0'
-  - '@typescript-eslint/types@8.66.0'
-  - '@typescript-eslint/typescript-estree@8.66.0'
-  - '@typescript-eslint/utils@8.66.0'
-  - '@typescript-eslint/visitor-keys@8.66.0'
+  - '@typescript-eslint/eslint-plugin@8.66.0 || 8.68.0'
+  - '@typescript-eslint/parser@8.66.0 || 8.68.0'
+  - '@typescript-eslint/project-service@8.66.0 || 8.68.0'
+  - '@typescript-eslint/scope-manager@8.66.0 || 8.68.0'
+  - '@typescript-eslint/tsconfig-utils@8.66.0 || 8.68.0'
+  - '@typescript-eslint/type-utils@8.66.0 || 8.68.0'
+  - '@typescript-eslint/types@8.66.0 || 8.68.0'
+  - '@typescript-eslint/typescript-estree@8.66.0 || 8.68.0'
+  - '@typescript-eslint/utils@8.66.0 || 8.68.0'
+  - '@typescript-eslint/visitor-keys@8.66.0 || 8.68.0'
   - tsx@4.23.5
-  - typescript-eslint@8.66.0
+  - typescript-eslint@8.66.0 || 8.68.0
+  - eslint@10.9.1
