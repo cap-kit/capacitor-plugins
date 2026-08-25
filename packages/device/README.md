@@ -345,6 +345,11 @@ Result object returned by the `getPluginVersion()` method.
 
 Callback for battery charging state changes.
 
+The listener fires only when the charging state **changes** (e.g. the
+charger is connected or disconnected). It is not invoked at subscription
+time and emits nothing while the state stays the same; read
+`getBatteryInfo()` for the current snapshot instead.
+
 <code>
   (info: <a href="#batteryinfo">BatteryInfo</a>): void
 </code>
