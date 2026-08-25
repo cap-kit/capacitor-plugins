@@ -1,4 +1,4 @@
-package io.capkit.device
+package io.capkit.device.error
 
 /**
  * Native error model for the Device plugin (Android).

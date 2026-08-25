@@ -11,6 +11,8 @@ import android.os.Environment
 import android.os.StatFs
 import android.provider.Settings
 import android.webkit.WebView
+import io.capkit.device.config.DeviceConfig
+import io.capkit.device.error.DeviceError
 import io.capkit.device.logger.DeviceLogger
 
 /**

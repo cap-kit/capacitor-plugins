@@ -12,6 +12,8 @@ import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
+import io.capkit.device.config.DeviceConfig
+import io.capkit.device.error.DeviceError
 import io.capkit.device.logger.DeviceLogger
 import io.capkit.device.model.DevicePluginVersionResult
 import kotlinx.serialization.encodeToString
