@@ -1,5 +1,5 @@
 import XCTest
-@testable import Device
+@testable import DevicePlugin
 
 /**
  Basic functional tests for the Device plugin native implementation.
