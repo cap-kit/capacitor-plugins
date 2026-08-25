@@ -28,13 +28,13 @@
 
 ## ✨ Why CapKit
 
-|                                     |                                                        |
-| ----------------------------------- | ------------------------------------------------------ |
-| ⚡ **Capacitor 8 Native-First**     | Built specifically for the latest Capacitor runtime    |
+|                                    |                                                        |
+| ---------------------------------- | ------------------------------------------------------ |
+| ⚡ **Capacitor 8 Native-First**    | Built specifically for the latest Capacitor runtime    |
 | 🏗 **Strict Monorepo Architecture** | Deterministic pnpm workspace + Turborepo orchestration |
-| 🔒 **Security-Oriented**            | Integrity signals, SSL pinning, runtime hardening      |
-| 🚀 **Automated Releases**           | Changesets + CI-driven publishing                      |
-| 🤖 **Dependency Safety**            | Renovate with controlled production updates            |
+| 🔒 **Security-Oriented**           | Integrity signals, SSL pinning, runtime hardening      |
+| 🚀 **Automated Releases**          | Changesets + CI-driven publishing                      |
+| 🤖 **Dependency Safety**           | Renovate with controlled production updates            |
 
 ---
 
@@ -70,7 +70,7 @@ Each plugin is fully cross-platform:
 
 Runtime integrity and environment signal detection for Capacitor v8 applications.
 
-<a href="./packages/integrity"><strong>Docs</strong></a> • 
+<a href="./packages/integrity"><strong>Docs</strong></a> •
 <a href="https://www.npmjs.com/package/@cap-kit/integrity"><strong>NPM</strong></a>
 
 </td>
@@ -86,7 +86,7 @@ Runtime integrity and environment signal detection for Capacitor v8 applications
 
 Unified, high-performance contact management for Capacitor with zero-permission picking and capability-based access.
 
-<a href="./packages/people"><strong>Docs</strong></a> • 
+<a href="./packages/people"><strong>Docs</strong></a> •
 <a href="https://www.npmjs.com/package/@cap-kit/people"><strong>NPM</strong></a>
 
 </td>
@@ -102,7 +102,7 @@ Unified, high-performance contact management for Capacitor with zero-permission 
 
 Unified Capacitor v8 plugin for native In-App Reviews and cross-platform Store navigation.
 
-<a href="./packages/rank"><strong>Docs</strong></a> • 
+<a href="./packages/rank"><strong>Docs</strong></a> •
 <a href="https://www.npmjs.com/package/@cap-kit/rank"><strong>NPM</strong></a>
 
 </td>
@@ -120,7 +120,7 @@ Unified Capacitor v8 plugin for native In-App Reviews and cross-platform Store n
 
 Redsys InApp SDK bridge for Capacitor v8. Supports native Direct Payment and secure 3D Secure (3DS) WebView flows with unified cross-platform API and HMAC signature utilities.
 
-<a href="./packages/redsys"><strong>Docs</strong></a> • 
+<a href="./packages/redsys"><strong>Docs</strong></a> •
 <a href="https://www.npmjs.com/package/@cap-kit/redsys"><strong>NPM</strong></a>
 
 </td>
@@ -136,7 +136,7 @@ Redsys InApp SDK bridge for Capacitor v8. Supports native Direct Payment and sec
 
 Capacitor plugin to open app and system settings on iOS and Android.
 
-<a href="./packages/settings"><strong>Docs</strong></a> • 
+<a href="./packages/settings"><strong>Docs</strong></a> •
 <a href="https://www.npmjs.com/package/@cap-kit/settings"><strong>NPM</strong></a>
 
 </td>
@@ -152,7 +152,7 @@ Capacitor plugin to open app and system settings on iOS and Android.
 
 Runtime TLS leaf certificate SHA-256 fingerprint validation plugin for Capacitor (iOS & Android)
 
-<a href="./packages/tls-fingerprint"><strong>Docs</strong></a> • 
+<a href="./packages/tls-fingerprint"><strong>Docs</strong></a> •
 <a href="https://www.npmjs.com/package/@cap-kit/tls-fingerprint"><strong>NPM</strong></a>
 
 </td>
@@ -161,7 +161,6 @@ Runtime TLS leaf certificate SHA-256 fingerprint validation plugin for Capacitor
 
 <details>
 <summary><strong>📱 Compact View (Mobile Friendly)</strong></summary>
-
 
 ### 🛡️ Integrity
 
@@ -247,7 +246,7 @@ This repository follows a **strict pnpm monorepo model**.
 
 | Layer              | Stack                           |
 | ------------------ | ------------------------------- |
-| Package Manager    | `pnpm 10+`                      |
+| Package Manager    | `pnpm 11+`                      |
 | Task Orchestration | `Turborepo 2.x`                 |
 | CI/CD              | GitHub Actions (`macos-latest`) |
 | Versioning         | Changesets                      |
@@ -268,7 +267,7 @@ This repository follows a **strict pnpm monorepo model**.
 ### Requirements
 
 - Node.js ≥ 24
-- pnpm ≥ 10
+- pnpm ≥ 11
 
 ### Install a plugin
 

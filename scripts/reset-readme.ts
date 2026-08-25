@@ -133,7 +133,7 @@ This repository follows a **strict pnpm monorepo model**.
 
 | Layer | Stack |
 |-------|-------|
-| Package Manager | \`pnpm 10+\` |
+| Package Manager | \`pnpm 11+\` |
 | Task Orchestration | \`Turborepo 2.x\` |
 | CI/CD | GitHub Actions (\`macos-latest\`) |
 | Versioning | Changesets |
@@ -154,7 +154,7 @@ This repository follows a **strict pnpm monorepo model**.
 ### Requirements
 
 - Node.js ≥ 24
-- pnpm ≥ 10
+- pnpm ≥ 11
 
 ### Install a plugin
 
