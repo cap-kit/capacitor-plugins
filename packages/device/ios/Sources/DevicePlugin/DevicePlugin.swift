@@ -50,6 +50,7 @@ public final class DevicePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "getMemoryInfo", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getSystemUptime", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getAppVersion", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getStorageInfo", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "removeListener", returnType: CAPPluginReturnNone),
         CAPPluginMethod(name: "removeAllListeners", returnType: CAPPluginReturnNone),
         CAPPluginMethod(name: "getPluginVersion", returnType: CAPPluginReturnPromise)
@@ -265,6 +266,19 @@ public final class DevicePlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func getAppVersion(_ call: CAPPluginCall) {
         do {
             let result = implementation.getAppVersion()
+            call.resolve(result)
+        } catch let error as NativeError {
+            reject(call, error: error)
+        } catch {
+            handleError(call, error)
+        }
+    }
+
+    // MARK: - Storage Info
+
+    @objc func getStorageInfo(_ call: CAPPluginCall) {
+        do {
+            let result = implementation.getStorageInfo()
             call.resolve(result)
         } catch let error as NativeError {
             reject(call, error: error)

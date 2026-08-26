@@ -139,6 +139,7 @@ export default config;
 - [`getConfiguration()`](#getconfiguration)
 - [`getPowerState()`](#getpowerstate)
 - [`getMemoryInfo()`](#getmemoryinfo)
+- [`getStorageInfo()`](#getstorageinfo)
 - [`getSystemUptime()`](#getsystemuptime)
 - [`getAppVersion()`](#getappversion)
 - [`addListener('batteryChargingStateChange', ...)`](#addlistenerbatterychargingstatechange-)
@@ -391,12 +392,16 @@ if (power.thermalState === 'serious' || power.thermalState === 'critical') {
 getMemoryInfo() => Promise<MemoryInfo>
 ```
 
-Return memory information (physical RAM, CPU cores, memory class).
+Return memory information (physical RAM, CPU cores, memory class) and
+optional CPU usage and memory pressure readings.
 
 Use this to adapt cache sizes, parallelism, and feature gating based on
-device capabilities.
+device capabilities. `cpuUsagePercent` requires two calls to produce a
+value (delta-based); the first call returns `null`.
 
-Only available on iOS and Android. On web, throws `unavailable`.
+On web, returns partial data from `navigator.deviceMemory` and
+`performance.memory` (Chrome only). `cpuUsagePercent` and `memoryPressure`
+are always `null`/`"unknown"` on web.
 
 **Returns:** <code>Promise&lt;<a href="#memoryinfo">MemoryInfo</a>&gt;</code>
 
@@ -414,6 +419,45 @@ if (memory.isLowRamDevice) {
   // Reduce image cache, skip animations, use smaller thumbnails
   console.log('Low RAM device — using reduced features');
 }
+
+// CPU usage (delta-based, null on first call)
+if (memory.cpuUsagePercent != null) {
+  console.log(`CPU usage: ${memory.cpuUsagePercent.toFixed(1)}%`);
+}
+
+// Memory pressure
+if (memory.memoryPressure === 'critical') {
+  console.log('Critical memory pressure — release cached resources');
+}
+```
+
+---
+
+### getStorageInfo()
+
+```typescript
+getStorageInfo() => Promise<StorageInfo>
+```
+
+Return disk storage information for the primary data volume.
+
+On web, uses `navigator.storage.estimate()` which is available in
+most modern browsers. Returns zeros if unavailable.
+
+**Returns:** <code>Promise&lt;<a href="#storageinfo">StorageInfo</a>&gt;</code>
+
+**Since:** 8.0.0
+
+#### Example
+
+```ts
+const storage = await Device.getStorageInfo();
+const freeGB = (storage.freeBytes / (1024 * 1024 * 1024)).toFixed(1);
+console.log(`Free storage: ${freeGB} GB (${storage.usedPercent.toFixed(0)}% used)`);
+
+if (storage.usedPercent > 90) {
+  console.log('Storage almost full — suggest cleanup to user');
+}
 ```
 
 ---
@@ -428,6 +472,8 @@ Return system uptime (time since last boot).
 
 Useful for analytics, performance heuristics, and detecting long uptimes
 that may correlate with degraded performance.
+
+Only available on iOS and Android. On web, throws `unavailable`.
 
 **Returns:** <code>Promise&lt;<a href="#systemuptime">SystemUptime</a>&gt;</code>
 
@@ -641,12 +687,25 @@ Device power and thermal state.
 
 Device memory information beyond the basic `memUsed` field.
 
-| Prop                 | Type                 | Description                                                                                                                                                                                         | Since |
-| -------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
-| **`physicalRam`**    | <code>number</code>  | Total physical RAM available on the device, in bytes.                                                                                                                                               | 8.0.0 |
-| **`cpuCores`**       | <code>number</code>  | Number of active CPU cores available for the app. This may be less than the total core count on devices with heterogeneous CPU architectures (big.LITTLE, etc.).                                    | 8.0.0 |
-| **`memoryClassMb`**  | <code>number</code>  | Standard app memory budget in MB. On iOS this corresponds to `ProcessInfo.physicalMemory` (full RAM available to the app). On Android this corresponds to `ActivityManager.getMemoryClass()`.       | 8.0.0 |
-| **`isLowRamDevice`** | <code>boolean</code> | Whether the device is classified as a low-RAM device. On Android this corresponds to `ActivityManager.isLowRamDevice()`. On iOS this is always `false` (Apple does not expose this classification). | 8.0.0 |
+| Prop                  | Type                                                          | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Since |
+| --------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| **`physicalRam`**     | <code>number</code>                                           | Total physical RAM available on the device, in bytes.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | 8.0.0 |
+| **`cpuCores`**        | <code>number</code>                                           | Number of active CPU cores available for the app. This may be less than the total core count on devices with heterogeneous CPU architectures (big.LITTLE, etc.).                                                                                                                                                                                                                                                                                                                                                                                           | 8.0.0 |
+| **`memoryClassMb`**   | <code>number</code>                                           | Standard app memory budget in MB. On iOS this corresponds to `ProcessInfo.physicalMemory` (full RAM available to the app). On Android this corresponds to `ActivityManager.getMemoryClass()`.                                                                                                                                                                                                                                                                                                                                                              | 8.0.0 |
+| **`isLowRamDevice`**  | <code>boolean</code>                                          | Whether the device is classified as a low-RAM device. On Android this corresponds to `ActivityManager.isLowRamDevice()`. On iOS this is always `false` (Apple does not expose this classification).                                                                                                                                                                                                                                                                                                                                                        | 8.0.0 |
+| **`cpuUsagePercent`** | <code>number \| null</code>                                   | Current CPU usage as a percentage (0–100), measured as a delta between two samples. The first call always returns `null`. Subsequent calls return the average CPU usage across all cores since the previous call. On iOS this uses `host_statistics(HOST_CPU_LOAD_INFO)` Mach API. On Android this uses `/proc/stat` delta parsing. On web this is always `null`.                                                                                                                                                                                          | 8.0.0 |
+| **`memoryPressure`**  | <code>'unknown' \| 'normal' \| 'critical' \| 'warning'</code> | System memory pressure level, derived from available memory and OS signals. - `"normal"` — Sufficient free memory - `"warning"` — Available memory is below a safe threshold - `"critical"` — Device is under severe memory pressure; reduce allocation immediately - `"unknown"` — Pressure level cannot be determined On iOS this maps from `ProcessInfo.physicalMemory` vs. free memory ratio. On Android this maps from `ActivityManager.<a href="#memoryinfo">MemoryInfo</a>.lowMemory` and `availMem` thresholds. On web this is always `"unknown"`. | 8.0.0 |
+
+#### StorageInfo
+
+Disk storage information for the primary data volume.
+
+| Prop              | Type                | Description                                                                                                                                                                           | Since |
+| ----------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| **`totalBytes`**  | <code>number</code> | Total storage capacity of the volume, in bytes.                                                                                                                                       | 8.0.0 |
+| **`freeBytes`**   | <code>number</code> | Free (available) storage on the volume, in bytes. On iOS this uses `URLResourceKey.volumeAvailableCapacityForImportantUsageKey`. On Android this uses `StatFs` on the data directory. | 8.0.0 |
+| **`usedBytes`**   | <code>number</code> | Used storage on the volume, in bytes (`totalBytes - freeBytes`).                                                                                                                      | 8.0.0 |
+| **`usedPercent`** | <code>number</code> | Percentage of storage used (0–100).                                                                                                                                                   | 8.0.0 |
 
 #### SystemUptime
 

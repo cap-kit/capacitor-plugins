@@ -22,6 +22,9 @@ import MachO
     /// Cached plugin configuration containing logging and behavioral flags.
     private var config: DeviceConfig?
 
+    /// Previous CPU load ticks for delta-based CPU usage computation.
+    private var previousCpuLoad: host_cpu_load_info?
+
     // MARK: - Initialization
 
     /**
@@ -402,12 +405,151 @@ import MachO
         var mib: [Int32] = [CTL_HW, HW_NCPU]
         sysctl(&mib, 2, &numCores, &sizeOfCores, nil, 0)
 
+        // Delta-based CPU usage
+        let cpuUsage = getCpuUsage()
+
+        // Memory pressure: derive from free memory ratio
+        let memoryPressure = getMemoryPressure(physicalRam: physicalRam)
+
         return [
             "physicalRam": physicalRam,
             "cpuCores": numCores,
-            "memoryClassMb": Int(physicalRam / (1024 * 1024)),  // iOS: full RAM available
-            "isLowRamDevice": false  // iOS does not expose this classification
+            "memoryClassMb": Int(physicalRam / (1024 * 1024)),
+            "isLowRamDevice": false,
+            "cpuUsagePercent": cpuUsage as Any,
+            "memoryPressure": memoryPressure
         ]
+    }
+
+    // MARK: - CPU Usage (Delta-based)
+
+    /**
+     * Computes CPU usage as a percentage (0–100) since the last call.
+     *
+     * Uses Mach `host_statistics` with `HOST_CPU_LOAD_INFO` to read user, system,
+     * idle, and nice ticks. Returns `nil` on the first call (no delta available)
+     * or if the Mach call fails.
+     */
+    private func getCpuUsage() -> Double? {
+        var numCPUInfo = mach_msg_type_number_t(
+            MemoryLayout<host_cpu_load_info>.size / MemoryLayout<integer_t>.size
+        )
+        var cpuInfo = host_cpu_load_info()
+
+        let result = withUnsafeMutablePointer(to: &cpuInfo) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(numCPUInfo)) {
+                host_statistics(
+                    mach_host_self(),
+                    host_flavor_t(HOST_CPU_LOAD_INFO),
+                    $0,
+                    &numCPUInfo
+                )
+            }
+        }
+
+        guard result == KERN_SUCCESS else { return nil }
+
+        let user = Double(cpuInfo.cpu_ticks.0)
+        let system = Double(cpuInfo.cpu_ticks.1)
+        let idle = Double(cpuInfo.cpu_ticks.2)
+        let nice = Double(cpuInfo.cpu_ticks.3)
+        let total = user + system + idle + nice
+
+        guard let previous = previousCpuLoad else {
+            previousCpuLoad = cpuInfo
+            return nil
+        }
+
+        let prevUser = Double(previous.cpu_ticks.0)
+        let prevSystem = Double(previous.cpu_ticks.1)
+        let prevIdle = Double(previous.cpu_ticks.2)
+        let prevNice = Double(previous.cpu_ticks.3)
+        let prevTotal = prevUser + prevSystem + prevIdle + prevNice
+
+        let totalDelta = total - prevTotal
+        let idleDelta = idle - prevIdle
+
+        previousCpuLoad = cpuInfo
+
+        guard totalDelta > 0 else { return 0.0 }
+        return ((totalDelta - idleDelta) / totalDelta) * 100.0
+    }
+
+    // MARK: - Memory Pressure
+
+    /**
+     * Derives memory pressure from the ratio of free to total physical RAM.
+     *
+     * Uses `host_statistics64` with `HOST_VM_INFO64` to read free and inactive
+     * page counts, then classifies into normal / warning / critical thresholds.
+     */
+    private func getMemoryPressure(physicalRam: UInt64) -> String {
+        var vmInfo = vm_statistics64()
+        var count = mach_msg_type_number_t(
+            MemoryLayout<vm_statistics64>.size / MemoryLayout<integer_t>.size
+        )
+
+        let result = withUnsafeMutablePointer(to: &vmInfo) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                host_statistics64(
+                    mach_host_self(),
+                    host_flavor_t(HOST_VM_INFO64),
+                    $0,
+                    &count
+                )
+            }
+        }
+
+        guard result == KERN_SUCCESS else { return "unknown" }
+
+        let pageSize = UInt64(vm_page_size)
+        let freePages = UInt64(vmInfo.free_count)
+        let inactivePages = UInt64(vmInfo.inactive_count)
+        let freeBytes = (freePages + inactivePages) * pageSize
+
+        guard physicalRam > 0 else { return "unknown" }
+        let freeRatio = Double(freeBytes) / Double(physicalRam)
+
+        if freeRatio < 0.05 {
+            return "critical"
+        } else if freeRatio < 0.15 {
+            return "warning"
+        } else {
+            return "normal"
+        }
+    }
+
+    // MARK: - Storage Info
+
+    /**
+     * Returns disk storage information for the primary data volume.
+     */
+    func getStorageInfo() -> [String: Any] {
+        let url = URL(fileURLWithPath: NSHomeDirectory())
+        do {
+            let values = try url.resourceValues(forKeys: [
+                URLResourceKey.volumeTotalCapacityKey,
+                URLResourceKey.volumeAvailableCapacityForImportantUsageKey
+            ])
+            let total = values.volumeTotalCapacity.map { Int64($0) } ?? 0
+            let free = values.volumeAvailableCapacityForImportantUsage ?? 0
+            let used = total - free
+            let usedPercent = total > 0 ? (Double(used) / Double(total)) * 100.0 : 0.0
+
+            return [
+                "totalBytes": total,
+                "freeBytes": free,
+                "usedBytes": used,
+                "usedPercent": usedPercent
+            ]
+        } catch {
+            return [
+                "totalBytes": 0,
+                "freeBytes": 0,
+                "usedBytes": 0,
+                "usedPercent": 0.0
+            ]
+        }
     }
 
     // MARK: - System Uptime

@@ -442,6 +442,21 @@ class DevicePlugin : Plugin() {
     }
   }
 
+  /**
+   * Returns disk storage information for the primary data volume.
+   */
+  @PluginMethod
+  fun getStorageInfo(call: PluginCall) {
+    try {
+      val result = implementation.getStorageInfo()
+      call.resolve(JSObject().apply { result.forEach { (k, v) -> put(k, v) } })
+    } catch (e: NativeError) {
+      handleError(call, e)
+    } catch (e: Exception) {
+      handleError(call, e)
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Version Information
   // ---------------------------------------------------------------------------

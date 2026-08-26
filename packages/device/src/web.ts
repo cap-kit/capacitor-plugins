@@ -14,6 +14,7 @@ import {
   MemoryInfo,
   PluginVersionResult,
   PowerState,
+  StorageInfo,
   SystemUptime,
   AppVersion,
 } from './definitions';
@@ -176,7 +177,32 @@ export class DeviceWeb extends WebPlugin implements DevicePlugin {
   }
 
   async getBatteryExtras(): Promise<BatteryExtras> {
-    throw this.unavailable('Battery extras are not available on web');
+    if (typeof navigator === 'undefined' || !navigator.getBattery) {
+      throw this.unavailable('Battery extras are not available on web');
+    }
+
+    let battery: any = {};
+    try {
+      battery = await navigator.getBattery();
+    } catch {
+      // Battery Status API unavailable
+    }
+
+    const charging = battery.charging ?? false;
+    const chargingTime = battery.chargingTime ?? Infinity;
+
+    const detailedState: BatteryExtras['detailedState'] = (() => {
+      if (charging && chargingTime === 0) return 'full';
+      if (charging) return 'charging';
+      return 'unplugged';
+    })();
+
+    const chargeSource: BatteryExtras['chargeSource'] = charging ? 'ac' : 'unknown';
+
+    return {
+      chargeSource,
+      detailedState,
+    };
   }
 
   async getDisplayInfo(): Promise<DisplayInfo> {
@@ -215,16 +241,58 @@ export class DeviceWeb extends WebPlugin implements DevicePlugin {
   }
 
   async getMemoryInfo(): Promise<MemoryInfo> {
-    throw this.unavailable('Memory info is not available on web');
+    const cpuCores = typeof navigator !== 'undefined' ? (navigator.hardwareConcurrency ?? 0) : 0;
+
+    // navigator.deviceMemory returns GB as a number (Chrome/Opera only)
+    const deviceMemoryGB = typeof navigator !== 'undefined' ? (navigator as any).deviceMemory : undefined;
+    const physicalRam = deviceMemoryGB != null ? deviceMemoryGB * 1024 * 1024 * 1024 : 0;
+
+    // performance.memory is Chrome-only (usedJSHeapSize, jsHeapSizeLimit)
+    const perfMemory = typeof performance !== 'undefined' ? (performance as any).memory : undefined;
+    const memoryClassMb = perfMemory?.jsHeapSizeLimit
+      ? Math.round(perfMemory.jsHeapSizeLimit / (1024 * 1024))
+      : Math.round(physicalRam / (1024 * 1024));
+
+    return {
+      physicalRam,
+      cpuCores,
+      memoryClassMb,
+      isLowRamDevice: deviceMemoryGB != null && deviceMemoryGB <= 1,
+      cpuUsagePercent: null,
+      memoryPressure: 'unknown',
+    };
+  }
+
+  async getStorageInfo(): Promise<StorageInfo> {
+    if (typeof navigator === 'undefined' || !navigator.storage?.estimate) {
+      throw this.unavailable('Storage info not available in this environment');
+    }
+
+    try {
+      const estimate = await navigator.storage.estimate();
+      const quota = estimate.quota ?? 0;
+      const usage = estimate.usage ?? 0;
+      const freeBytes = quota - usage;
+      const usedPercent = quota > 0 ? (usage / quota) * 100.0 : 0.0;
+
+      return {
+        totalBytes: quota,
+        freeBytes,
+        usedBytes: usage,
+        usedPercent,
+      };
+    } catch {
+      return {
+        totalBytes: 0,
+        freeBytes: 0,
+        usedBytes: 0,
+        usedPercent: 0,
+      };
+    }
   }
 
   async getSystemUptime(): Promise<SystemUptime> {
-    if (typeof performance === 'undefined') {
-      throw this.unavailable('System uptime not available in this environment');
-    }
-    return {
-      uptimeSeconds: performance.timeOrigin / 1000,
-    };
+    throw this.unavailable('System uptime is not available on web');
   }
 
   async getAppVersion(): Promise<AppVersion> {

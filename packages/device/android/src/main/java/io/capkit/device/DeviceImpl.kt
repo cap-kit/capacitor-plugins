@@ -21,6 +21,8 @@ import io.capkit.device.config.DeviceConfig
 import io.capkit.device.error.ErrorMessages
 import io.capkit.device.error.NativeError
 import io.capkit.device.logger.DeviceLogger
+import java.io.BufferedReader
+import java.io.FileReader
 import java.util.Locale
 
 /**
@@ -45,6 +47,9 @@ class DeviceImpl(
    * Provided once during initialization via [updateConfig].
    */
   private lateinit var config: DeviceConfig
+
+  /** Previous CPU ticks for delta-based usage computation. */
+  private var previousCpuTicks: CpuTicks? = null
 
   // ---------------------------------------------------------------------------
   // Configuration
@@ -325,7 +330,8 @@ class DeviceImpl(
   // ---------------------------------------------------------------------------
 
   /**
-   * Returns memory information: physical RAM, CPU cores, memory class, and low-RAM flag.
+   * Returns memory information: physical RAM, CPU cores, memory class, low-RAM flag,
+   * delta-based CPU usage, and memory pressure level.
    */
   fun getMemoryInfo(): Map<String, Any> {
     val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
@@ -345,13 +351,124 @@ class DeviceImpl(
     activityManager?.getMemoryInfo(memInfo)
     val physicalRam = memInfo.totalMem
 
-    return mapOf(
-      "physicalRam" to physicalRam,
-      "cpuCores" to cpuCores,
-      "memoryClassMb" to memoryClassMb,
-      "isLowRamDevice" to isLowRamDevice,
-    )
+    // Delta-based CPU usage
+    val cpuUsage = getCpuUsage()
+
+    // Memory pressure
+    val memoryPressure = getMemoryPressure(memInfo)
+
+    val resultMap =
+      mutableMapOf<String, Any>(
+        "physicalRam" to physicalRam,
+        "cpuCores" to cpuCores,
+        "memoryClassMb" to memoryClassMb,
+        "isLowRamDevice" to isLowRamDevice,
+      )
+    cpuUsage?.let { resultMap["cpuUsagePercent"] = it }
+    resultMap["memoryPressure"] = memoryPressure
+    return resultMap
   }
+
+  // ---------------------------------------------------------------------------
+  // CPU Usage (Delta-based)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Reads /proc/stat to compute delta-based CPU usage as a percentage (0–100).
+   * Returns null on the first call (no delta) or if the file cannot be read.
+   */
+  private fun getCpuUsage(): Double? {
+    return try {
+      BufferedReader(FileReader("/proc/stat")).use { reader ->
+        val line = reader.readLine() ?: return null
+        // Format: cpu user nice system idle iowait irq softirq steal
+        val parts = line.trim().split("\\s+".toRegex())
+        if (parts.size < 5) return null
+
+        val user = parts[1].toLong()
+        val nice = parts[2].toLong()
+        val system = parts[3].toLong()
+        val idle = parts[4].toLong()
+        val iowait = if (parts.size > 5) parts[5].toLong() else 0L
+        val irq = if (parts.size > 6) parts[6].toLong() else 0L
+        val softirq = if (parts.size > 7) parts[7].toLong() else 0L
+        val steal = if (parts.size > 8) parts[8].toLong() else 0L
+
+        val total = user + nice + system + idle + iowait + irq + softirq + steal
+        val idleTotal = idle + iowait
+
+        val current = CpuTicks(total, idleTotal)
+
+        val previous = previousCpuTicks
+        previousCpuTicks = current
+
+        if (previous == null) {
+          null // First call, no delta available
+        } else {
+          val totalDelta = current.total - previous.total
+          val idleDelta = current.idle - previous.idle
+          if (totalDelta > 0) {
+            ((totalDelta - idleDelta).toDouble() / totalDelta.toDouble()) * 100.0
+          } else {
+            0.0
+          }
+        }
+      }
+    } catch (e: Exception) {
+      DeviceLogger.debug("Failed to read /proc/stat: ${e.message}")
+      null
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Memory Pressure
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Derives memory pressure from available memory relative to total RAM.
+   */
+  private fun getMemoryPressure(memInfo: ActivityManager.MemoryInfo): String {
+    val lowMemory = memInfo.lowMemory
+    val availMem = memInfo.availMem
+    val totalMem = memInfo.totalMem
+
+    return when {
+      lowMemory -> "critical"
+      totalMem > 0 && availMem < totalMem * 0.10 -> "critical"
+      totalMem > 0 && availMem < totalMem * 0.20 -> "warning"
+      else -> "normal"
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Storage Info
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Returns disk storage information for the primary data volume.
+   */
+  fun getStorageInfo(): Map<String, Any> =
+    try {
+      val statFs = StatFs(Environment.getDataDirectory().absolutePath)
+      val totalBytes = statFs.blockCountLong * statFs.blockSizeLong
+      val freeBytes = statFs.availableBlocksLong * statFs.blockSizeLong
+      val usedBytes = totalBytes - freeBytes
+      val usedPercent = if (totalBytes > 0) (usedBytes.toDouble() / totalBytes.toDouble()) * 100.0 else 0.0
+
+      mapOf(
+        "totalBytes" to totalBytes,
+        "freeBytes" to freeBytes,
+        "usedBytes" to usedBytes,
+        "usedPercent" to usedPercent,
+      )
+    } catch (e: Exception) {
+      mapOf(
+        "totalBytes" to 0L,
+        "freeBytes" to 0L,
+        "usedBytes" to 0L,
+        "usedPercent" to 0.0,
+      )
+    }
 
   // ---------------------------------------------------------------------------
   // System Uptime
@@ -478,4 +595,13 @@ class DeviceImpl(
   private companion object {
     private const val WEBVIEW_PACKAGE_NAME = "com.android.chrome"
   }
+
+  // ---------------------------------------------------------------------------
+  // Data Classes
+  // ---------------------------------------------------------------------------
+
+  private data class CpuTicks(
+    val total: Long,
+    val idle: Long,
+  )
 }
