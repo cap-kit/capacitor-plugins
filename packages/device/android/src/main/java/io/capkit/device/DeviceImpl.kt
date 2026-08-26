@@ -403,7 +403,7 @@ class DeviceImpl(
   // ---------------------------------------------------------------------------
 
   /**
-   * Returns extended battery information: charge source and detailed charging state.
+   * Returns extended battery information: charge source, detailed state, health, and temperature.
    */
   fun getBatteryExtras(): Map<String, Any> {
     val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
@@ -428,9 +428,27 @@ class DeviceImpl(
         else -> "unknown"
       }
 
+    // Health status (Android only)
+    val health = intent?.getIntExtra(BatteryManager.EXTRA_HEALTH, -1) ?: -1
+    val healthState =
+      when (health) {
+        BatteryManager.BATTERY_HEALTH_GOOD -> "good"
+        BatteryManager.BATTERY_HEALTH_OVERHEAT -> "overheat"
+        BatteryManager.BATTERY_HEALTH_DEAD -> "dead"
+        BatteryManager.BATTERY_HEALTH_COLD -> "cold"
+        BatteryManager.BATTERY_HEALTH_UNKNOWN -> "unknown"
+        else -> "unspecified"
+      }
+
+    // Temperature in tenths of degree Celsius → convert to degrees
+    val tempTenths = intent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
+    val temperature = tempTenths / 10.0
+
     return mapOf(
       "chargeSource" to chargeSource,
       "detailedState" to detailedState,
+      "health" to healthState,
+      "temperature" to temperature,
     )
   }
 

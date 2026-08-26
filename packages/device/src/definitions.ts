@@ -320,6 +320,32 @@ export interface BatteryExtras {
    * @since 8.0.0
    */
   detailedState: 'unknown' | 'unplugged' | 'charging' | 'full' | 'not-charging';
+
+  /**
+   * Battery health status.
+   *
+   * Only available on Android.
+   *
+   * - `"good"` — Battery is in good condition
+   * - `"overheat"` — Battery is overheating
+   * - `"dead"` — Battery is dead
+   * - `"unknown"` — Health status not available
+   * - `"cold"` — Battery is too cold
+   * - `"unspecified"` — Health status not reported
+   *
+   * @since 8.0.0
+   */
+  health?: 'good' | 'overheat' | 'dead' | 'unknown' | 'cold' | 'unspecified';
+
+  /**
+   * Battery temperature in degrees Celsius.
+   *
+   * Only available on Android. iOS does not expose battery temperature
+   * through public APIs.
+   *
+   * @since 8.0.0
+   */
+  temperature?: number;
 }
 
 /**
@@ -598,12 +624,30 @@ export interface DevicePlugin {
   /**
    * Return an unique identifier for the device.
    *
+   * @returns A promise resolving to the device identifier.
+   *
+   * @example
+   * ```ts
+   * const { identifier } = await Device.getId();
+   * console.log('Device ID:', identifier);
+   * ```
+   *
    * @since 8.0.0
    */
   getId(): Promise<DeviceId>;
 
   /**
    * Return information about the underlying device/os/platform.
+   *
+   * @returns A promise resolving to comprehensive device information.
+   *
+   * @example
+   * ```ts
+   * const info = await Device.getInfo();
+   * console.log(`${info.manufacturer} ${info.model}`);
+   * console.log(`${info.operatingSystem} ${info.osVersion}`);
+   * console.log(`Virtual: ${info.isVirtual}`);
+   * ```
    *
    * @since 8.0.0
    */
@@ -612,12 +656,29 @@ export interface DevicePlugin {
   /**
    * Return information about the battery.
    *
+   * @returns A promise resolving to the current battery level and charging state.
+   *
+   * @example
+   * ```ts
+   * const battery = await Device.getBatteryInfo();
+   * const percent = Math.round((battery.batteryLevel ?? 0) * 100);
+   * console.log(`Battery: ${percent}% — ${battery.isCharging ? 'charging' : 'on battery'}`);
+   * ```
+   *
    * @since 8.0.0
    */
   getBatteryInfo(): Promise<BatteryInfo>;
 
   /**
    * Get the device's current language locale code.
+   *
+   * @returns A promise resolving to the two-character language code.
+   *
+   * @example
+   * ```ts
+   * const { value } = await Device.getLanguageCode();
+   * console.log('Language:', value); // "en", "es", "it"
+   * ```
    *
    * @since 8.0.0
    */
@@ -626,12 +687,40 @@ export interface DevicePlugin {
   /**
    * Get the device's current language locale tag.
    *
+   * @returns A promise resolving to the BCP 47 language tag.
+   *
+   * @example
+   * ```ts
+   * const { value } = await Device.getLanguageTag();
+   * console.log('Language tag:', value); // "en-US", "es-ES", "it-IT"
+   * ```
+   *
    * @since 8.0.0
    */
   getLanguageTag(): Promise<LanguageTag>;
 
   /**
    * Return extended battery information including charge source and detailed state.
+   *
+   * The `health` and `temperature` fields are only available on Android.
+   * On web, throws `unavailable`.
+   *
+   * @returns A promise resolving to battery charge source, detailed state, and platform-specific extras.
+   *
+   * @example
+   * ```ts
+   * const extras = await Device.getBatteryExtras();
+   * console.log(`Charging via: ${extras.chargeSource}`); // "ac", "usb", "wireless"
+   * console.log(`State: ${extras.detailedState}`);       // "charging", "full", "unplugged"
+   *
+   * // Android-only fields
+   * if (extras.health) {
+   *   console.log(`Battery health: ${extras.health}`);   // "good", "overheat", "dead"
+   * }
+   * if (extras.temperature) {
+   *   console.log(`Temperature: ${extras.temperature}°C`);
+   * }
+   * ```
    *
    * @since 8.0.0
    */
@@ -640,12 +729,40 @@ export interface DevicePlugin {
   /**
    * Return display characteristics (resolution, density, refresh rate).
    *
+   * On web, returns partial data from `window.screen`. Refresh rate defaults to 60 Hz
+   * as web does not reliably expose this value.
+   *
+   * @returns A promise resolving to screen dimensions and display properties.
+   *
+   * @example
+   * ```ts
+   * const display = await Device.getDisplayInfo();
+   * console.log(`Screen: ${display.widthPx}×${display.heightPx}`);
+   * console.log(`Density: ${display.densityDpi} DPI (${display.scale}x)`);
+   * console.log(`Refresh rate: ${display.refreshRateHz} Hz`);
+   * ```
+   *
    * @since 8.0.0
    */
   getDisplayInfo(): Promise<DisplayInfo>;
 
   /**
    * Return device configuration and user preferences (orientation, dark mode, font scale).
+   *
+   * On web, returns partial data from `matchMedia` and `screen.orientation`.
+   * `idiom` defaults to `"phone"` and `screenSize` defaults to `"normal"` on web.
+   *
+   * @returns A promise resolving to the current device configuration and accessibility settings.
+   *
+   * @example
+   * ```ts
+   * const config = await Device.getConfiguration();
+   * console.log(`Orientation: ${config.orientation}`);
+   * console.log(`Dark mode: ${config.isDarkMode}`);
+   * console.log(`Font scale: ${config.fontScale}x`);
+   * console.log(`Device type: ${config.idiom}`);       // "phone", "tablet", "desktop"
+   * console.log(`Screen size: ${config.screenSize}`);  // "small", "normal", "large", "xlarge"
+   * ```
    *
    * @since 8.0.0
    */
@@ -654,12 +771,52 @@ export interface DevicePlugin {
   /**
    * Return power and thermal state information.
    *
+   * Use this to adapt app behavior when the device is in power-saving mode
+   * or experiencing thermal throttling.
+   *
+   * Only available on iOS and Android. On web, throws `unavailable`.
+   *
+   * @returns A promise resolving to the current power and thermal state.
+   *
+   * @example
+   * ```ts
+   * const power = await Device.getPowerState();
+   * if (power.isLowPowerMode) {
+   *   // Reduce animations, defer background sync, lower frame rate
+   *   console.log('Low power mode active — reducing workload');
+   * }
+   * if (power.thermalState === 'serious' || power.thermalState === 'critical') {
+   *   // Pause heavy computation, skip video processing
+   *   console.log(`Thermal throttling detected: ${power.thermalState}`);
+   * }
+   * ```
+   *
    * @since 8.0.0
    */
   getPowerState(): Promise<PowerState>;
 
   /**
    * Return memory information (physical RAM, CPU cores, memory class).
+   *
+   * Use this to adapt cache sizes, parallelism, and feature gating based on
+   * device capabilities.
+   *
+   * Only available on iOS and Android. On web, throws `unavailable`.
+   *
+   * @returns A promise resolving to device memory and CPU information.
+   *
+   * @example
+   * ```ts
+   * const memory = await Device.getMemoryInfo();
+   * const ramMB = Math.round(memory.physicalRam / (1024 * 1024));
+   * console.log(`RAM: ${ramMB} MB — ${memory.cpuCores} cores`);
+   * console.log(`Memory budget: ${memory.memoryClassMb} MB`);
+   *
+   * if (memory.isLowRamDevice) {
+   *   // Reduce image cache, skip animations, use smaller thumbnails
+   *   console.log('Low RAM device — using reduced features');
+   * }
+   * ```
    *
    * @since 8.0.0
    */
@@ -668,6 +825,23 @@ export interface DevicePlugin {
   /**
    * Return system uptime (time since last boot).
    *
+   * Useful for analytics, performance heuristics, and detecting long uptimes
+   * that may correlate with degraded performance.
+   *
+   * @returns A promise resolving to the system uptime in seconds.
+   *
+   * @example
+   * ```ts
+   * const { uptimeSeconds } = await Device.getSystemUptime();
+   * const days = Math.floor(uptimeSeconds / 86400);
+   * console.log(`Device uptime: ${days} day(s)`);
+   *
+   * if (uptimeSeconds > 7 * 86400) {
+   *   // Suggest restarting the device after 7+ days
+   *   console.log('Device has been running for over a week');
+   * }
+   * ```
+   *
    * @since 8.0.0
    */
   getSystemUptime(): Promise<SystemUptime>;
@@ -675,12 +849,35 @@ export interface DevicePlugin {
   /**
    * Return application version information (version string + build number).
    *
+   * @returns A promise resolving to the app version and build number.
+   *
+   * @example
+   * ```ts
+   * const app = await Device.getAppVersion();
+   * console.log(`App version: ${app.version} (build ${app.buildNumber})`);
+   *
+   * // Use for update checks or analytics
+   * analytics.setAppVersion(app.version);
+   * ```
+   *
    * @since 8.0.0
    */
   getAppVersion(): Promise<AppVersion>;
 
   /**
    * Listen for changes to whether the device is charging (including when the battery becomes full while plugged in).
+   *
+   * The listener fires only when the charging state **changes**. It is not invoked at subscription time.
+   *
+   * @example
+   * ```ts
+   * const handle = await Device.addListener('batteryChargingStateChange', (info) => {
+   *   console.log(`Charging: ${info.isCharging ? 'yes' : 'no'}`);
+   * });
+   *
+   * // Later, remove the listener
+   * await handle.remove();
+   * ```
    *
    * @since 8.0.0
    */
@@ -691,6 +888,11 @@ export interface DevicePlugin {
 
   /**
    * Remove all listeners for this plugin.
+   *
+   * @example
+   * ```ts
+   * await Device.removeAllListeners();
+   * ```
    *
    * @since 8.0.0
    */
@@ -707,6 +909,7 @@ export interface DevicePlugin {
    * @example
    * ```ts
    * const { version } = await Device.getPluginVersion();
+   * console.log('Plugin version:', version);
    * ```
    *
    * @since 8.0.0

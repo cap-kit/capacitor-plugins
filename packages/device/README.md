@@ -134,15 +134,13 @@ export default config;
 - [`getBatteryInfo()`](#getbatteryinfo)
 - [`getLanguageCode()`](#getlanguagecode)
 - [`getLanguageTag()`](#getlanguagetag)
-
-* [`getBatteryExtras()`](#getbatteryextras)
-* [`getDisplayInfo()`](#getdisplayinfo)
-* [`getConfiguration()`](#getconfiguration)
-* [`getPowerState()`](#getpowerstate)
-* [`getMemoryInfo()`](#getmemoryinfo)
-* [`getSystemUptime()`](#getsystemuptime)
-* [`getAppVersion()`](#getappversion)
-
+- [`getBatteryExtras()`](#getbatteryextras)
+- [`getDisplayInfo()`](#getdisplayinfo)
+- [`getConfiguration()`](#getconfiguration)
+- [`getPowerState()`](#getpowerstate)
+- [`getMemoryInfo()`](#getmemoryinfo)
+- [`getSystemUptime()`](#getsystemuptime)
+- [`getAppVersion()`](#getappversion)
 - [`addListener('batteryChargingStateChange', ...)`](#addlistenerbatterychargingstatechange-)
 - [`removeAllListeners()`](#removealllisteners)
 - [`getPluginVersion()`](#getpluginversion)
@@ -171,6 +169,13 @@ Return an unique identifier for the device.
 
 **Since:** 8.0.0
 
+#### Example
+
+```ts
+const { identifier } = await Device.getId();
+console.log('Device ID:', identifier);
+```
+
 ---
 
 ### getInfo()
@@ -184,6 +189,15 @@ Return information about the underlying device/os/platform.
 **Returns:** <code>Promise&lt;<a href="#deviceinfo">DeviceInfo</a>&gt;</code>
 
 **Since:** 8.0.0
+
+#### Example
+
+```ts
+const info = await Device.getInfo();
+console.log(`${info.manufacturer} ${info.model}`);
+console.log(`${info.operatingSystem} ${info.osVersion}`);
+console.log(`Virtual: ${info.isVirtual}`);
+```
 
 ---
 
@@ -199,6 +213,14 @@ Return information about the battery.
 
 **Since:** 8.0.0
 
+#### Example
+
+```ts
+const battery = await Device.getBatteryInfo();
+const percent = Math.round((battery.batteryLevel ?? 0) * 100);
+console.log(`Battery: ${percent}% — ${battery.isCharging ? 'charging' : 'on battery'}`);
+```
+
 ---
 
 ### getLanguageCode()
@@ -212,6 +234,13 @@ Get the device's current language locale code.
 **Returns:** <code>Promise&lt;<a href="#getlanguagecoderesult">GetLanguageCodeResult</a>&gt;</code>
 
 **Since:** 8.0.0
+
+#### Example
+
+```ts
+const { value } = await Device.getLanguageCode();
+console.log('Language:', value); // "en", "es", "it"
+```
 
 ---
 
@@ -227,13 +256,14 @@ Get the device's current language locale tag.
 
 **Since:** 8.0.0
 
----
+#### Example
 
-### addListener('batteryChargingStateChange', ...)
-
-```typescript
-addListener(eventName: "batteryChargingStateChange", listenerFunc: BatteryChargingStateChangeListener) => Promise<PluginListenerHandle>
+```ts
+const { value } = await Device.getLanguageTag();
+console.log('Language tag:', value); // "en-US", "es-ES", "it-IT"
 ```
+
+---
 
 ### getBatteryExtras()
 
@@ -243,9 +273,28 @@ getBatteryExtras() => Promise<BatteryExtras>
 
 Return extended battery information including charge source and detailed state.
 
+The `health` and `temperature` fields are only available on Android.
+On web, throws `unavailable`.
+
 **Returns:** <code>Promise&lt;<a href="#batteryextras">BatteryExtras</a>&gt;</code>
 
 **Since:** 8.0.0
+
+#### Example
+
+```ts
+const extras = await Device.getBatteryExtras();
+console.log(`Charging via: ${extras.chargeSource}`); // "ac", "usb", "wireless"
+console.log(`State: ${extras.detailedState}`); // "charging", "full", "unplugged"
+
+// Android-only fields
+if (extras.health) {
+  console.log(`Battery health: ${extras.health}`); // "good", "overheat", "dead"
+}
+if (extras.temperature) {
+  console.log(`Temperature: ${extras.temperature}°C`);
+}
+```
 
 ---
 
@@ -257,9 +306,21 @@ getDisplayInfo() => Promise<DisplayInfo>
 
 Return display characteristics (resolution, density, refresh rate).
 
+On web, returns partial data from `window.screen`. Refresh rate defaults to 60 Hz
+as web does not reliably expose this value.
+
 **Returns:** <code>Promise&lt;<a href="#displayinfo">DisplayInfo</a>&gt;</code>
 
 **Since:** 8.0.0
+
+#### Example
+
+```ts
+const display = await Device.getDisplayInfo();
+console.log(`Screen: ${display.widthPx}×${display.heightPx}`);
+console.log(`Density: ${display.densityDpi} DPI (${display.scale}x)`);
+console.log(`Refresh rate: ${display.refreshRateHz} Hz`);
+```
 
 ---
 
@@ -271,9 +332,23 @@ getConfiguration() => Promise<DeviceConfiguration>
 
 Return device configuration and user preferences (orientation, dark mode, font scale).
 
+On web, returns partial data from `matchMedia` and `screen.orientation`.
+`idiom` defaults to `"phone"` and `screenSize` defaults to `"normal"` on web.
+
 **Returns:** <code>Promise&lt;<a href="#deviceconfiguration">DeviceConfiguration</a>&gt;</code>
 
 **Since:** 8.0.0
+
+#### Example
+
+```ts
+const config = await Device.getConfiguration();
+console.log(`Orientation: ${config.orientation}`);
+console.log(`Dark mode: ${config.isDarkMode}`);
+console.log(`Font scale: ${config.fontScale}x`);
+console.log(`Device type: ${config.idiom}`); // "phone", "tablet", "desktop"
+console.log(`Screen size: ${config.screenSize}`); // "small", "normal", "large", "xlarge"
+```
 
 ---
 
@@ -285,9 +360,28 @@ getPowerState() => Promise<PowerState>
 
 Return power and thermal state information.
 
+Use this to adapt app behavior when the device is in power-saving mode
+or experiencing thermal throttling.
+
+Only available on iOS and Android. On web, throws `unavailable`.
+
 **Returns:** <code>Promise&lt;<a href="#powerstate">PowerState</a>&gt;</code>
 
 **Since:** 8.0.0
+
+#### Example
+
+```ts
+const power = await Device.getPowerState();
+if (power.isLowPowerMode) {
+  // Reduce animations, defer background sync, lower frame rate
+  console.log('Low power mode active — reducing workload');
+}
+if (power.thermalState === 'serious' || power.thermalState === 'critical') {
+  // Pause heavy computation, skip video processing
+  console.log(`Thermal throttling detected: ${power.thermalState}`);
+}
+```
 
 ---
 
@@ -299,9 +393,28 @@ getMemoryInfo() => Promise<MemoryInfo>
 
 Return memory information (physical RAM, CPU cores, memory class).
 
+Use this to adapt cache sizes, parallelism, and feature gating based on
+device capabilities.
+
+Only available on iOS and Android. On web, throws `unavailable`.
+
 **Returns:** <code>Promise&lt;<a href="#memoryinfo">MemoryInfo</a>&gt;</code>
 
 **Since:** 8.0.0
+
+#### Example
+
+```ts
+const memory = await Device.getMemoryInfo();
+const ramMB = Math.round(memory.physicalRam / (1024 * 1024));
+console.log(`RAM: ${ramMB} MB — ${memory.cpuCores} cores`);
+console.log(`Memory budget: ${memory.memoryClassMb} MB`);
+
+if (memory.isLowRamDevice) {
+  // Reduce image cache, skip animations, use smaller thumbnails
+  console.log('Low RAM device — using reduced features');
+}
+```
 
 ---
 
@@ -313,9 +426,25 @@ getSystemUptime() => Promise<SystemUptime>
 
 Return system uptime (time since last boot).
 
+Useful for analytics, performance heuristics, and detecting long uptimes
+that may correlate with degraded performance.
+
 **Returns:** <code>Promise&lt;<a href="#systemuptime">SystemUptime</a>&gt;</code>
 
 **Since:** 8.0.0
+
+#### Example
+
+```ts
+const { uptimeSeconds } = await Device.getSystemUptime();
+const days = Math.floor(uptimeSeconds / 86400);
+console.log(`Device uptime: ${days} day(s)`);
+
+if (uptimeSeconds > 7 * 86400) {
+  // Suggest restarting the device after 7+ days
+  console.log('Device has been running for over a week');
+}
+```
 
 ---
 
@@ -331,9 +460,27 @@ Return application version information (version string + build number).
 
 **Since:** 8.0.0
 
+#### Example
+
+```ts
+const app = await Device.getAppVersion();
+console.log(`App version: ${app.version} (build ${app.buildNumber})`);
+
+// Use for update checks or analytics
+analytics.setAppVersion(app.version);
+```
+
 ---
 
+### addListener('batteryChargingStateChange', ...)
+
+```typescript
+addListener(eventName: "batteryChargingStateChange", listenerFunc: BatteryChargingStateChangeListener) => Promise<PluginListenerHandle>
+```
+
 Listen for changes to whether the device is charging (including when the battery becomes full while plugged in).
+
+The listener fires only when the charging state **changes**. It is not invoked at subscription time.
 
 | Param              | Type                                                                                              |
 | ------------------ | ------------------------------------------------------------------------------------------------- |
@@ -343,6 +490,17 @@ Listen for changes to whether the device is charging (including when the battery
 **Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt;</code>
 
 **Since:** 8.0.0
+
+#### Example
+
+```ts
+const handle = await Device.addListener('batteryChargingStateChange', (info) => {
+  console.log(`Charging: ${info.isCharging ? 'yes' : 'no'}`);
+});
+
+// Later, remove the listener
+await handle.remove();
+```
 
 ---
 
@@ -355,6 +513,12 @@ removeAllListeners() => Promise<void>
 Remove all listeners for this plugin.
 
 **Since:** 8.0.0
+
+#### Example
+
+```ts
+await Device.removeAllListeners();
+```
 
 ---
 
@@ -377,6 +541,7 @@ bundled with the application.
 
 ```ts
 const { version } = await Device.getPluginVersion();
+console.log('Plugin version:', version);
 ```
 
 ---
@@ -428,28 +593,16 @@ const { version } = await Device.getPluginVersion();
 | ----------- | ------------------- | ----------------------------------------------- | ----- |
 | **`value`** | <code>string</code> | Returns a well-formed IETF BCP 47 language tag. | 8.0.0 |
 
-#### PluginListenerHandle
-
-| Prop         | Type                                      |
-| ------------ | ----------------------------------------- |
-| **`remove`** | <code>() =&gt; Promise&lt;void&gt;</code> |
-
-#### PluginVersionResult
-
-Result object returned by the `getPluginVersion()` method.
-
-| Prop          | Type                | Description                       |
-| ------------- | ------------------- | --------------------------------- |
-| **`version`** | <code>string</code> | The native plugin version string. |
-
 #### BatteryExtras
 
 Extended battery information including charge source and detailed state.
 
-| Prop                | Type                                                                            | Description                                                                                                                                                                                                                                                                              | Since |
-| ------------------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
-| **`chargeSource`**  | <code>'unknown' \| 'ac' \| 'usb' \| 'wireless'</code>                           | The current charge source. - `"ac"` — AC adapter - `"usb"` — USB port - `"wireless"` — Wireless charging - `"unknown"` — Charge source not determinable                                                                                                                                  | 8.0.0 |
-| **`detailedState`** | <code>'unknown' \| 'unplugged' \| 'charging' \| 'full' \| 'not-charging'</code> | The detailed battery state. - `"unknown"` — Battery state is unknown - `"unplugged"` — Not connected to a power source - `"charging"` — Connected and charging - `"full"` — Connected and fully charged - `"not-charging"` — Connected but not charging (e.g. battery temperature limit) | 8.0.0 |
+| Prop                | Type                                                                                | Description                                                                                                                                                                                                                                                                                  | Since |
+| ------------------- | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| **`chargeSource`**  | <code>'unknown' \| 'ac' \| 'usb' \| 'wireless'</code>                               | The current charge source. - `"ac"` — AC adapter - `"usb"` — USB port - `"wireless"` — Wireless charging - `"unknown"` — Charge source not determinable                                                                                                                                      | 8.0.0 |
+| **`detailedState`** | <code>'unknown' \| 'unplugged' \| 'charging' \| 'full' \| 'not-charging'</code>     | The detailed battery state. - `"unknown"` — Battery state is unknown - `"unplugged"` — Not connected to a power source - `"charging"` — Connected and charging - `"full"` — Connected and fully charged - `"not-charging"` — Connected but not charging (e.g. battery temperature limit)     | 8.0.0 |
+| **`health`**        | <code>'unknown' \| 'good' \| 'overheat' \| 'dead' \| 'cold' \| 'unspecified'</code> | Battery health status. Only available on Android. - `"good"` — Battery is in good condition - `"overheat"` — Battery is overheating - `"dead"` — Battery is dead - `"unknown"` — Health status not available - `"cold"` — Battery is too cold - `"unspecified"` — Health status not reported | 8.0.0 |
+| **`temperature`**   | <code>number</code>                                                                 | Battery temperature in degrees Celsius. Only available on Android. iOS does not expose battery temperature through public APIs.                                                                                                                                                              | 8.0.0 |
 
 #### DisplayInfo
 
@@ -511,6 +664,20 @@ Application version information.
 | ----------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
 | **`version`**     | <code>string</code> | Human-readable version string (e.g. "1.2.3"). On iOS this corresponds to `CFBundleShortVersionString`. On Android this corresponds to `PackageInfo.versionName`. | 8.0.0 |
 | **`buildNumber`** | <code>number</code> | Numeric build number used for update detection. On iOS this corresponds to `CFBundleVersion`. On Android this corresponds to `PackageInfo.versionCode`.          | 8.0.0 |
+
+#### PluginListenerHandle
+
+| Prop         | Type                                      |
+| ------------ | ----------------------------------------- |
+| **`remove`** | <code>() =&gt; Promise&lt;void&gt;</code> |
+
+#### PluginVersionResult
+
+Result object returned by the `getPluginVersion()` method.
+
+| Prop          | Type                | Description                       |
+| ------------- | ------------------- | --------------------------------- |
+| **`version`** | <code>string</code> | The native plugin version string. |
 
 ### Type Aliases
 
