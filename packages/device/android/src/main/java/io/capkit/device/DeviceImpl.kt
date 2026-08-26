@@ -1,15 +1,21 @@
 package io.capkit.device
 
+import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
+import android.content.res.Configuration
+import android.content.res.Resources
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Environment
+import android.os.PowerManager
 import android.os.StatFs
+import android.os.SystemClock
 import android.provider.Settings
+import android.view.WindowManager
 import android.webkit.WebView
 import io.capkit.device.config.DeviceConfig
 import io.capkit.device.error.ErrorMessages
@@ -208,6 +214,225 @@ class DeviceImpl(
 
   private fun queryBatteryStatus(): Intent? =
     context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+
+  // ---------------------------------------------------------------------------
+  // Display Info
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Returns display metrics including resolution, density, and refresh rate.
+   */
+  fun getDisplayInfo(): Map<String, Any> {
+    val metrics = Resources.getSystem().displayMetrics
+    val refreshRate =
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
+        val display = windowManager?.defaultDisplay
+        display?.refreshRate?.toInt() ?: 60
+      } else {
+        60
+      }
+
+    return mapOf(
+      "widthPx" to metrics.widthPixels,
+      "heightPx" to metrics.heightPixels,
+      "densityDpi" to metrics.densityDpi,
+      "scale" to metrics.density.toDouble(),
+      "refreshRateHz" to refreshRate,
+    )
+  }
+
+  // ---------------------------------------------------------------------------
+  // Configuration
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Returns the current device configuration: orientation, dark mode, font scale, idiom, and screen size.
+   */
+  fun getConfiguration(): Map<String, Any> {
+    val config = context.resources.configuration
+
+    val orientation =
+      when (config.orientation) {
+        Configuration.ORIENTATION_PORTRAIT -> "portrait"
+        Configuration.ORIENTATION_LANDSCAPE -> "landscape"
+        else -> "unknown"
+      }
+
+    val uiMode = config.uiMode and Configuration.UI_MODE_NIGHT_MASK
+    val isDarkMode = uiMode == Configuration.UI_MODE_NIGHT_YES
+
+    val screenSize =
+      when (config.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK) {
+        Configuration.SCREENLAYOUT_SIZE_SMALL -> "small"
+        Configuration.SCREENLAYOUT_SIZE_NORMAL -> "normal"
+        Configuration.SCREENLAYOUT_SIZE_LARGE -> "large"
+        Configuration.SCREENLAYOUT_SIZE_XLARGE -> "xlarge"
+        else -> "unknown"
+      }
+
+    val idiom = if (config.smallestScreenWidthDp >= 600) "tablet" else "phone"
+
+    return mapOf(
+      "orientation" to orientation,
+      "isDarkMode" to isDarkMode,
+      "fontScale" to config.fontScale.toDouble(),
+      "idiom" to idiom,
+      "screenSize" to screenSize,
+    )
+  }
+
+  // ---------------------------------------------------------------------------
+  // Power State
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Returns the power state: low power mode and thermal state.
+   */
+  fun getPowerState(): Map<String, Any> {
+    val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
+
+    val isLowPowerMode =
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+        powerManager?.isPowerSaveMode ?: false
+      } else {
+        false
+      }
+
+    val thermalState =
+      try {
+        val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val temp = intent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
+        val tempCelsius = temp / 10.0
+        when {
+          tempCelsius < 35.0 -> "nominal"
+          tempCelsius < 40.0 -> "fair"
+          tempCelsius < 45.0 -> "serious"
+          else -> "critical"
+        }
+      } catch (e: Exception) {
+        "nominal"
+      }
+
+    return mapOf(
+      "isLowPowerMode" to isLowPowerMode,
+      "thermalState" to thermalState,
+    )
+  }
+
+  // ---------------------------------------------------------------------------
+  // Memory Info
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Returns memory information: physical RAM, CPU cores, memory class, and low-RAM flag.
+   */
+  fun getMemoryInfo(): Map<String, Any> {
+    val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+
+    val memoryClassMb = activityManager?.memoryClass ?: 0
+
+    val isLowRamDevice =
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+        activityManager?.isLowRamDevice ?: false
+      } else {
+        false
+      }
+
+    val cpuCores = Runtime.getRuntime().availableProcessors()
+
+    val memInfo = ActivityManager.MemoryInfo()
+    activityManager?.getMemoryInfo(memInfo)
+    val physicalRam = memInfo.totalMem
+
+    return mapOf(
+      "physicalRam" to physicalRam,
+      "cpuCores" to cpuCores,
+      "memoryClassMb" to memoryClassMb,
+      "isLowRamDevice" to isLowRamDevice,
+    )
+  }
+
+  // ---------------------------------------------------------------------------
+  // System Uptime
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Returns the system uptime in seconds.
+   */
+  fun getSystemUptime(): Map<String, Any> {
+    val uptimeMillis = SystemClock.elapsedRealtime()
+    return mapOf(
+      "uptimeSeconds" to (uptimeMillis / 1000.0),
+    )
+  }
+
+  // ---------------------------------------------------------------------------
+  // App Version
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Returns the app version name and build number.
+   */
+  fun getAppVersion(): Map<String, Any> {
+    val packageInfo =
+      try {
+        context.packageManager.getPackageInfo(context.packageName, 0)
+      } catch (e: Exception) {
+        return mapOf("version" to "unknown", "buildNumber" to 0)
+      }
+
+    @Suppress("DEPRECATION")
+    val versionName = packageInfo.versionName ?: "unknown"
+    val versionCode =
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        packageInfo.longVersionCode.toInt()
+      } else {
+        @Suppress("DEPRECATION")
+        packageInfo.versionCode
+      }
+
+    return mapOf(
+      "version" to versionName,
+      "buildNumber" to versionCode,
+    )
+  }
+
+  // ---------------------------------------------------------------------------
+  // Battery Extras
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Returns extended battery information: charge source and detailed charging state.
+   */
+  fun getBatteryExtras(): Map<String, Any> {
+    val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+
+    val plugged = intent?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0
+    val chargeSource =
+      when (plugged) {
+        BatteryManager.BATTERY_PLUGGED_AC -> "ac"
+        BatteryManager.BATTERY_PLUGGED_USB -> "usb"
+        BatteryManager.BATTERY_PLUGGED_WIRELESS -> "wireless"
+        else -> "unknown"
+      }
+
+    val status = intent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
+    val detailedState =
+      when (status) {
+        BatteryManager.BATTERY_STATUS_UNKNOWN -> "unknown"
+        BatteryManager.BATTERY_STATUS_DISCHARGING -> "unplugged"
+        BatteryManager.BATTERY_STATUS_CHARGING -> "charging"
+        BatteryManager.BATTERY_STATUS_FULL -> "full"
+        BatteryManager.BATTERY_STATUS_NOT_CHARGING -> "not-charging"
+        else -> "unknown"
+      }
+
+    return mapOf(
+      "chargeSource" to chargeSource,
+      "detailedState" to detailedState,
+    )
+  }
 
   // ---------------------------------------------------------------------------
   // WebView

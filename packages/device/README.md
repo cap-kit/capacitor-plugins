@@ -134,6 +134,15 @@ export default config;
 - [`getBatteryInfo()`](#getbatteryinfo)
 - [`getLanguageCode()`](#getlanguagecode)
 - [`getLanguageTag()`](#getlanguagetag)
+
+* [`getBatteryExtras()`](#getbatteryextras)
+* [`getDisplayInfo()`](#getdisplayinfo)
+* [`getConfiguration()`](#getconfiguration)
+* [`getPowerState()`](#getpowerstate)
+* [`getMemoryInfo()`](#getmemoryinfo)
+* [`getSystemUptime()`](#getsystemuptime)
+* [`getAppVersion()`](#getappversion)
+
 - [`addListener('batteryChargingStateChange', ...)`](#addlistenerbatterychargingstatechange-)
 - [`removeAllListeners()`](#removealllisteners)
 - [`getPluginVersion()`](#getpluginversion)
@@ -225,6 +234,104 @@ Get the device's current language locale tag.
 ```typescript
 addListener(eventName: "batteryChargingStateChange", listenerFunc: BatteryChargingStateChangeListener) => Promise<PluginListenerHandle>
 ```
+
+### getBatteryExtras()
+
+```typescript
+getBatteryExtras() => Promise<BatteryExtras>
+```
+
+Return extended battery information including charge source and detailed state.
+
+**Returns:** <code>Promise&lt;<a href="#batteryextras">BatteryExtras</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### getDisplayInfo()
+
+```typescript
+getDisplayInfo() => Promise<DisplayInfo>
+```
+
+Return display characteristics (resolution, density, refresh rate).
+
+**Returns:** <code>Promise&lt;<a href="#displayinfo">DisplayInfo</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### getConfiguration()
+
+```typescript
+getConfiguration() => Promise<DeviceConfiguration>
+```
+
+Return device configuration and user preferences (orientation, dark mode, font scale).
+
+**Returns:** <code>Promise&lt;<a href="#deviceconfiguration">DeviceConfiguration</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### getPowerState()
+
+```typescript
+getPowerState() => Promise<PowerState>
+```
+
+Return power and thermal state information.
+
+**Returns:** <code>Promise&lt;<a href="#powerstate">PowerState</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### getMemoryInfo()
+
+```typescript
+getMemoryInfo() => Promise<MemoryInfo>
+```
+
+Return memory information (physical RAM, CPU cores, memory class).
+
+**Returns:** <code>Promise&lt;<a href="#memoryinfo">MemoryInfo</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### getSystemUptime()
+
+```typescript
+getSystemUptime() => Promise<SystemUptime>
+```
+
+Return system uptime (time since last boot).
+
+**Returns:** <code>Promise&lt;<a href="#systemuptime">SystemUptime</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### getAppVersion()
+
+```typescript
+getAppVersion() => Promise<AppVersion>
+```
+
+Return application version information (version string + build number).
+
+**Returns:** <code>Promise&lt;<a href="#appversion">AppVersion</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
 
 Listen for changes to whether the device is charging (including when the battery becomes full while plugged in).
 
@@ -334,6 +441,76 @@ Result object returned by the `getPluginVersion()` method.
 | Prop          | Type                | Description                       |
 | ------------- | ------------------- | --------------------------------- |
 | **`version`** | <code>string</code> | The native plugin version string. |
+
+#### BatteryExtras
+
+Extended battery information including charge source and detailed state.
+
+| Prop                | Type                                                                            | Description                                                                                                                                                                                                                                                                              | Since |
+| ------------------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| **`chargeSource`**  | <code>'unknown' \| 'ac' \| 'usb' \| 'wireless'</code>                           | The current charge source. - `"ac"` — AC adapter - `"usb"` — USB port - `"wireless"` — Wireless charging - `"unknown"` — Charge source not determinable                                                                                                                                  | 8.0.0 |
+| **`detailedState`** | <code>'unknown' \| 'unplugged' \| 'charging' \| 'full' \| 'not-charging'</code> | The detailed battery state. - `"unknown"` — Battery state is unknown - `"unplugged"` — Not connected to a power source - `"charging"` — Connected and charging - `"full"` — Connected and fully charged - `"not-charging"` — Connected but not charging (e.g. battery temperature limit) | 8.0.0 |
+
+#### DisplayInfo
+
+Display characteristics of the device screen.
+
+| Prop                | Type                | Description                                                                                                                                                       | Since |
+| ------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| **`widthPx`**       | <code>number</code> | Screen width in physical pixels.                                                                                                                                  | 8.0.0 |
+| **`heightPx`**      | <code>number</code> | Screen height in physical pixels.                                                                                                                                 | 8.0.0 |
+| **`densityDpi`**    | <code>number</code> | Screen density in DPI (dots per inch). Common values: 160 (mdpi), 240 (hdpi), 320 (xhdpi), 480 (xxhdpi), 640 (xxxhdpi).                                           | 8.0.0 |
+| **`scale`**         | <code>number</code> | Display scale factor. On iOS this corresponds to `UIScreen.main.scale` (e.g. 2.0, 3.0). On Android this is `DisplayMetrics.density` (e.g. 1.0, 1.5, 2.0, 3.0).    | 8.0.0 |
+| **`refreshRateHz`** | <code>number</code> | Maximum display refresh rate in Hz. On iOS this corresponds to `UIScreen.main.maximumFramesPerWindow`. On Android this corresponds to `Display.getRefreshRate()`. | 8.0.0 |
+
+#### DeviceConfiguration
+
+Device configuration and user preferences.
+
+| Prop              | Type                                                                 | Description                                                                                                                                                                                                                                                                                               | Since |
+| ----------------- | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| **`orientation`** | <code>'unknown' \| 'portrait' \| 'landscape'</code>                  | Current interface orientation. - `"portrait"` — Device is in portrait orientation - `"landscape"` — Device is in landscape orientation - `"unknown"` — Orientation cannot be determined                                                                                                                   | 8.0.0 |
+| **`isDarkMode`**  | <code>boolean</code>                                                 | Whether the device is in dark mode. On iOS this corresponds to `UITraitCollection.userInterfaceStyle`. On Android this corresponds to `Configuration.uiMode`.                                                                                                                                             | 8.0.0 |
+| **`fontScale`**   | <code>number</code>                                                  | User's preferred text size multiplier. A value of `1.0` means default text size. Values above 1.0 indicate the user has increased text size for accessibility. On iOS this corresponds to `UIContentSizeCategory` converted to a numeric scale. On Android this corresponds to `Configuration.fontScale`. | 8.0.0 |
+| **`idiom`**       | <code>'desktop' \| 'unknown' \| 'phone' \| 'tablet'</code>           | Device form factor / idiom. - `"phone"` — iPhone or small Android phone - `"tablet"` — iPad or Android tablet - `"desktop"` — Mac Catalyst or desktop mode - `"unknown"` — Cannot determine form factor                                                                                                   | 8.0.0 |
+| **`screenSize`**  | <code>'unknown' \| 'small' \| 'normal' \| 'large' \| 'xlarge'</code> | Screen size category relative to standard phone dimensions. - `"small"` — Smaller than normal phone - `"normal"` — Standard phone - `"large"` — Large phone / small tablet - `"xlarge"` — Tablet or larger - `"unknown"` — Cannot determine                                                               | 8.0.0 |
+
+#### PowerState
+
+Device power and thermal state.
+
+| Prop                 | Type                                                        | Description                                                                                                                                                                                                                                                                                                                                                                                            | Since |
+| -------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----- |
+| **`isLowPowerMode`** | <code>boolean</code>                                        | Whether the device is in low power / battery saver mode. On iOS this corresponds to `ProcessInfo.isLowPowerModeEnabled`. On Android this corresponds to `PowerManager.isPowerSaveMode()`.                                                                                                                                                                                                              | 8.0.0 |
+| **`thermalState`**   | <code>'nominal' \| 'fair' \| 'serious' \| 'critical'</code> | Current thermal state of the device. - `"nominal"` — No thermal issues - `"fair"` — Thermal level is elevated but manageable - `"serious"` — Device is actively throttling performance - `"critical"` — Device is severely throttling; reduce workload immediately On iOS this corresponds to `ProcessInfo.thermalState`. On Android this is derived from battery temperature and system thermal APIs. | 8.0.0 |
+
+#### MemoryInfo
+
+Device memory information beyond the basic `memUsed` field.
+
+| Prop                 | Type                 | Description                                                                                                                                                                                         | Since |
+| -------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| **`physicalRam`**    | <code>number</code>  | Total physical RAM available on the device, in bytes.                                                                                                                                               | 8.0.0 |
+| **`cpuCores`**       | <code>number</code>  | Number of active CPU cores available for the app. This may be less than the total core count on devices with heterogeneous CPU architectures (big.LITTLE, etc.).                                    | 8.0.0 |
+| **`memoryClassMb`**  | <code>number</code>  | Standard app memory budget in MB. On iOS this corresponds to `ProcessInfo.physicalMemory` (full RAM available to the app). On Android this corresponds to `ActivityManager.getMemoryClass()`.       | 8.0.0 |
+| **`isLowRamDevice`** | <code>boolean</code> | Whether the device is classified as a low-RAM device. On Android this corresponds to `ActivityManager.isLowRamDevice()`. On iOS this is always `false` (Apple does not expose this classification). | 8.0.0 |
+
+#### SystemUptime
+
+System uptime information.
+
+| Prop                | Type                | Description                                                                                                                                                              | Since |
+| ------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----- |
+| **`uptimeSeconds`** | <code>number</code> | Time in seconds since the device was last booted. On iOS this corresponds to `ProcessInfo.systemUptime`. On Android this corresponds to `SystemClock.elapsedRealtime()`. | 8.0.0 |
+
+#### AppVersion
+
+Application version information.
+
+| Prop              | Type                | Description                                                                                                                                                      | Since |
+| ----------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| **`version`**     | <code>string</code> | Human-readable version string (e.g. "1.2.3"). On iOS this corresponds to `CFBundleShortVersionString`. On Android this corresponds to `PackageInfo.versionName`. | 8.0.0 |
+| **`buildNumber`** | <code>number</code> | Numeric build number used for update detection. On iOS this corresponds to `CFBundleVersion`. On Android this corresponds to `PackageInfo.versionCode`.          | 8.0.0 |
 
 ### Type Aliases
 

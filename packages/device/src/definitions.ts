@@ -291,6 +291,274 @@ export interface BatteryInfo {
 }
 
 /**
+ * Extended battery information including charge source and detailed state.
+ *
+ * @since 8.0.0
+ */
+export interface BatteryExtras {
+  /**
+   * The current charge source.
+   *
+   * - `"ac"` — AC adapter
+   * - `"usb"` — USB port
+   * - `"wireless"` — Wireless charging
+   * - `"unknown"` — Charge source not determinable
+   *
+   * @since 8.0.0
+   */
+  chargeSource: 'ac' | 'usb' | 'wireless' | 'unknown';
+
+  /**
+   * The detailed battery state.
+   *
+   * - `"unknown"` — Battery state is unknown
+   * - `"unplugged"` — Not connected to a power source
+   * - `"charging"` — Connected and charging
+   * - `"full"` — Connected and fully charged
+   * - `"not-charging"` — Connected but not charging (e.g. battery temperature limit)
+   *
+   * @since 8.0.0
+   */
+  detailedState: 'unknown' | 'unplugged' | 'charging' | 'full' | 'not-charging';
+}
+
+/**
+ * Display characteristics of the device screen.
+ *
+ * @since 8.0.0
+ */
+export interface DisplayInfo {
+  /**
+   * Screen width in physical pixels.
+   *
+   * @since 8.0.0
+   */
+  widthPx: number;
+
+  /**
+   * Screen height in physical pixels.
+   *
+   * @since 8.0.0
+   */
+  heightPx: number;
+
+  /**
+   * Screen density in DPI (dots per inch).
+   *
+   * Common values: 160 (mdpi), 240 (hdpi), 320 (xhdpi), 480 (xxhdpi), 640 (xxxhdpi).
+   *
+   * @since 8.0.0
+   */
+  densityDpi: number;
+
+  /**
+   * Display scale factor.
+   *
+   * On iOS this corresponds to `UIScreen.main.scale` (e.g. 2.0, 3.0).
+   * On Android this is `DisplayMetrics.density` (e.g. 1.0, 1.5, 2.0, 3.0).
+   *
+   * @since 8.0.0
+   */
+  scale: number;
+
+  /**
+   * Maximum display refresh rate in Hz.
+   *
+   * On iOS this corresponds to `UIScreen.main.maximumFramesPerWindow`.
+   * On Android this corresponds to `Display.getRefreshRate()`.
+   *
+   * @since 8.0.0
+   */
+  refreshRateHz: number;
+}
+
+/**
+ * Device configuration and user preferences.
+ *
+ * @since 8.0.0
+ */
+export interface DeviceConfiguration {
+  /**
+   * Current interface orientation.
+   *
+   * - `"portrait"` — Device is in portrait orientation
+   * - `"landscape"` — Device is in landscape orientation
+   * - `"unknown"` — Orientation cannot be determined
+   *
+   * @since 8.0.0
+   */
+  orientation: 'portrait' | 'landscape' | 'unknown';
+
+  /**
+   * Whether the device is in dark mode.
+   *
+   * On iOS this corresponds to `UITraitCollection.userInterfaceStyle`.
+   * On Android this corresponds to `Configuration.uiMode`.
+   *
+   * @since 8.0.0
+   */
+  isDarkMode: boolean;
+
+  /**
+   * User's preferred text size multiplier.
+   *
+   * A value of `1.0` means default text size. Values above 1.0 indicate
+   * the user has increased text size for accessibility.
+   *
+   * On iOS this corresponds to `UIContentSizeCategory` converted to a numeric scale.
+   * On Android this corresponds to `Configuration.fontScale`.
+   *
+   * @since 8.0.0
+   */
+  fontScale: number;
+
+  /**
+   * Device form factor / idiom.
+   *
+   * - `"phone"` — iPhone or small Android phone
+   * - `"tablet"` — iPad or Android tablet
+   * - `"desktop"` — Mac Catalyst or desktop mode
+   * - `"unknown"` — Cannot determine form factor
+   *
+   * @since 8.0.0
+   */
+  idiom: 'phone' | 'tablet' | 'desktop' | 'unknown';
+
+  /**
+   * Screen size category relative to standard phone dimensions.
+   *
+   * - `"small"` — Smaller than normal phone
+   * - `"normal"` — Standard phone
+   * - `"large"` — Large phone / small tablet
+   * - `"xlarge"` — Tablet or larger
+   * - `"unknown"` — Cannot determine
+   *
+   * @since 8.0.0
+   */
+  screenSize: 'small' | 'normal' | 'large' | 'xlarge' | 'unknown';
+}
+
+/**
+ * Device power and thermal state.
+ *
+ * @since 8.0.0
+ */
+export interface PowerState {
+  /**
+   * Whether the device is in low power / battery saver mode.
+   *
+   * On iOS this corresponds to `ProcessInfo.isLowPowerModeEnabled`.
+   * On Android this corresponds to `PowerManager.isPowerSaveMode()`.
+   *
+   * @since 8.0.0
+   */
+  isLowPowerMode: boolean;
+
+  /**
+   * Current thermal state of the device.
+   *
+   * - `"nominal"` — No thermal issues
+   * - `"fair"` — Thermal level is elevated but manageable
+   * - `"serious"` — Device is actively throttling performance
+   * - `"critical"` — Device is severely throttling; reduce workload immediately
+   *
+   * On iOS this corresponds to `ProcessInfo.thermalState`.
+   * On Android this is derived from battery temperature and system thermal APIs.
+   *
+   * @since 8.0.0
+   */
+  thermalState: 'nominal' | 'fair' | 'serious' | 'critical';
+}
+
+/**
+ * Device memory information beyond the basic `memUsed` field.
+ *
+ * @since 8.0.0
+ */
+export interface MemoryInfo {
+  /**
+   * Total physical RAM available on the device, in bytes.
+   *
+   * @since 8.0.0
+   */
+  physicalRam: number;
+
+  /**
+   * Number of active CPU cores available for the app.
+   *
+   * This may be less than the total core count on devices with
+   * heterogeneous CPU architectures (big.LITTLE, etc.).
+   *
+   * @since 8.0.0
+   */
+  cpuCores: number;
+
+  /**
+   * Standard app memory budget in MB.
+   *
+   * On iOS this corresponds to `ProcessInfo.physicalMemory` (full RAM available to the app).
+   * On Android this corresponds to `ActivityManager.getMemoryClass()`.
+   *
+   * @since 8.0.0
+   */
+  memoryClassMb: number;
+
+  /**
+   * Whether the device is classified as a low-RAM device.
+   *
+   * On Android this corresponds to `ActivityManager.isLowRamDevice()`.
+   * On iOS this is always `false` (Apple does not expose this classification).
+   *
+   * @since 8.0.0
+   */
+  isLowRamDevice: boolean;
+}
+
+/**
+ * System uptime information.
+ *
+ * @since 8.0.0
+ */
+export interface SystemUptime {
+  /**
+   * Time in seconds since the device was last booted.
+   *
+   * On iOS this corresponds to `ProcessInfo.systemUptime`.
+   * On Android this corresponds to `SystemClock.elapsedRealtime()`.
+   *
+   * @since 8.0.0
+   */
+  uptimeSeconds: number;
+}
+
+/**
+ * Application version information.
+ *
+ * @since 8.0.0
+ */
+export interface AppVersion {
+  /**
+   * Human-readable version string (e.g. "1.2.3").
+   *
+   * On iOS this corresponds to `CFBundleShortVersionString`.
+   * On Android this corresponds to `PackageInfo.versionName`.
+   *
+   * @since 8.0.0
+   */
+  version: string;
+
+  /**
+   * Numeric build number used for update detection.
+   *
+   * On iOS this corresponds to `CFBundleVersion`.
+   * On Android this corresponds to `PackageInfo.versionCode`.
+   *
+   * @since 8.0.0
+   */
+  buildNumber: number;
+}
+
+/**
  * Callback for battery charging state changes.
  *
  * The listener fires only when the charging state **changes** (e.g. the
@@ -361,6 +629,55 @@ export interface DevicePlugin {
    * @since 8.0.0
    */
   getLanguageTag(): Promise<LanguageTag>;
+
+  /**
+   * Return extended battery information including charge source and detailed state.
+   *
+   * @since 8.0.0
+   */
+  getBatteryExtras(): Promise<BatteryExtras>;
+
+  /**
+   * Return display characteristics (resolution, density, refresh rate).
+   *
+   * @since 8.0.0
+   */
+  getDisplayInfo(): Promise<DisplayInfo>;
+
+  /**
+   * Return device configuration and user preferences (orientation, dark mode, font scale).
+   *
+   * @since 8.0.0
+   */
+  getConfiguration(): Promise<DeviceConfiguration>;
+
+  /**
+   * Return power and thermal state information.
+   *
+   * @since 8.0.0
+   */
+  getPowerState(): Promise<PowerState>;
+
+  /**
+   * Return memory information (physical RAM, CPU cores, memory class).
+   *
+   * @since 8.0.0
+   */
+  getMemoryInfo(): Promise<MemoryInfo>;
+
+  /**
+   * Return system uptime (time since last boot).
+   *
+   * @since 8.0.0
+   */
+  getSystemUptime(): Promise<SystemUptime>;
+
+  /**
+   * Return application version information (version string + build number).
+   *
+   * @since 8.0.0
+   */
+  getAppVersion(): Promise<AppVersion>;
 
   /**
    * Listen for changes to whether the device is charging (including when the battery becomes full while plugged in).

@@ -2,13 +2,20 @@ import { WebPlugin, PluginListenerHandle } from '@capacitor/core';
 
 import {
   BatteryChargingStateChangeListener,
+  BatteryExtras,
   BatteryInfo,
+  DeviceConfiguration,
   DeviceId,
   DeviceInfo,
   DevicePlugin,
+  DisplayInfo,
   GetLanguageCodeResult,
   LanguageTag,
+  MemoryInfo,
   PluginVersionResult,
+  PowerState,
+  SystemUptime,
+  AppVersion,
 } from './definitions';
 import { PLUGIN_VERSION } from './version';
 
@@ -165,6 +172,65 @@ export class DeviceWeb extends WebPlugin implements DevicePlugin {
   async getLanguageTag(): Promise<LanguageTag> {
     return {
       value: navigator.language,
+    };
+  }
+
+  async getBatteryExtras(): Promise<BatteryExtras> {
+    throw this.unavailable('Battery extras are not available on web');
+  }
+
+  async getDisplayInfo(): Promise<DisplayInfo> {
+    if (typeof window === 'undefined') {
+      throw this.unavailable('Display info not available in this environment');
+    }
+
+    return {
+      widthPx: window.screen.width,
+      heightPx: window.screen.height,
+      densityDpi: window.devicePixelRatio * 160,
+      scale: window.devicePixelRatio,
+      refreshRateHz: 60,
+    };
+  }
+
+  async getConfiguration(): Promise<DeviceConfiguration> {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+      throw this.unavailable('Configuration not available in this environment');
+    }
+
+    const isDarkMode = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+    const orientation = window.screen.orientation?.type?.includes('portrait') ? 'portrait' : 'landscape';
+
+    return {
+      orientation: orientation as 'portrait' | 'landscape',
+      isDarkMode,
+      fontScale: 1.0,
+      idiom: 'phone',
+      screenSize: 'normal',
+    };
+  }
+
+  async getPowerState(): Promise<PowerState> {
+    throw this.unavailable('Power state is not available on web');
+  }
+
+  async getMemoryInfo(): Promise<MemoryInfo> {
+    throw this.unavailable('Memory info is not available on web');
+  }
+
+  async getSystemUptime(): Promise<SystemUptime> {
+    if (typeof performance === 'undefined') {
+      throw this.unavailable('System uptime not available in this environment');
+    }
+    return {
+      uptimeSeconds: performance.timeOrigin / 1000,
+    };
+  }
+
+  async getAppVersion(): Promise<AppVersion> {
+    return {
+      version: PLUGIN_VERSION,
+      buildNumber: 0,
     };
   }
 

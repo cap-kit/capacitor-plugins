@@ -43,6 +43,13 @@ public final class DevicePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "getLanguageCode", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getLanguageTag", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "addListener", returnType: CAPPluginReturnNone),
+        CAPPluginMethod(name: "getBatteryExtras", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getDisplayInfo", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getConfiguration", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getPowerState", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getMemoryInfo", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getSystemUptime", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getAppVersion", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "removeListener", returnType: CAPPluginReturnNone),
         CAPPluginMethod(name: "removeAllListeners", returnType: CAPPluginReturnNone),
         CAPPluginMethod(name: "getPluginVersion", returnType: CAPPluginReturnPromise)
@@ -173,6 +180,97 @@ public final class DevicePlugin: CAPPlugin, CAPBridgedPlugin {
         call.resolve([
             "value": tag
         ])
+    }
+
+    // MARK: - Battery Extras
+
+    @objc func getBatteryExtras(_ call: CAPPluginCall) {
+        do {
+            let result = implementation.getBatteryExtras()
+            call.resolve(result)
+        } catch let error as NativeError {
+            reject(call, error: error)
+        } catch {
+            handleError(call, error)
+        }
+    }
+
+    // MARK: - Display Info
+
+    @objc func getDisplayInfo(_ call: CAPPluginCall) {
+        do {
+            let result = implementation.getDisplayInfo()
+            call.resolve(result)
+        } catch let error as NativeError {
+            reject(call, error: error)
+        } catch {
+            handleError(call, error)
+        }
+    }
+
+    // MARK: - Configuration
+
+    @objc func getConfiguration(_ call: CAPPluginCall) {
+        do {
+            let result = implementation.getConfiguration()
+            call.resolve(result)
+        } catch let error as NativeError {
+            reject(call, error: error)
+        } catch {
+            handleError(call, error)
+        }
+    }
+
+    // MARK: - Power State
+
+    @objc func getPowerState(_ call: CAPPluginCall) {
+        do {
+            let result = implementation.getPowerState()
+            call.resolve(result)
+        } catch let error as NativeError {
+            reject(call, error: error)
+        } catch {
+            handleError(call, error)
+        }
+    }
+
+    // MARK: - Memory Info
+
+    @objc func getMemoryInfo(_ call: CAPPluginCall) {
+        do {
+            let result = implementation.getMemoryInfo()
+            call.resolve(result)
+        } catch let error as NativeError {
+            reject(call, error: error)
+        } catch {
+            handleError(call, error)
+        }
+    }
+
+    // MARK: - System Uptime
+
+    @objc func getSystemUptime(_ call: CAPPluginCall) {
+        do {
+            let result = implementation.getSystemUptime()
+            call.resolve(result)
+        } catch let error as NativeError {
+            reject(call, error: error)
+        } catch {
+            handleError(call, error)
+        }
+    }
+
+    // MARK: - App Version
+
+    @objc func getAppVersion(_ call: CAPPluginCall) {
+        do {
+            let result = implementation.getAppVersion()
+            call.resolve(result)
+        } catch let error as NativeError {
+            reject(call, error: error)
+        } catch {
+            handleError(call, error)
+        }
     }
 
     // MARK: - Error Mapping

@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import MachO
 
 /**
  * Native iOS implementation for the Device plugin.
@@ -288,5 +289,177 @@ import UIKit
         combined.append(String(format: "%02d", patch))
 
         return Int(combined.joined())
+    }
+
+    // MARK: - Display Info
+
+    func getDisplayInfo() -> [String: Any] {
+        let screen = UIScreen.main
+        return [
+            "widthPx": Int(screen.nativeBounds.width),
+            "heightPx": Int(screen.nativeBounds.height),
+            "densityDpi": Int(screen.scale * 160),
+            "scale": screen.scale,
+            "refreshRateHz": screen.maximumFramesPerSecond
+        ]
+    }
+
+    // MARK: - Configuration
+
+    func getConfiguration() -> [String: Any] {
+        let screen = UIScreen.main
+        let device = UIDevice.current
+
+        // Map UIUserInterfaceIdiom to our string
+        let idiom: String
+        switch device.userInterfaceIdiom {
+        case .phone: idiom = "phone"
+        case .pad: idiom = "tablet"
+        case .mac: idiom = "desktop"
+        default: idiom = "unknown"
+        }
+
+        // Map traitCollection.userInterfaceStyle
+        let isDarkMode = screen.traitCollection.userInterfaceStyle == .dark
+
+        // Map preferredContentSizeCategory to numeric scale
+        // UIContentSizeCategory doesn't expose fontScale directly;
+        // map the category to a representative multiplier.
+        let contentSizeCategory = UIApplication.shared.preferredContentSizeCategory
+        let fontScale: Double
+        switch contentSizeCategory {
+        case .extraSmall: fontScale = 0.8
+        case .small: fontScale = 0.9
+        case .medium: fontScale = 1.0
+        case .large: fontScale = 1.15
+        case .extraLarge: fontScale = 1.3
+        case .extraExtraLarge: fontScale = 1.6
+        case .extraExtraExtraLarge: fontScale = 1.9
+        case .accessibilityMedium: fontScale = 2.3
+        case .accessibilityLarge: fontScale = 2.8
+        case .accessibilityExtraLarge: fontScale = 3.3
+        case .accessibilityExtraExtraLarge: fontScale = 3.8
+        case .accessibilityExtraExtraExtraLarge: fontScale = 4.4
+        default: fontScale = 1.0
+        }
+
+        // Map orientation
+        let orientation: String
+        switch device.orientation {
+        case .portrait, .portraitUpsideDown: orientation = "portrait"
+        case .landscapeLeft, .landscapeRight: orientation = "landscape"
+        default: orientation = "unknown"
+        }
+
+        // Map screen size bucket
+        let screenSize: String
+        let screenHeight = screen.nativeBounds.height / screen.scale
+        if screenHeight < 568 {
+            screenSize = "small"
+        } else if screenHeight < 812 {
+            screenSize = "normal"
+        } else if screenHeight < 1024 {
+            screenSize = "large"
+        } else {
+            screenSize = "xlarge"
+        }
+
+        return [
+            "orientation": orientation,
+            "isDarkMode": isDarkMode,
+            "fontScale": fontScale,
+            "idiom": idiom,
+            "screenSize": screenSize
+        ]
+    }
+
+    // MARK: - Power State
+
+    func getPowerState() -> [String: Any] {
+        let thermalState: String
+        switch ProcessInfo.processInfo.thermalState {
+        case .nominal: thermalState = "nominal"
+        case .fair: thermalState = "fair"
+        case .serious: thermalState = "serious"
+        case .critical: thermalState = "critical"
+        @unknown default: thermalState = "unknown"
+        }
+
+        return [
+            "isLowPowerMode": ProcessInfo.processInfo.isLowPowerModeEnabled,
+            "thermalState": thermalState
+        ]
+    }
+
+    // MARK: - Memory Info
+
+    func getMemoryInfo() -> [String: Any] {
+        let physicalRam = ProcessInfo.processInfo.physicalMemory
+
+        // Get CPU core count via sysctl
+        var numCores: Int = 0
+        var sizeOfCores = MemoryLayout<Int>.size
+        var mib: [Int32] = [CTL_HW, HW_NCPU]
+        sysctl(&mib, 2, &numCores, &sizeOfCores, nil, 0)
+
+        return [
+            "physicalRam": physicalRam,
+            "cpuCores": numCores,
+            "memoryClassMb": Int(physicalRam / (1024 * 1024)),  // iOS: full RAM available
+            "isLowRamDevice": false  // iOS does not expose this classification
+        ]
+    }
+
+    // MARK: - System Uptime
+
+    func getSystemUptime() -> [String: Any] {
+        return [
+            "uptimeSeconds": ProcessInfo.processInfo.systemUptime
+        ]
+    }
+
+    // MARK: - App Version
+
+    func getAppVersion() -> [String: Any] {
+        let bundle = Bundle.main
+        let version = bundle.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
+        let buildNumber = bundle.infoDictionary?["CFBundleVersion"] as? String ?? "0"
+
+        return [
+            "version": version,
+            "buildNumber": Int(buildNumber) ?? 0
+        ]
+    }
+
+    // MARK: - Battery Extras
+
+    func getBatteryExtras() -> [String: Any] {
+        let device = UIDevice.current
+
+        // Determine charge source
+        // iOS UIDevice doesn't directly expose charge source, but batteryState gives us partial info
+        // We use ProcessInfo for power source info
+        let chargeSource: String
+        switch device.batteryState {
+        case .charging, .full:
+            chargeSource = "ac"  // Default assumption when plugged in
+        default:
+            chargeSource = "unknown"
+        }
+
+        // Map detailed state
+        let detailedState: String
+        switch device.batteryState {
+        case .unknown: detailedState = "unknown"
+        case .unplugged: detailedState = "unplugged"
+        case .charging: detailedState = "charging"
+        case .full: detailedState = "full"
+        @unknown default: detailedState = "unknown"
+        }
+
+        return [
+            "chargeSource": chargeSource,
+            "detailedState": detailedState
+        ]
     }
 }

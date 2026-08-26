@@ -334,6 +334,115 @@ class DevicePlugin : Plugin() {
   }
 
   // ---------------------------------------------------------------------------
+  // Extended Device Features
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Returns extended battery information: charge source and detailed charging state.
+   */
+  @PluginMethod
+  fun getBatteryExtras(call: PluginCall) {
+    try {
+      val result = implementation.getBatteryExtras()
+      call.resolve(JSObject().apply { result.forEach { (k, v) -> put(k, v) } })
+    } catch (e: NativeError) {
+      handleError(call, e)
+    } catch (e: Exception) {
+      handleError(call, e)
+    }
+  }
+
+  /**
+   * Returns display metrics including resolution, density, and refresh rate.
+   */
+  @PluginMethod
+  fun getDisplayInfo(call: PluginCall) {
+    try {
+      val result = implementation.getDisplayInfo()
+      call.resolve(JSObject().apply { result.forEach { (k, v) -> put(k, v) } })
+    } catch (e: NativeError) {
+      handleError(call, e)
+    } catch (e: Exception) {
+      handleError(call, e)
+    }
+  }
+
+  /**
+   * Returns the current device configuration: orientation, dark mode, font scale, idiom, and screen size.
+   */
+  @PluginMethod
+  fun getConfiguration(call: PluginCall) {
+    try {
+      val result = implementation.getConfiguration()
+      call.resolve(JSObject().apply { result.forEach { (k, v) -> put(k, v) } })
+    } catch (e: NativeError) {
+      handleError(call, e)
+    } catch (e: Exception) {
+      handleError(call, e)
+    }
+  }
+
+  /**
+   * Returns the power state: low power mode and thermal state.
+   */
+  @PluginMethod
+  fun getPowerState(call: PluginCall) {
+    try {
+      val result = implementation.getPowerState()
+      call.resolve(JSObject().apply { result.forEach { (k, v) -> put(k, v) } })
+    } catch (e: NativeError) {
+      handleError(call, e)
+    } catch (e: Exception) {
+      handleError(call, e)
+    }
+  }
+
+  /**
+   * Returns memory information: physical RAM, CPU cores, memory class, and low-RAM flag.
+   */
+  @PluginMethod
+  fun getMemoryInfo(call: PluginCall) {
+    try {
+      val result = implementation.getMemoryInfo()
+      call.resolve(JSObject().apply { result.forEach { (k, v) -> put(k, v) } })
+    } catch (e: NativeError) {
+      handleError(call, e)
+    } catch (e: Exception) {
+      handleError(call, e)
+    }
+  }
+
+  /**
+   * Returns the system uptime in seconds.
+   */
+  @PluginMethod
+  fun getSystemUptime(call: PluginCall) {
+    try {
+      val result = implementation.getSystemUptime()
+      call.resolve(JSObject().apply { result.forEach { (k, v) -> put(k, v) } })
+    } catch (e: NativeError) {
+      handleError(call, e)
+    } catch (e: Exception) {
+      handleError(call, e)
+    }
+  }
+
+  /**
+   * Returns the app version name and build number.
+   */
+  @PluginMethod
+  fun getAppVersion(call: PluginCall) {
+    try {
+      val result = implementation.getAppVersion()
+      call.resolve(JSObject().apply { result.forEach { (k, v) -> put(k, v) } })
+    } catch (e: NativeError) {
+      handleError(call, e)
+    } catch (e: Exception) {
+      handleError(call, e)
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Version Information
   // ---------------------------------------------------------------------------
 
