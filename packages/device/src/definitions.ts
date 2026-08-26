@@ -540,6 +540,16 @@ export interface MemoryInfo {
   isLowRamDevice: boolean;
 
   /**
+   * Whether the returned values are estimated or measured.
+   *
+   * When `true`, the data comes from a fallback path or partial reading
+   * and should not be treated as authoritative.
+   *
+   * @since 8.0.0
+   */
+  isEstimated?: boolean;
+
+  /**
    * Current CPU usage as a percentage (0–100), measured as a delta between two samples.
    *
    * The first call always returns `null`. Subsequent calls return the average CPU
@@ -576,6 +586,16 @@ export interface MemoryInfo {
  * @since 8.0.0
  */
 export interface StorageInfo {
+  /**
+   * Whether the returned values are estimated or measured.
+   *
+   * When `true`, the underlying OS call failed and zero-filled defaults
+   * were returned. Consumers should treat these values as placeholders.
+   *
+   * @since 8.0.0
+   */
+  isEstimated: boolean;
+
   /**
    * Total storage capacity of the volume, in bytes.
    *

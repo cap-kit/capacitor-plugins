@@ -258,6 +258,7 @@ export class DeviceWeb extends WebPlugin implements DevicePlugin {
       cpuCores,
       memoryClassMb,
       isLowRamDevice: deviceMemoryGB != null && deviceMemoryGB <= 1,
+      isEstimated: deviceMemoryGB == null,
       cpuUsagePercent: null,
       memoryPressure: 'unknown',
     };
@@ -280,6 +281,7 @@ export class DeviceWeb extends WebPlugin implements DevicePlugin {
         freeBytes,
         usedBytes: usage,
         usedPercent,
+        isEstimated: false,
       };
     } catch {
       return {
@@ -287,6 +289,7 @@ export class DeviceWeb extends WebPlugin implements DevicePlugin {
         freeBytes: 0,
         usedBytes: 0,
         usedPercent: 0,
+        isEstimated: true,
       };
     }
   }

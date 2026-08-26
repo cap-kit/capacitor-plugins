@@ -344,7 +344,7 @@ class DevicePlugin : Plugin() {
   fun getBatteryExtras(call: PluginCall) {
     try {
       val result = implementation.getBatteryExtras()
-      call.resolve(JSObject().apply { result.forEach { (k, v) -> put(k, v) } })
+      call.resolve(toJSObject(result))
     } catch (e: NativeError) {
       handleError(call, e)
     } catch (e: Exception) {
@@ -359,7 +359,7 @@ class DevicePlugin : Plugin() {
   fun getDisplayInfo(call: PluginCall) {
     try {
       val result = implementation.getDisplayInfo()
-      call.resolve(JSObject().apply { result.forEach { (k, v) -> put(k, v) } })
+      call.resolve(toJSObject(result))
     } catch (e: NativeError) {
       handleError(call, e)
     } catch (e: Exception) {
@@ -374,7 +374,7 @@ class DevicePlugin : Plugin() {
   fun getConfiguration(call: PluginCall) {
     try {
       val result = implementation.getConfiguration()
-      call.resolve(JSObject().apply { result.forEach { (k, v) -> put(k, v) } })
+      call.resolve(toJSObject(result))
     } catch (e: NativeError) {
       handleError(call, e)
     } catch (e: Exception) {
@@ -389,7 +389,7 @@ class DevicePlugin : Plugin() {
   fun getPowerState(call: PluginCall) {
     try {
       val result = implementation.getPowerState()
-      call.resolve(JSObject().apply { result.forEach { (k, v) -> put(k, v) } })
+      call.resolve(toJSObject(result))
     } catch (e: NativeError) {
       handleError(call, e)
     } catch (e: Exception) {
@@ -404,7 +404,7 @@ class DevicePlugin : Plugin() {
   fun getMemoryInfo(call: PluginCall) {
     try {
       val result = implementation.getMemoryInfo()
-      call.resolve(JSObject().apply { result.forEach { (k, v) -> put(k, v) } })
+      call.resolve(toJSObject(result))
     } catch (e: NativeError) {
       handleError(call, e)
     } catch (e: Exception) {
@@ -419,7 +419,7 @@ class DevicePlugin : Plugin() {
   fun getSystemUptime(call: PluginCall) {
     try {
       val result = implementation.getSystemUptime()
-      call.resolve(JSObject().apply { result.forEach { (k, v) -> put(k, v) } })
+      call.resolve(toJSObject(result))
     } catch (e: NativeError) {
       handleError(call, e)
     } catch (e: Exception) {
@@ -434,7 +434,7 @@ class DevicePlugin : Plugin() {
   fun getAppVersion(call: PluginCall) {
     try {
       val result = implementation.getAppVersion()
-      call.resolve(JSObject().apply { result.forEach { (k, v) -> put(k, v) } })
+      call.resolve(toJSObject(result))
     } catch (e: NativeError) {
       handleError(call, e)
     } catch (e: Exception) {
@@ -449,7 +449,7 @@ class DevicePlugin : Plugin() {
   fun getStorageInfo(call: PluginCall) {
     try {
       val result = implementation.getStorageInfo()
-      call.resolve(JSObject().apply { result.forEach { (k, v) -> put(k, v) } })
+      call.resolve(toJSObject(result))
     } catch (e: NativeError) {
       handleError(call, e)
     } catch (e: Exception) {

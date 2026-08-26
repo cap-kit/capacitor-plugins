@@ -21,6 +21,14 @@ import io.capkit.device.config.DeviceConfig
 import io.capkit.device.error.ErrorMessages
 import io.capkit.device.error.NativeError
 import io.capkit.device.logger.DeviceLogger
+import io.capkit.device.model.AppVersionResult
+import io.capkit.device.model.BatteryExtrasResult
+import io.capkit.device.model.ConfigurationResult
+import io.capkit.device.model.DisplayInfoResult
+import io.capkit.device.model.MemoryInfoResult
+import io.capkit.device.model.PowerStateResult
+import io.capkit.device.model.StorageInfoResult
+import io.capkit.device.model.SystemUptimeResult
 import java.io.BufferedReader
 import java.io.FileReader
 import java.util.Locale
@@ -227,7 +235,7 @@ class DeviceImpl(
   /**
    * Returns display metrics including resolution, density, and refresh rate.
    */
-  fun getDisplayInfo(): Map<String, Any> {
+  fun getDisplayInfo(): DisplayInfoResult {
     val metrics = Resources.getSystem().displayMetrics
     val refreshRate =
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -238,12 +246,12 @@ class DeviceImpl(
         60
       }
 
-    return mapOf(
-      "widthPx" to metrics.widthPixels,
-      "heightPx" to metrics.heightPixels,
-      "densityDpi" to metrics.densityDpi,
-      "scale" to metrics.density.toDouble(),
-      "refreshRateHz" to refreshRate,
+    return DisplayInfoResult(
+      widthPx = metrics.widthPixels,
+      heightPx = metrics.heightPixels,
+      densityDpi = metrics.densityDpi,
+      scale = metrics.density.toDouble(),
+      refreshRateHz = refreshRate,
     )
   }
 
@@ -254,7 +262,7 @@ class DeviceImpl(
   /**
    * Returns the current device configuration: orientation, dark mode, font scale, idiom, and screen size.
    */
-  fun getConfiguration(): Map<String, Any> {
+  fun getConfiguration(): ConfigurationResult {
     val config = context.resources.configuration
 
     val orientation =
@@ -278,12 +286,12 @@ class DeviceImpl(
 
     val idiom = if (config.smallestScreenWidthDp >= 600) "tablet" else "phone"
 
-    return mapOf(
-      "orientation" to orientation,
-      "isDarkMode" to isDarkMode,
-      "fontScale" to config.fontScale.toDouble(),
-      "idiom" to idiom,
-      "screenSize" to screenSize,
+    return ConfigurationResult(
+      orientation = orientation,
+      isDarkMode = isDarkMode,
+      fontScale = config.fontScale.toDouble(),
+      idiom = idiom,
+      screenSize = screenSize,
     )
   }
 
@@ -294,7 +302,7 @@ class DeviceImpl(
   /**
    * Returns the power state: low power mode and thermal state.
    */
-  fun getPowerState(): Map<String, Any> {
+  fun getPowerState(): PowerStateResult {
     val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
 
     val isLowPowerMode =
@@ -319,9 +327,9 @@ class DeviceImpl(
         "nominal"
       }
 
-    return mapOf(
-      "isLowPowerMode" to isLowPowerMode,
-      "thermalState" to thermalState,
+    return PowerStateResult(
+      isLowPowerMode = isLowPowerMode,
+      thermalState = thermalState,
     )
   }
 
@@ -333,7 +341,7 @@ class DeviceImpl(
    * Returns memory information: physical RAM, CPU cores, memory class, low-RAM flag,
    * delta-based CPU usage, and memory pressure level.
    */
-  fun getMemoryInfo(): Map<String, Any> {
+  fun getMemoryInfo(): MemoryInfoResult {
     val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
 
     val memoryClassMb = activityManager?.memoryClass ?: 0
@@ -357,16 +365,15 @@ class DeviceImpl(
     // Memory pressure
     val memoryPressure = getMemoryPressure(memInfo)
 
-    val resultMap =
-      mutableMapOf<String, Any>(
-        "physicalRam" to physicalRam,
-        "cpuCores" to cpuCores,
-        "memoryClassMb" to memoryClassMb,
-        "isLowRamDevice" to isLowRamDevice,
-      )
-    cpuUsage?.let { resultMap["cpuUsagePercent"] = it }
-    resultMap["memoryPressure"] = memoryPressure
-    return resultMap
+    return MemoryInfoResult(
+      physicalRam = physicalRam,
+      cpuCores = cpuCores,
+      memoryClassMb = memoryClassMb,
+      isLowRamDevice = isLowRamDevice,
+      isEstimated = false,
+      cpuUsagePercent = cpuUsage,
+      memoryPressure = memoryPressure,
+    )
   }
 
   // ---------------------------------------------------------------------------
@@ -447,7 +454,7 @@ class DeviceImpl(
   /**
    * Returns disk storage information for the primary data volume.
    */
-  fun getStorageInfo(): Map<String, Any> =
+  fun getStorageInfo(): StorageInfoResult =
     try {
       val statFs = StatFs(Environment.getDataDirectory().absolutePath)
       val totalBytes = statFs.blockCountLong * statFs.blockSizeLong
@@ -455,18 +462,21 @@ class DeviceImpl(
       val usedBytes = totalBytes - freeBytes
       val usedPercent = if (totalBytes > 0) (usedBytes.toDouble() / totalBytes.toDouble()) * 100.0 else 0.0
 
-      mapOf(
-        "totalBytes" to totalBytes,
-        "freeBytes" to freeBytes,
-        "usedBytes" to usedBytes,
-        "usedPercent" to usedPercent,
+      StorageInfoResult(
+        totalBytes = totalBytes,
+        freeBytes = freeBytes,
+        usedBytes = usedBytes,
+        usedPercent = usedPercent,
+        isEstimated = false,
       )
     } catch (e: Exception) {
-      mapOf(
-        "totalBytes" to 0L,
-        "freeBytes" to 0L,
-        "usedBytes" to 0L,
-        "usedPercent" to 0.0,
+      DeviceLogger.debug("Failed to read storage info: ${e.message}")
+      StorageInfoResult(
+        totalBytes = 0L,
+        freeBytes = 0L,
+        usedBytes = 0L,
+        usedPercent = 0.0,
+        isEstimated = true,
       )
     }
 
@@ -477,10 +487,10 @@ class DeviceImpl(
   /**
    * Returns the system uptime in seconds.
    */
-  fun getSystemUptime(): Map<String, Any> {
+  fun getSystemUptime(): SystemUptimeResult {
     val uptimeMillis = SystemClock.elapsedRealtime()
-    return mapOf(
-      "uptimeSeconds" to (uptimeMillis / 1000.0),
+    return SystemUptimeResult(
+      uptimeSeconds = uptimeMillis / 1000.0,
     )
   }
 
@@ -491,12 +501,12 @@ class DeviceImpl(
   /**
    * Returns the app version name and build number.
    */
-  fun getAppVersion(): Map<String, Any> {
+  fun getAppVersion(): AppVersionResult {
     val packageInfo =
       try {
         context.packageManager.getPackageInfo(context.packageName, 0)
       } catch (e: Exception) {
-        return mapOf("version" to "unknown", "buildNumber" to 0)
+        return AppVersionResult(version = "unknown", buildNumber = 0)
       }
 
     @Suppress("DEPRECATION")
@@ -509,9 +519,9 @@ class DeviceImpl(
         packageInfo.versionCode
       }
 
-    return mapOf(
-      "version" to versionName,
-      "buildNumber" to versionCode,
+    return AppVersionResult(
+      version = versionName,
+      buildNumber = versionCode,
     )
   }
 
@@ -522,7 +532,7 @@ class DeviceImpl(
   /**
    * Returns extended battery information: charge source, detailed state, health, and temperature.
    */
-  fun getBatteryExtras(): Map<String, Any> {
+  fun getBatteryExtras(): BatteryExtrasResult {
     val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
 
     val plugged = intent?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0
@@ -561,11 +571,11 @@ class DeviceImpl(
     val tempTenths = intent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
     val temperature = tempTenths / 10.0
 
-    return mapOf(
-      "chargeSource" to chargeSource,
-      "detailedState" to detailedState,
-      "health" to healthState,
-      "temperature" to temperature,
+    return BatteryExtrasResult(
+      chargeSource = chargeSource,
+      detailedState = detailedState,
+      health = healthState,
+      temperature = temperature,
     )
   }
 

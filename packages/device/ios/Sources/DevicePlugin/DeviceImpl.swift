@@ -416,6 +416,7 @@ import MachO
             "cpuCores": numCores,
             "memoryClassMb": Int(physicalRam / (1024 * 1024)),
             "isLowRamDevice": false,
+            "isEstimated": false,
             "cpuUsagePercent": cpuUsage as Any,
             "memoryPressure": memoryPressure
         ]
@@ -540,14 +541,16 @@ import MachO
                 "totalBytes": total,
                 "freeBytes": free,
                 "usedBytes": used,
-                "usedPercent": usedPercent
+                "usedPercent": usedPercent,
+                "isEstimated": false
             ]
         } catch {
             return [
                 "totalBytes": 0,
                 "freeBytes": 0,
                 "usedBytes": 0,
-                "usedPercent": 0.0
+                "usedPercent": 0.0,
+                "isEstimated": true
             ]
         }
     }
