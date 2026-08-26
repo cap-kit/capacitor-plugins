@@ -117,12 +117,13 @@ public final class DevicePlugin: CAPPlugin, CAPBridgedPlugin {
      * Returns the vendor identifier assigned to the app on this device.
      */
     @objc func getId(_ call: CAPPluginCall) {
-        if let uuid = UIDevice.current.identifierForVendor {
-            call.resolve([
-                "identifier": uuid.uuidString
-            ])
-        } else {
-            reject(call, error: .unavailable("Id not available"))
+        do {
+            let result = implementation.getId()
+            call.resolve(result)
+        } catch let error as NativeError {
+            reject(call, error: error)
+        } catch {
+            handleError(call, error)
         }
     }
 
@@ -130,52 +131,28 @@ public final class DevicePlugin: CAPPlugin, CAPBridgedPlugin {
      * Returns information about the underlying device, OS, and platform.
      */
     @objc func getInfo(_ call: CAPPluginCall) {
-        var isSimulator = false
-        var modelName = ""
-        #if targetEnvironment(simulator)
-        isSimulator = true
-        modelName = ProcessInfo().environment["SIMULATOR_MODEL_IDENTIFIER"] ?? "Simulator"
-        #else
-        modelName = implementation.getModelName()
-        #endif
-
-        let memUsed = implementation.getMemoryUsage()
-        let diskFree = implementation.getFreeDiskSize() ?? 0
-        let realDiskFree = implementation.getRealFreeDiskSize() ?? 0
-        let diskTotal = implementation.getTotalDiskSize() ?? 0
-        let realDiskTotal = implementation.getRealTotalDiskSize() ?? 0
-        let systemVersionNum = implementation.getSystemVersionInt() ?? 0
-
-        call.resolve([
-            "memUsed": memUsed,
-            "diskFree": diskFree,
-            "diskTotal": diskTotal,
-            "realDiskFree": realDiskFree,
-            "realDiskTotal": realDiskTotal,
-            "name": UIDevice.current.name,
-            "model": modelName,
-            "operatingSystem": "ios",
-            "osVersion": UIDevice.current.systemVersion,
-            "iOSVersion": systemVersionNum,
-            "platform": "ios",
-            "manufacturer": "Apple",
-            "isVirtual": isSimulator,
-            "webViewVersion": UIDevice.current.systemVersion
-        ])
+        do {
+            let result = implementation.getInfo()
+            call.resolve(result)
+        } catch let error as NativeError {
+            reject(call, error: error)
+        } catch {
+            handleError(call, error)
+        }
     }
 
     /**
      * Returns information about the device battery.
      */
     @objc func getBatteryInfo(_ call: CAPPluginCall) {
-        // Battery data is only valid while monitoring is enabled; re-arm it defensively
-        // but never disable it afterwards so listeners keep receiving events.
-        UIDevice.current.isBatteryMonitoringEnabled = true
-
-        call.resolve([
-            "batteryLevel": UIDevice.current.batteryLevel,
-            "isCharging": UIDevice.current.batteryState == .charging || UIDevice.current.batteryState == .full
-        ])
+        do {
+            let result = implementation.getBatteryInfo()
+            call.resolve(result)
+        } catch let error as NativeError {
+            reject(call, error: error)
+        } catch {
+            handleError(call, error)
+        }
     }
 
     /**
@@ -201,19 +178,18 @@ public final class DevicePlugin: CAPPlugin, CAPBridgedPlugin {
     // MARK: - Error Mapping
 
     /**
-     * Rejects the call using standardized error codes from the native DeviceError enum.
+     * Rejects the call using standardized error codes from the native NativeError enum.
      */
     private func reject(
         _ call: CAPPluginCall,
-        error: DeviceError
+        error: NativeError
     ) {
-        // Use the centralized errorCode and message defined in DeviceError.swift
         call.reject(error.message, error.errorCode)
     }
 
     private func handleError(_ call: CAPPluginCall, _ error: Error) {
-        if let deviceError = error as? DeviceError {
-            call.reject(deviceError.message, deviceError.errorCode)
+        if let nativeError = error as? NativeError {
+            call.reject(nativeError.message, nativeError.errorCode)
         } else {
             reject(call, error: .initFailed(error.localizedDescription))
         }

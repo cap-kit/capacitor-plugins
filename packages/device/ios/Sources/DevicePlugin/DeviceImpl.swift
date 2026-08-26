@@ -54,6 +54,83 @@ import UIKit
         )
     }
 
+    // MARK: - Device Identity
+
+    /**
+     * Returns the vendor identifier and its type.
+     */
+    func getId() -> [String: Any] {
+        let uid = UIDevice.current.identifierForVendor?.uuidString ?? ""
+        return ["uid": uid, "type": "vendor"]
+    }
+
+    // MARK: - Device Info
+
+    /**
+     * Returns a dictionary containing device hardware and OS information.
+     */
+    func getInfo() -> [String: Any] {
+        let device = UIDevice.current
+        let matrix = DeviceImpl.getDeviceMatrix()
+        return [
+            "name": device.name,
+            "model": getModelName(),
+            "platform": matrix["platform"] ?? "",
+            "operatingSystem": matrix["os"] ?? "",
+            "osVersion": device.systemVersion,
+            "systemVersionInt": getSystemVersionInt() ?? 0,
+            "memUsed": getMemoryUsage(),
+            "batteryLevel": Int(round(device.batteryLevel * 100)),
+            "isVirtual": isVirtual()
+        ] as [String: Any]
+    }
+
+    // MARK: - Battery
+
+    /**
+     * Returns battery level and charging state.
+     */
+    func getBatteryInfo() -> [String: Any] {
+        let device = UIDevice.current
+        return [
+            "batteryLevel": Int(round(device.batteryLevel * 100)),
+            "isCharging": device.batteryState == .charging || device.batteryState == .full,
+            "isPlugged": device.batteryState == .charging || device.batteryState == .full
+        ]
+    }
+
+    // MARK: - Device Matrix
+
+    /**
+     * Returns platform and OS identifiers derived from the runtime environment.
+     */
+    static func getDeviceMatrix() -> [String: String] {
+        #if os(iOS)
+        return ["platform": "ios", "os": "ios"]
+        #elseif os(macOS)
+        return ["platform": "mac", "os": "macos"]
+        #elseif os(tvOS)
+        return ["platform": "tv", "os": "tvos"]
+        #elseif os(watchOS)
+        return ["platform": "watch", "os": "watchos"]
+        #else
+        return ["platform": "unknown", "os": "unknown"]
+        #endif
+    }
+
+    // MARK: - Simulator Detection
+
+    /**
+     * Returns whether the app is running on a simulator.
+     */
+    func isVirtual() -> Bool {
+        #if targetEnvironment(simulator)
+        return true
+        #else
+        return false
+        #endif
+    }
+
     // MARK: - Memory
 
     /**
@@ -167,11 +244,15 @@ import UIKit
      * Gets the machine model identifier (e.g. "iPhone13,4").
      */
     public func getModelName() -> String {
+        #if targetEnvironment(simulator)
+        return ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"] ?? "Simulator"
+        #else
         var size = 0
         sysctlbyname("hw.machine", nil, &size, nil, 0)
         var machine = [CChar](repeating: 0, count: size)
         sysctlbyname("hw.machine", &machine, &size, nil, 0)
         return String(cString: machine)
+        #endif
     }
 
     // MARK: - System Version

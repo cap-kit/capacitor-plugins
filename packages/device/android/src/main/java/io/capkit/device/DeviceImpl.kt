@@ -12,8 +12,10 @@ import android.os.StatFs
 import android.provider.Settings
 import android.webkit.WebView
 import io.capkit.device.config.DeviceConfig
-import io.capkit.device.error.DeviceError
+import io.capkit.device.error.ErrorMessages
+import io.capkit.device.error.NativeError
 import io.capkit.device.logger.DeviceLogger
+import java.util.Locale
 
 /**
  * Platform-specific native implementation for the Device plugin.
@@ -112,11 +114,11 @@ class DeviceImpl(
   /**
    * Returns the ANDROID_ID assigned to this app-signing key, user, and device.
    *
-   * @throws DeviceError.Unavailable when the identifier cannot be read.
+   * @throws NativeError.Unavailable when the identifier cannot be read.
    */
   fun getUuid(): String =
     Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
-      ?: throw DeviceError.Unavailable("Id not available")
+      ?: throw NativeError.Unavailable(ErrorMessages.UNAVAILABLE)
 
   /**
    * Returns the consumer-visible device name, or null when unsupported.
@@ -151,7 +153,31 @@ class DeviceImpl(
   /**
    * Returns whether the app is running on an emulator or virtual device.
    */
-  fun isVirtual(): Boolean = Build.FINGERPRINT.contains("generic") || Build.PRODUCT.contains("sdk")
+  fun isVirtual(): Boolean =
+    try {
+      val result =
+        Settings.Secure.getString(
+          context.contentResolver,
+          Settings.Secure.ANDROID_ID,
+        )
+      result.isNullOrEmpty() || result == "unknown"
+    } catch (e: Exception) {
+      false
+    }
+
+  // ---------------------------------------------------------------------------
+  // Locale
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Returns the two-character language code of the current locale.
+   */
+  fun getLanguageCode(): String = Locale.getDefault().language
+
+  /**
+   * Returns the BCP 47 language tag of the current locale.
+   */
+  fun getLanguageTag(): String = Locale.getDefault().toLanguageTag()
 
   // ---------------------------------------------------------------------------
   // Battery

@@ -39,6 +39,7 @@ declare global {
 export class DeviceWeb extends WebPlugin implements DevicePlugin {
   private batteryApi: any = null;
   private batteryListenersAttached = false;
+  private readonly uidCache = new Map<string, string>();
 
   // -----------------------------------------------------------------------------
   // Battery Charging State Events
@@ -259,18 +260,15 @@ export class DeviceWeb extends WebPlugin implements DevicePlugin {
     return uaFields;
   }
 
-  getUid(): string {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      let uid = window.localStorage.getItem('_capuid');
-      if (uid) {
-        return uid;
-      }
-
-      uid = this.uuid4();
-      window.localStorage.setItem('_capuid', uid);
-      return uid;
+  private getUid(): string {
+    const key = '_capuid';
+    const cached = this.uidCache.get(key);
+    if (cached) {
+      return cached;
     }
-    return this.uuid4();
+    const uid = this.uuid4();
+    this.uidCache.set(key, uid);
+    return uid;
   }
 
   uuid4(): string {

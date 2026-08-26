@@ -59,28 +59,41 @@ export interface DeviceConfig {
  * These codes are returned as part of structured error objects
  * and allow consumers to implement programmatic error handling.
  *
+ * Defined as a readonly object literal rather than an enum to satisfy
+ * CapKit strict TypeScript rules (no enums; use `as const` objects).
+ *
  * @since 8.0.0
  */
-export enum DeviceErrorCode {
+export const DeviceErrorCode = {
   /** The device does not have the requested hardware or the feature is not available on this platform. */
-  UNAVAILABLE = 'UNAVAILABLE',
+  UNAVAILABLE: 'UNAVAILABLE',
   /** The user cancelled an interactive flow. */
-  CANCELLED = 'CANCELLED',
+  CANCELLED: 'CANCELLED',
   /** The user denied the permission or the feature is disabled by the OS. */
-  PERMISSION_DENIED = 'PERMISSION_DENIED',
+  PERMISSION_DENIED: 'PERMISSION_DENIED',
   /** The plugin failed to initialize or perform an operation. */
-  INIT_FAILED = 'INIT_FAILED',
+  INIT_FAILED: 'INIT_FAILED',
   /** The input provided to the plugin method is invalid, missing, or malformed. */
-  INVALID_INPUT = 'INVALID_INPUT',
+  INVALID_INPUT: 'INVALID_INPUT',
   /** The requested type is not valid or supported. */
-  UNKNOWN_TYPE = 'UNKNOWN_TYPE',
+  UNKNOWN_TYPE: 'UNKNOWN_TYPE',
   /** The requested resource does not exist. */
-  NOT_FOUND = 'NOT_FOUND',
+  NOT_FOUND: 'NOT_FOUND',
   /** The operation conflicts with the current state. */
-  CONFLICT = 'CONFLICT',
+  CONFLICT: 'CONFLICT',
   /** The operation did not complete within the expected time. */
-  TIMEOUT = 'TIMEOUT',
-}
+  TIMEOUT: 'TIMEOUT',
+} as const;
+
+/**
+ * Union type derived from the `DeviceErrorCode` object.
+ *
+ * Consumers can use this to obtain valid error code values at the type level
+ * without depending on the runtime enum object.
+ *
+ * @since 8.0.0
+ */
+export type DeviceErrorCode = (typeof DeviceErrorCode)[keyof typeof DeviceErrorCode];
 
 /**
  * Result object returned by the `getPluginVersion()` method.

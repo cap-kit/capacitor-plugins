@@ -13,12 +13,12 @@ import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 import io.capkit.device.config.DeviceConfig
-import io.capkit.device.error.DeviceError
+import io.capkit.device.error.ErrorMessages
+import io.capkit.device.error.NativeError
 import io.capkit.device.logger.DeviceLogger
 import io.capkit.device.model.DevicePluginVersionResult
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.util.Locale
 
 /**
  * Capacitor bridge for the Device plugin.
@@ -141,10 +141,14 @@ class DevicePlugin : Plugin() {
    */
   private fun registerBatteryReceiver() {
     val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-      ContextCompat.registerReceiver(context, batteryStateReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
-    } else {
-      context.registerReceiver(batteryStateReceiver, filter)
+    try {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        ContextCompat.registerReceiver(context, batteryStateReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+      } else {
+        context.registerReceiver(batteryStateReceiver, filter)
+      }
+    } catch (e: SecurityException) {
+      DeviceLogger.warn("Failed to register battery receiver: ${e.message}")
     }
   }
 
@@ -193,24 +197,41 @@ class DevicePlugin : Plugin() {
    */
   private fun reject(
     call: PluginCall,
-    error: DeviceError,
+    error: NativeError,
   ) {
     val code =
       when (error) {
-        is DeviceError.Unavailable -> "UNAVAILABLE"
-        is DeviceError.Cancelled -> "CANCELLED"
-        is DeviceError.PermissionDenied -> "PERMISSION_DENIED"
-        is DeviceError.InitFailed -> "INIT_FAILED"
-        is DeviceError.InvalidInput -> "INVALID_INPUT"
-        is DeviceError.UnknownType -> "UNKNOWN_TYPE"
-        is DeviceError.NotFound -> "NOT_FOUND"
-        is DeviceError.Conflict -> "CONFLICT"
-        is DeviceError.Timeout -> "TIMEOUT"
+        is NativeError.Unavailable -> "UNAVAILABLE"
+        is NativeError.Cancelled -> "CANCELLED"
+        is NativeError.PermissionDenied -> "PERMISSION_DENIED"
+        is NativeError.InitFailed -> "INIT_FAILED"
+        is NativeError.InvalidInput -> "INVALID_INPUT"
+        is NativeError.UnknownType -> "UNKNOWN_TYPE"
+        is NativeError.NotFound -> "NOT_FOUND"
+        is NativeError.Conflict -> "CONFLICT"
+        is NativeError.Timeout -> "TIMEOUT"
       }
 
-    // Always use the message from the DeviceError instance
-    val message = error.message ?: "Unknown native error"
+    // Always use the message from the NativeError instance
+    val message = error.message ?: ErrorMessages.INTERNAL_ERROR
     call.reject(message, code)
+  }
+
+  /**
+   * Handles unexpected throwables from the Impl layer.
+   * If the throwable is already a NativeError, delegates to [reject].
+   * Otherwise wraps it in an InitFailed rejection.
+   */
+  private fun handleError(
+    call: PluginCall,
+    throwable: Throwable,
+  ) {
+    if (throwable is NativeError) {
+      reject(call, throwable)
+    } else {
+      val message = throwable.message ?: ErrorMessages.UNEXPECTED_NATIVE_ERROR
+      reject(call, NativeError.InitFailed(message))
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -226,8 +247,10 @@ class DevicePlugin : Plugin() {
       val result = JSObject()
       result.put("identifier", implementation.getUuid())
       call.resolve(result)
-    } catch (error: DeviceError) {
-      reject(call, error)
+    } catch (e: NativeError) {
+      reject(call, e)
+    } catch (e: Exception) {
+      handleError(call, e)
     }
   }
 
@@ -239,22 +262,28 @@ class DevicePlugin : Plugin() {
    */
   @PluginMethod
   fun getInfo(call: PluginCall) {
-    val result = JSObject()
-    result.put("memUsed", implementation.getMemUsed())
-    result.put("diskFree", implementation.getDiskFree())
-    result.put("diskTotal", implementation.getDiskTotal())
-    result.put("realDiskFree", implementation.getRealDiskFree())
-    result.put("realDiskTotal", implementation.getRealDiskTotal())
-    result.put("model", implementation.getModel())
-    result.put("operatingSystem", "android")
-    result.put("osVersion", implementation.getOsVersion())
-    result.put("androidSDKVersion", implementation.getAndroidSDKVersion())
-    result.put("platform", implementation.getPlatform())
-    result.put("manufacturer", implementation.getManufacturer())
-    result.put("isVirtual", implementation.isVirtual())
-    result.put("name", implementation.getName())
-    result.put("webViewVersion", implementation.getWebViewVersion())
-    call.resolve(result)
+    try {
+      val result = JSObject()
+      result.put("memUsed", implementation.getMemUsed())
+      result.put("diskFree", implementation.getDiskFree())
+      result.put("diskTotal", implementation.getDiskTotal())
+      result.put("realDiskFree", implementation.getRealDiskFree())
+      result.put("realDiskTotal", implementation.getRealDiskTotal())
+      result.put("model", implementation.getModel())
+      result.put("operatingSystem", "android")
+      result.put("osVersion", implementation.getOsVersion())
+      result.put("androidSDKVersion", implementation.getAndroidSDKVersion())
+      result.put("platform", implementation.getPlatform())
+      result.put("manufacturer", implementation.getManufacturer())
+      result.put("isVirtual", implementation.isVirtual())
+      result.put("name", implementation.getName())
+      result.put("webViewVersion", implementation.getWebViewVersion())
+      call.resolve(result)
+    } catch (e: NativeError) {
+      handleError(call, e)
+    } catch (e: Exception) {
+      handleError(call, e)
+    }
   }
 
   /**
@@ -262,10 +291,16 @@ class DevicePlugin : Plugin() {
    */
   @PluginMethod
   fun getBatteryInfo(call: PluginCall) {
-    val result = JSObject()
-    result.put("batteryLevel", implementation.getBatteryLevel())
-    result.put("isCharging", implementation.isCharging())
-    call.resolve(result)
+    try {
+      val result = JSObject()
+      result.put("batteryLevel", implementation.getBatteryLevel())
+      result.put("isCharging", implementation.isCharging())
+      call.resolve(result)
+    } catch (e: NativeError) {
+      handleError(call, e)
+    } catch (e: Exception) {
+      handleError(call, e)
+    }
   }
 
   /**
@@ -273,9 +308,14 @@ class DevicePlugin : Plugin() {
    */
   @PluginMethod
   fun getLanguageCode(call: PluginCall) {
-    val result = JSObject()
-    result.put("value", Locale.getDefault().language)
-    call.resolve(result)
+    try {
+      val result = implementation.getLanguageCode()
+      call.resolve(JSObject().put("value", result))
+    } catch (e: NativeError) {
+      reject(call, e)
+    } catch (e: Exception) {
+      handleError(call, e)
+    }
   }
 
   /**
@@ -283,9 +323,14 @@ class DevicePlugin : Plugin() {
    */
   @PluginMethod
   fun getLanguageTag(call: PluginCall) {
-    val result = JSObject()
-    result.put("value", Locale.getDefault().toLanguageTag())
-    call.resolve(result)
+    try {
+      val result = implementation.getLanguageTag()
+      call.resolve(JSObject().put("value", result))
+    } catch (e: NativeError) {
+      reject(call, e)
+    } catch (e: Exception) {
+      handleError(call, e)
+    }
   }
 
   // ---------------------------------------------------------------------------

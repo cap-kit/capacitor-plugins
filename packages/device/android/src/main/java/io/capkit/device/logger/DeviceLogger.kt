@@ -41,6 +41,17 @@ object DeviceLogger {
   }
 
   /**
+   * Prints a warning log message.
+   *
+   * Warning logs are always printed regardless of [verbose] state.
+   *
+   * @param message Human-readable warning description.
+   */
+  fun warn(message: String) {
+    Log.w(TAG, message)
+  }
+
+  /**
    * Prints an error log message.
    *
    * Error logs are always printed regardless of [verbose] state.

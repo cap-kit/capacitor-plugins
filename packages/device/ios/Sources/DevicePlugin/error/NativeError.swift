@@ -12,7 +12,7 @@ import Foundation
  - Must be throwable from the Impl layer
  - Mapping to JS-facing error codes happens ONLY in the Plugin layer
  */
-enum DeviceError: Error {
+enum NativeError: Error {
 
     /// Feature or capability is not available on this device or configuration
     case unavailable(String)

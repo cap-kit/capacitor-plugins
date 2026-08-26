@@ -12,7 +12,7 @@ package io.capkit.device.error
  * Errors are intentionally NOT @Serializable: they are conveyed to JavaScript
  * exclusively via the bridge rejection path (message + code) and never serialized.
  */
-sealed class DeviceError(
+sealed class NativeError(
   val errorMessage: String,
 ) : Throwable(errorMessage) {
   // -----------------------------------------------------------------------------
@@ -25,7 +25,7 @@ sealed class DeviceError(
    */
   class Unavailable(
     val msg: String,
-  ) : DeviceError(msg)
+  ) : NativeError(msg)
 
   /**
    * The user cancelled an interactive flow.
@@ -33,7 +33,7 @@ sealed class DeviceError(
    */
   class Cancelled(
     val msg: String,
-  ) : DeviceError(msg)
+  ) : NativeError(msg)
 
   /**
    * Required permission was denied or not granted by the user.
@@ -41,7 +41,7 @@ sealed class DeviceError(
    */
   class PermissionDenied(
     val msg: String,
-  ) : DeviceError(msg)
+  ) : NativeError(msg)
 
   /**
    * Plugin failed to initialize or perform a required native operation.
@@ -49,7 +49,7 @@ sealed class DeviceError(
    */
   class InitFailed(
     val msg: String,
-  ) : DeviceError(msg)
+  ) : NativeError(msg)
 
   /**
    * Invalid or malformed input was provided by the caller.
@@ -57,7 +57,7 @@ sealed class DeviceError(
    */
   class InvalidInput(
     val msg: String,
-  ) : DeviceError(msg)
+  ) : NativeError(msg)
 
   /**
    * Invalid or unsupported input type was provided to the native implementation.
@@ -65,7 +65,7 @@ sealed class DeviceError(
    */
   class UnknownType(
     val msg: String,
-  ) : DeviceError(msg)
+  ) : NativeError(msg)
 
   /**
    * The requested resource does not exist.
@@ -73,7 +73,7 @@ sealed class DeviceError(
    */
   class NotFound(
     val msg: String,
-  ) : DeviceError(msg)
+  ) : NativeError(msg)
 
   /**
    * The operation conflicts with the current state.
@@ -81,7 +81,7 @@ sealed class DeviceError(
    */
   class Conflict(
     val msg: String,
-  ) : DeviceError(msg)
+  ) : NativeError(msg)
 
   /**
    * The operation did not complete within the expected time.
@@ -89,5 +89,5 @@ sealed class DeviceError(
    */
   class Timeout(
     val msg: String,
-  ) : DeviceError(msg)
+  ) : NativeError(msg)
 }
