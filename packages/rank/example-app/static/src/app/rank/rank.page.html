@@ -1,0 +1,63 @@
+<app-page-header [title]="'Rank'" />
+
+<ion-content class="ion-padding">
+  <app-info-card
+    [title]="'Rank'"
+    [subtitle]="'@cap-kit/rank'"
+    [content]="'Ranking and scoring of app users based on their activity.'"
+    (githubClick)="openOnGithub()"
+  />
+
+  <app-info-card
+    [title]="'Runtime info'"
+    [content]="
+    !reviewEnvChecked()
+      ? 'Review environment not checked yet.'
+      : canRequestReview()
+        ? 'In-App Review can be requested in this environment.'
+        : 'In-App Review is NOT available in this environment.'
+          + (reviewEnvReason() ? ' Reason: ' + reviewEnvReason() : '')
+  "
+  />
+
+  @if (isSupported()) {
+  <ion-list>
+    <ion-list-header>
+      <ion-label>Availability</ion-label>
+      <ion-badge [color]="badgeColor(singleOkState())"> {{ badgeLabel(singleOkState()) }} </ion-badge>
+    </ion-list-header>
+
+    <ion-item>
+      <ion-button expand="block" (click)="checkAvailability()"> Check availability </ion-button>
+    </ion-item>
+
+    <ion-item>
+      <ion-label>Fire and forget</ion-label>
+      <ion-toggle [checked]="fireAndForget()" (ionChange)="fireAndForget.set($event.detail.checked)" />
+    </ion-item>
+
+    <ion-item>
+      <ion-button
+        expand="block"
+        (click)="requestReview()"
+        [disabled]="reviewEnvChecked() && canRequestReview() === false"
+      >
+        Request in-app review
+      </ion-button>
+    </ion-item>
+
+    <ion-item>
+      <ion-button expand="block" (click)="openStore()"> Open store page </ion-button>
+    </ion-item>
+
+    <ion-item lines="none">
+      <ion-note> The review dialog is controlled by the OS and may not always appear. </ion-note>
+    </ion-item>
+  </ion-list>
+
+  } @else {
+  <p>This plugin is not supported on this platform.</p>
+  }
+</ion-content>
+
+<app-page-footer [version]="displayVersion()" [label]="'Plugin Version'" />

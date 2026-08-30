@@ -1,0 +1,22 @@
+--- a/src/app/app.config.ts
++++ b/src/app/app.config.ts
+@@ -3,6 +3,8 @@
+ import { IonicRouteStrategy, provideIonicAngular, ToastController } from '@ionic/angular';
+ 
+ import { routes } from './app.routes';
++import { IntegritySignalStore } from './integrity/integrity-signal.store';
++import { initIntegrityListener } from './integrity/integrity-listener';
+ 
+ export const appConfig: ApplicationConfig = {
+   providers: [
+@@ -11,7 +13,10 @@
+     provideRouter(routes, withPreloading(PreloadAllModules)),
+     provideIonicAngular({}),
+     provideAppInitializer(() => {
++      const store = inject(IntegritySignalStore);
+       const toastCtrl = inject(ToastController);
++
++      initIntegrityListener(store, toastCtrl);
+     }),
+   ]
+ };

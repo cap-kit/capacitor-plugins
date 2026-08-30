@@ -1,0 +1,140 @@
+<app-page-header [title]="'People'" />
+
+<ion-content class="ion-padding">
+  <app-info-card
+    [title]="'People'"
+    [subtitle]="'@cap-kit/people'"
+    [content]="'High-performance contact management, with zero-permission picking and capability-based access.'"
+    (githubClick)="openOnGithub()"
+  />
+
+  @if (isSupported()) {
+  <ion-list>
+    <ion-item-divider>
+      <ion-label>Configuration & Access</ion-label>
+    </ion-item-divider>
+
+    <ion-item button (click)="checkAndRequestPermissions()">
+      <ion-icon slot="start" name="shield-checkmark" color="primary"></ion-icon>
+      <ion-label>
+        <h2>Check Permissions & Capabilities</h2>
+        <p>Required for system access and writing</p>
+      </ion-label>
+    </ion-item>
+
+    <ion-item-divider>
+      <ion-label>User Interaction</ion-label>
+    </ion-item-divider>
+
+    <ion-item button (click)="pickContact()">
+      <ion-icon slot="start" name="person" color="success"></ion-icon>
+      <ion-label>
+        <h2>Open Contact Picker</h2>
+        <p>Zero-Permission: User chooses a contact</p>
+      </ion-label>
+    </ion-item>
+
+    <ion-item-divider>
+      <ion-label>Database Operations</ion-label>
+    </ion-item-divider>
+
+    <ion-item button (click)="loadContacts()" [disabled]="capabilities()?.canRead === false">
+      <ion-icon slot="start" name="list" color="warning"></ion-icon>
+      <ion-label>
+        <h2>Load Top 10 Contacts</h2>
+        <p>Requires READ_CONTACTS permissions</p>
+      </ion-label>
+    </ion-item>
+
+    <ion-item button (click)="createTestContact()" [disabled]="capabilities()?.canWrite === false">
+      <ion-icon slot="start" name="add" color="tertiary"></ion-icon>
+      <ion-label>
+        <h2>Create Test Contact</h2>
+        <p>Create a "CapKit Owned" contact</p>
+      </ion-label>
+    </ion-item>
+
+    @if (selectedContact()) {
+    <ion-item-divider color="light">
+      <ion-label>Last Contact Managed</ion-label>
+    </ion-item-divider>
+    <ion-item lines="none">
+      <ion-icon slot="start" name="people-circle"></ion-icon>
+      <ion-label>
+        <h2 style="font-weight: bold">{{ selectedContact()?.name?.display }}</h2>
+        @for (p of selectedContact()?.phones; track p.number) {
+        <p>Tel: {{ p.number }} ({{ p.label }})</p>
+        }
+        <p><small>ID: {{ selectedContact()?.id }}</small></p>
+      </ion-label>
+    </ion-item>
+    } @if (contactsList().length > 0) {
+    <ion-item-divider color="light">
+      <ion-label>Systematic Contact List</ion-label>
+    </ion-item-divider>
+    @for (c of contactsList(); track c.id) {
+    <ion-item>
+      <ion-label>
+        <h3>{{ c.name?.display }}</h3>
+        <p>{{ c.phones?.[0]?.number }}</p>
+      </ion-label>
+    </ion-item>
+    } }
+    <ion-item-divider>
+      <ion-label>Real Time Monitoring</ion-label>
+    </ion-item-divider>
+
+    <ion-item button (click)="toggleObservation()" [disabled]="capabilities()?.canObserve === false">
+      <ion-icon
+        slot="start"
+        [name]="isObserving() ? 'eye-off' : 'eye'"
+        [color]="isObserving() ? 'danger' : 'primary'"
+      ></ion-icon>
+      <ion-label>
+        <h2>{{ isObserving() ? 'Stop Observer' : 'Start Observer' }}</h2>
+        <p>Listen to the system's 'peopleChange' event</p>
+      </ion-label>
+      <ion-badge slot="end" [color]="isObserving() ? 'success' : 'medium'">
+        {{ isObserving() ? 'LIVE' : 'OFF' }}
+      </ion-badge>
+    </ion-item>
+
+    <ion-item-divider>
+      <ion-label>Group Management</ion-label>
+    </ion-item-divider>
+
+    <ion-item button (click)="loadGroups()" [disabled]="capabilities()?.canManageGroups === false">
+      <ion-icon slot="start" name="grid" color="secondary"></ion-icon>
+      <ion-label>
+        <h2>List Groups</h2>
+        <p>Retrieve contact folders/labels</p>
+      </ion-label>
+    </ion-item>
+
+    <ion-item button (click)="createGroup()" [disabled]="capabilities()?.canManageGroups === false">
+      <ion-icon slot="start" name="add-circle" color="tertiary"></ion-icon>
+      <ion-label>
+        <h2>Create New Group</h2>
+        <p>Add a label to the database</p>
+      </ion-label>
+    </ion-item>
+
+    @if (groups().length > 0) {
+    <ion-item-divider color="light">
+      <ion-label>Groups Found</ion-label>
+    </ion-item-divider>
+    @for (g of groups(); track g.id) {
+    <ion-item>
+      <ion-label>
+        <h3>{{ g.name }}</h3>
+        <p>Source: {{ g.source }} | Read-Only: {{ g.readOnly }}</p>
+      </ion-label>
+    </ion-item>
+    } }
+  </ion-list>
+  } @else {
+  <p>This plugin is not supported on this platform.</p>
+  }
+</ion-content>
+
+<app-page-footer [version]="displayVersion()" [label]="'Plugin Version'" />
