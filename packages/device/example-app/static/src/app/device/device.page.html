@@ -4,14 +4,303 @@
   <app-info-card
     [title]="'Device'"
     [subtitle]="'@cap-kit/device'"
-    [content]="'A Capacitor plugin for...'"
+    [content]="'A demo page for the @cap-kit/device plugin. Every read-only getter is invoked and its result is rendered below.'"
+    [githubUrl]="GH_URL"
     (githubClick)="openOnGithub()"
   />
 
   @if (isSupported()) {
-  <ion-list lines="none"> </ion-list>
+  <div class="actions">
+    <ion-button fill="solid" (click)="onRefresh()" [disabled]="isLoading()">
+      <ion-icon name="refresh" slot="start" />
+      Refresh
+    </ion-button>
+    <ion-button
+      fill="outline"
+      [color]="isObservingBattery() ? 'danger' : 'primary'"
+      (click)="onToggleBatteryListener()"
+    >
+      <ion-icon name="battery-half" slot="start" />
+      {{ isObservingBattery() ? 'Stop battery listener' : 'Start battery listener' }}
+    </ion-button>
+  </div>
+
+  @if (countErrors() > 0) {
+  <ion-item color="danger" lines="full" class="error-summary">
+    <ion-label>
+      <h2>{{ countErrors() }} section{{ countErrors() === 1 ? '' : 's' }} failed to load</h2>
+      @for (err of errors(); track err) {
+      <p>{{ err }}</p>
+      }
+    </ion-label>
+  </ion-item>
+  }
+
+  <!-- Identity -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="phone-portrait" slot="start" />
+        Identity
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      @if (deviceId()) {
+      <ion-item lines="none" class="detail-row">
+        <ion-label position="stacked">Device ID</ion-label>
+        <ion-text class="mono">{{ deviceId()?.identifier }}</ion-text>
+      </ion-item>
+      } @else {
+      <p class="placeholder">Not available</p>
+      } @if (appVersion()) {
+      <ion-item lines="none" class="detail-row">
+        <ion-label position="stacked">App version</ion-label>
+        <ion-text>{{ appVersion()?.version }} (build {{ appVersion()?.buildNumber }})</ion-text>
+      </ion-item>
+      }
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Device info -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="hardware-chip" slot="start" />
+        Device Info
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      @if (deviceInfoRows().length) {
+      <ion-list lines="none">
+        @for (row of deviceInfoRows(); track row.key) {
+        <ion-item>
+          <ion-label>
+            <h3>{{ row.key }}</h3>
+            <p>{{ row.value }}</p>
+          </ion-label>
+        </ion-item>
+        }
+      </ion-list>
+      } @else {
+      <p class="placeholder">Not available</p>
+      }
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Battery -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="battery-half" slot="start" />
+        Battery
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      @if (batteryInfoRows().length) {
+      <ion-list lines="none">
+        @for (row of batteryInfoRows(); track row.key) {
+        <ion-item>
+          <ion-label>
+            <h3>{{ row.key }}</h3>
+            <p>{{ row.value }}</p>
+          </ion-label>
+        </ion-item>
+        }
+      </ion-list>
+      } @else {
+      <p class="placeholder">Not available</p>
+      } @if (batteryExtrasRows().length) {
+      <ion-item lines="full" class="section-separator"><ion-label>Extended</ion-label></ion-item>
+      <ion-list lines="none">
+        @for (row of batteryExtrasRows(); track row.key) {
+        <ion-item>
+          <ion-label>
+            <h3>{{ row.key }}</h3>
+            <p>{{ row.value }}</p>
+          </ion-label>
+        </ion-item>
+        }
+      </ion-list>
+      }
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Language -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="language" slot="start" />
+        Language
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      @if (languageCode() || languageTag()) {
+      <ion-item lines="none" class="detail-row">
+        <ion-label position="stacked">Code</ion-label>
+        <ion-text class="mono">{{ languageCode()?.value ?? 'n/a' }}</ion-text>
+      </ion-item>
+      <ion-item lines="none" class="detail-row">
+        <ion-label position="stacked">Tag</ion-label>
+        <ion-text class="mono">{{ languageTag()?.value ?? 'n/a' }}</ion-text>
+      </ion-item>
+      } @else {
+      <p class="placeholder">Not available</p>
+      }
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Display -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="phone-portrait" slot="start" />
+        Display
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      @if (displayRows().length) {
+      <ion-list lines="none">
+        @for (row of displayRows(); track row.key) {
+        <ion-item>
+          <ion-label>
+            <h3>{{ row.key }}</h3>
+            <p>{{ row.value }}</p>
+          </ion-label>
+        </ion-item>
+        }
+      </ion-list>
+      } @else {
+      <p class="placeholder">Not available</p>
+      }
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Configuration -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="settings" slot="start" />
+        Configuration
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      @if (configRows().length) {
+      <ion-list lines="none">
+        @for (row of configRows(); track row.key) {
+        <ion-item>
+          <ion-label>
+            <h3>{{ row.key }}</h3>
+            <p>{{ row.value }}</p>
+          </ion-label>
+        </ion-item>
+        }
+      </ion-list>
+      } @else {
+      <p class="placeholder">Not available</p>
+      }
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Power -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="snow" slot="start" />
+        Power
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      @if (powerRows().length) {
+      <ion-list lines="none">
+        @for (row of powerRows(); track row.key) {
+        <ion-item>
+          <ion-label>
+            <h3>{{ row.key }}</h3>
+            <p>{{ row.value }}</p>
+          </ion-label>
+        </ion-item>
+        }
+      </ion-list>
+      } @else {
+      <p class="placeholder">Not available</p>
+      }
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Memory -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="speedometer" slot="start" />
+        Memory &amp; CPU
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      @if (memoryRows().length) {
+      <ion-list lines="none">
+        @for (row of memoryRows(); track row.key) {
+        <ion-item>
+          <ion-label>
+            <h3>{{ row.key }}</h3>
+            <p>{{ row.value }}</p>
+          </ion-label>
+        </ion-item>
+        }
+      </ion-list>
+      } @else {
+      <p class="placeholder">Not available</p>
+      }
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Storage -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="disc" slot="start" />
+        Storage
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      @if (storageRows().length) {
+      <ion-list lines="none">
+        @for (row of storageRows(); track row.key) {
+        <ion-item>
+          <ion-label>
+            <h3>{{ row.key }}</h3>
+            <p>{{ row.value }}</p>
+          </ion-label>
+        </ion-item>
+        }
+      </ion-list>
+      } @else {
+      <p class="placeholder">Not available</p>
+      }
+    </ion-card-content>
+  </ion-card>
+
+  <!-- System uptime -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="timer" slot="start" />
+        System
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      @if (systemUptime()) {
+      <ion-item lines="none" class="detail-row">
+        <ion-label position="stacked">Uptime</ion-label>
+        <ion-text>{{ formatUptime(systemUptime()?.uptimeSeconds) }}</ion-text>
+      </ion-item>
+      } @else {
+      <p class="placeholder">Not available</p>
+      }
+    </ion-card-content>
+  </ion-card>
+
   } @else {
-  <p>This plugin is not supported on this platform.</p>
+  <p class="unsupported">This plugin is not supported on this platform.</p>
   }
 </ion-content>
 

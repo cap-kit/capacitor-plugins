@@ -1,7 +1,11 @@
 --- a/src/app/plugins-list.ts
 +++ b/src/app/plugins-list.ts
-@@ -13,2 +13,14 @@
- export const PLUGINS: PluginConfig[] = [
+@@ -10,4 +10,17 @@
+   isVisible: boolean;
+ }
+ 
+-export const PLUGINS: PluginConfig[] = [];
++export const PLUGINS: PluginConfig[] = [
 +  {
 +    id: 10,
 +    name: 'Device',
@@ -14,4 +18,4 @@
 +    active: true,
 +    isVisible: true,
 +  }
- ];
++];

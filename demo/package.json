@@ -20,8 +20,7 @@
     "ionic:add": "ionic capacitor add",
     "ionic:sync": "ionic capacitor sync",
     "ionic:open": "ionic capacitor open",
-    "sanitize:team:id": "tsx scripts/sanitize-team-id.ts",
-    "reset:git": "rm -rf .git && git init && git add . && git commit -m \"Initial commit\""
+    "sanitize:team:id": "tsx scripts/sanitize-team-id.ts"
   },
   "prettier": {
     "printWidth": 100,
