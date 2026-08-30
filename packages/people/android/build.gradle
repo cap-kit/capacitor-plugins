@@ -20,7 +20,6 @@ ext {
     androidxAppCompatVersion = project.hasProperty('androidxAppCompatVersion') ? project.property('androidxAppCompatVersion') : '1.7.1'
     androidxJunitVersion = project.hasProperty('androidxJunitVersion') ? project.property('androidxJunitVersion') : '1.3.0'
     androidxEspressoCoreVersion = project.hasProperty('androidxEspressoCoreVersion') ? project.property('androidxEspressoCoreVersion') : '3.7.0'
-    androidxCoreKTXVersion = project.hasProperty('androidxCoreKTXVersion') ? project.property('androidxCoreKTXVersion') : '1.18.0'
 }
 
 apply plugin: 'com.android.library'
@@ -101,7 +100,6 @@ dependencies {
     implementation project(':capacitor-android')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    implementation "androidx.core:core-ktx:$androidxCoreKTXVersion"
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0"
 
     testImplementation "junit:junit:$junitVersion"
