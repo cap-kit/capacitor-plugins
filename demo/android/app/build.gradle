@@ -1,0 +1,109 @@
+// Apply the Android application plugin.
+apply plugin: 'com.android.application'
+
+android {
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
+    }
+    // Namespace of the application.
+    namespace = "capkit.plugin.demo"
+    // Use the compileSdKVersion defined in the root project.
+    compileSdk = rootProject.ext.compileSdkVersion
+
+    // Configure Java compilation tasks.
+    tasks.withType(JavaCompile).configureEach {
+        // Enable warnings for deprecated and unchecked operations.
+        options.compilerArgs << "-Xlint:deprecation" << "-Xlint:unchecked"
+    }
+
+    defaultConfig {
+        applicationId = "capkit.plugin.demo"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode = 1
+        versionName = "1.0.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        aaptOptions {
+            // Exclude unnecessary files from the APK assets directory.
+            // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+            // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+
+    buildTypes {
+        // Configuration for debug builds.
+        debug {
+            debuggable true
+            minifyEnabled false
+            // Uncomment to use the debug signing config explicitly.
+            // signingConfig signingConfigs.debug
+        }
+        // Configuration for release builds.
+        release {
+            debuggable false
+            minifyEnabled = false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        // Set Java compatibility to version 21.
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+
+    java {
+        toolchain {
+            // Ensure Java 21 is used for builds.
+            languageVersion = JavaLanguageVersion.of(21)
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        // Include custom libraries located in these directories.
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    // Include dependencies from the 'libs' directory.
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+
+    // AndroidX and other dependencies.
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    implementation "androidx.core:core-ktx:$androidxCoreKTXVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+
+    // Test dependencies.
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+}
+
+configurations.configureEach {
+    resolutionStrategy {
+        // Force specific versions of libraries to avoid conflicts.
+        force("androidx.core:core-ktx:$androidxCoreKTXVersion")
+    }
+}
+
+// Include additional Gradle scripts and plugins.
+apply from: 'capacitor.build.gradle'
+
+try {
+    // Apply Google Services plugin if the configuration file exists.
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work", e)
+}

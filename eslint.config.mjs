@@ -14,6 +14,8 @@ export default [
       '**/ios/**',     // Ignore iOS native code
       '**/node_modules/**',
       '**/.docusaurus/**',
+      '**/demo/**', // Shared demo app — synced via prepare-demo.ts
+      '**/example-app/**', // Generated per-plugin demo apps
     ],
   },
 

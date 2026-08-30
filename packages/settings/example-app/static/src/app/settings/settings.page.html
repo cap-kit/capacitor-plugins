@@ -1,0 +1,31 @@
+<app-page-header [title]="'Settings Plugin'" />
+
+<ion-content class="ion-padding">
+  <app-info-card
+    [title]="'Settings'"
+    [subtitle]="'@cap-kit/settings'"
+    [content]="'A Capacitor plugin for opening system and application settings on iOS and Android.'"
+    (githubClick)="openOnGithub()"
+  />
+
+  @if (isSupported()) {
+  <ion-list lines="none">
+    <ion-item>
+      <ion-button size="small" (click)="openAppSettings()">App Settings</ion-button>
+    </ion-item>
+    <ion-item>
+      <ion-button size="small" (click)="openNotificationSettings()">Notification Settings</ion-button>
+    </ion-item>
+    <ion-item>
+      <ion-button size="small" (click)="openWifiSettingsAndroid()">Wi-Fi Settings (Android)</ion-button>
+    </ion-item>
+    <ion-item>
+      <ion-button size="small" (click)="openBluetoothSettingsIOS()">Bluetooth Settings (iOS)</ion-button>
+    </ion-item>
+  </ion-list>
+  } @else {
+  <p>This plugin is not supported on this platform.</p>
+  }
+</ion-content>
+
+<app-page-footer [version]="displayVersion()" [label]="'Plugin Version'" />

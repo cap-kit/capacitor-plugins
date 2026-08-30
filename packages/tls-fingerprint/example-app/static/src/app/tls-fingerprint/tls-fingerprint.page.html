@@ -1,0 +1,166 @@
+<app-page-header [title]="'TLS Fingerprint'" />
+
+<ion-content class="ion-padding">
+  <app-info-card
+    [title]="'TLS Fingerprint'"
+    [subtitle]="'@cap-kit/tls-fingerprint'"
+    [content]="'Runtime TLS leaf certificate SHA-256 fingerprint validation.'"
+    (githubClick)="openOnGithub()"
+  />
+
+  @if (isSupported()) {
+
+  <!-- ======================================================= -->
+  <!-- Single Fingerprint -->
+  <!-- ======================================================= -->
+
+  <ion-list lines="inset">
+    <ion-list-header lines="full">
+      <ion-label><h2>Single Fingerprint · Config Fallback</h2></ion-label>
+    </ion-list-header>
+
+    <ion-item>
+      <ion-note color="secondary">
+        Uses the fingerprint defined in <code>capacitor.config.ts</code>. The fingerprint field is intentionally left
+        empty.
+      </ion-note>
+    </ion-item>
+
+    <form [formGroup]="singleOkForm" (ngSubmit)="runSingle(singleOkForm, singleOkState)">
+      <ion-item>
+        <ion-input label="URL (from config)" labelPlacement="stacked" formControlName="url" readonly />
+      </ion-item>
+
+      <ion-item>
+        <ion-input
+          label="Fingerprint (empty → config)"
+          labelPlacement="stacked"
+          formControlName="fingerprint"
+          clearInput
+        />
+      </ion-item>
+
+      <ion-item>
+        <ion-button size="small" type="submit">Run example</ion-button>
+        <ion-badge slot="end" [color]="badgeColor(singleOkState())"> {{ badgeLabel(singleOkState()) }} </ion-badge>
+      </ion-item>
+    </form>
+  </ion-list>
+
+  <ion-list lines="inset">
+    <ion-list-header lines="full">
+      <ion-label><h2>Single Fingerprint · Runtime Override</h2></ion-label>
+    </ion-list-header>
+
+    <ion-item>
+      <ion-note color="secondary">
+        Overrides the configured fingerprint with an invalid one. This example is expected to fail.
+      </ion-note>
+    </ion-item>
+
+    <form [formGroup]="singleKoForm" (ngSubmit)="runSingle(singleKoForm, singleKoState)">
+      <ion-item>
+        <ion-input label="URL" labelPlacement="stacked" formControlName="url" clearInput />
+      </ion-item>
+
+      <ion-item>
+        <ion-input label="Fingerprint (invalid)" labelPlacement="stacked" formControlName="fingerprint" clearInput />
+      </ion-item>
+
+      <ion-item>
+        <ion-button size="small" color="danger" type="submit" [disabled]="singleKoForm.invalid">
+          Run example
+        </ion-button>
+        <ion-badge slot="end" [color]="badgeColor(singleKoState())"> {{ badgeLabel(singleKoState()) }} </ion-badge>
+      </ion-item>
+    </form>
+  </ion-list>
+
+  <!-- ======================================================= -->
+  <!-- Multiple Fingerprints -->
+  <!-- ======================================================= -->
+
+  <ion-list lines="inset">
+    <ion-list-header lines="full">
+      <ion-label><h2>Multiple Fingerprints · Config List</h2></ion-label>
+    </ion-list-header>
+
+    <ion-item>
+      <ion-note color="secondary">
+        Uses the <code>fingerprints[]</code> list from configuration. Useful for certificate rotation.
+      </ion-note>
+    </ion-item>
+
+    <form [formGroup]="multiOkForm" (ngSubmit)="runMulti(multiOkForm, multiOkState)">
+      <ion-item>
+        <ion-input label="URL (from config)" labelPlacement="stacked" formControlName="url" readonly />
+      </ion-item>
+
+      <div formArrayName="fingerprints">
+        @for (ctrl of multiOkFingerprints.controls; let i = $index; track i) {
+        <ion-item>
+          <ion-input [label]="'Fingerprint #' + (i + 1)" labelPlacement="stacked" [formControlName]="i" clearInput />
+          <ion-button size="small" fill="clear" color="danger" (click)="removeFingerprint(multiOkForm, i)">
+            <ion-icon name="trash" />
+          </ion-button>
+        </ion-item>
+        }
+      </div>
+
+      <ion-button size="small" fill="outline" (click)="addFingerprint(multiOkForm)">
+        <ion-icon name="add-circle" />Add fingerprint
+      </ion-button>
+
+      <ion-item>
+        <ion-button size="small" type="submit">Run example</ion-button>
+        <ion-badge slot="end" [color]="badgeColor(multiOkState())"> {{ badgeLabel(multiOkState()) }} </ion-badge>
+      </ion-item>
+    </form>
+  </ion-list>
+
+  <ion-list lines="inset">
+    <ion-list-header lines="full">
+      <ion-label><h2>Multiple Fingerprints · Runtime Override</h2></ion-label>
+    </ion-list-header>
+
+    <ion-item>
+      <ion-note color="secondary">
+        Provides an invalid list of fingerprints at runtime. This example is expected to fail.
+      </ion-note>
+    </ion-item>
+
+    <form [formGroup]="multiKoForm" (ngSubmit)="runMulti(multiKoForm, multiKoState)">
+      <ion-item>
+        <ion-input label="URL" labelPlacement="stacked" formControlName="url" clearInput />
+      </ion-item>
+
+      <div formArrayName="fingerprints">
+        @for (ctrl of multiKoFingerprints.controls; let i = $index; track i) {
+        <ion-item>
+          <ion-input [label]="'Fingerprint #' + (i + 1)" labelPlacement="stacked" [formControlName]="i" clearInput />
+          <ion-button size="small" fill="clear" color="danger" (click)="removeFingerprint(multiKoForm, i)">
+            <ion-icon name="trash" />
+          </ion-button>
+        </ion-item>
+        }
+      </div>
+
+      <ion-button size="small" fill="outline" (click)="addFingerprint(multiKoForm)">
+        <ion-icon name="add-circle" />Add fingerprint
+      </ion-button>
+
+      <ion-item>
+        <ion-button size="small" color="danger" type="submit" [disabled]="multiKoForm.invalid">
+          Run example
+        </ion-button>
+        <ion-badge slot="end" [color]="badgeColor(multiKoState())"> {{ badgeLabel(multiKoState()) }} </ion-badge>
+      </ion-item>
+    </form>
+  </ion-list>
+
+  } @else {
+  <p>This plugin is not supported on this platform.</p>
+  }
+</ion-content>
+
+<app-page-footer [version]="displayVersion()" [label]="'Plugin Version'" />

@@ -1,0 +1,99 @@
+--- a/capacitor.config.ts
++++ b/capacitor.config.ts
+@@ -1,5 +1,13 @@
++/// <reference types='@cap-kit/redsys' />
++
+ import type { CapacitorConfig } from '@capacitor/cli';
+ import { KeyboardResize } from '@capacitor/keyboard';
++import {
++  RedsysEnvironment,
++  RedsysLanguage,
++  RedsysTransactionType,
++  RedsysPaymentMethod,
++} from '@cap-kit/redsys';
+ 
+ const config: CapacitorConfig = {
+   appId: 'capkit.plugin.demo',
+@@ -25,6 +33,82 @@
+     Keyboard: {
+       resize: KeyboardResize.None,
+     },
++    Redsys: {
++      /**
++       * Enables verbose native logging.
++       * Logs are printed in Logcat (Android) and Xcode console (iOS).
++       * Default: false
++       */
++      verboseLogging: false,
++      license: 'LICENSE_HERE',
++      environment: RedsysEnvironment.Test,
++      fuc: '999999999',
++      terminal: '1',
++      currency: '978',
++      /**
++       * Optional global signature fallback for WebView payments
++       */
++      signature: '',
++      /**
++       * Merchant Metadata
++       */
++      merchantName: 'CapKit Demo Store',
++      merchantUrl: 'https://example.com',
++      merchantData: 'DEMO_DATA',
++      merchantDescription: 'CapKit Redsys Integration Demo',
++      merchantGroup: 'GROUP_001',
++      merchantConsumerLanguage: RedsysLanguage.Spanish,
++      /**
++       * Default transaction type
++       */
++      transactionType: RedsysTransactionType.Normal,
++      /**
++       * WebView payment methods (affects iOS primarily)
++       */
++      paymentMethods: [RedsysPaymentMethod.Card, RedsysPaymentMethod.Bizum],
++      /**
++       * Flow Behavior
++       */
++      enableRedirection: true,
++      enableResultAlert: true,
++      /**
++       * UI Customization (All Available Options)
++       */
++      ui: {
++        /**
++         * Shared
++         */
++        logo: 'logo_merchant',
++        backgroundColor: '#FFFFFF',
++        confirmButtonText: 'Pay Now',
++        labelTextColor: '#333333',
++        cardNumberLabel: 'Card Number',
++        expirationLabel: 'Expiration Date',
++        cvvLabel: 'CVV',
++        infoLabel: 'Secure payment via Redsys',
++        /**
++         * iOS Only
++         */
++        iosBackgroundImage: 'background_demo',
++        iosCancelButtonText: 'Cancel Payment',
++        /**
++         * Android Only
++         */
++        androidProgressBarColor: '#00438c',
++        androidTopBarColor: '#00438c',
++        androidConfirmButtonColor: '#00438c',
++        androidConfirmButtonTextColor: '#FFFFFF',
++        androidExpirationErrorText: 'Invalid expiration date',
++        androidCvvErrorText: 'Invalid CVV',
++        cardHeaderBackgroundColor: '#eeeeee',
++        androidCardHeaderText: 'Secure Card Entry',
++        androidCardHeaderTextColor: '#000000',
++        androidResultAlertTextOk: 'Payment Successful!',
++        androidResultAlertTextKo: 'Payment Failed!',
++        androidResultAlertButtonTextOk: 'Close',
++        androidResultAlertButtonTextKo: 'Retry',
++      },
++    },
+   },
+   cordova: {},
+ };

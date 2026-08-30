@@ -1,0 +1,18 @@
+<app-page-header [title]="'Device Plugin'" />
+
+<ion-content class="ion-padding">
+  <app-info-card
+    [title]="'Device'"
+    [subtitle]="'@cap-kit/device'"
+    [content]="'A Capacitor plugin for...'"
+    (githubClick)="openOnGithub()"
+  />
+
+  @if (isSupported()) {
+  <ion-list lines="none"> </ion-list>
+  } @else {
+  <p>This plugin is not supported on this platform.</p>
+  }
+</ion-content>
+
+<app-page-footer [version]="displayVersion()" [label]="'Plugin Version'" />
