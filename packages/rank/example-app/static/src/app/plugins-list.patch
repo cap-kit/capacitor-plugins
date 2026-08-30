@@ -1,0 +1,17 @@
+--- a/src/app/plugins-list.ts
++++ b/src/app/plugins-list.ts
+@@ -13,2 +13,14 @@
+ export const PLUGINS: PluginConfig[] = [
++  {
++    id: 5,
++    name: 'Rank',
++    npmName: '@cap-kit/rank',
++    iconName: 'trophy',
++    githubUrl:
++      'https://github.com/cap-kit/capacitor-plugins/tree/main/packages/rank',
++    pathName: '/rank',
++    description: 'Ranking and scoring of app users based on their activity.',
++    active: true,
++    isVisible: true,
++  }
+ ];

@@ -1,0 +1,36 @@
+.result-header {
+  text-align: center;
+  padding: 16px;
+  border-radius: 16px;
+  margin-top: 60px;
+  margin-bottom: 20px;
+  color: white;
+}
+
+.result-header.success {
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
+}
+
+.result-header.error {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+}
+
+.result-success ion-item,
+.result-error {
+  margin-bottom: 10px;
+}
+
+.error-message {
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+.raw-json {
+  margin-top: 20px;
+  background: #f4f4f4;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  max-height: 200px;
+  overflow: auto;
+}

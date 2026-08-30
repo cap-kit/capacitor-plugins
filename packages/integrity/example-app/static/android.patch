@@ -1,0 +1,21 @@
+--- a/android/app/src/main/kotlin/capkit/plugin/demo/MainActivity.kt
++++ b/android/app/src/main/kotlin/capkit/plugin/demo/MainActivity.kt
+@@ -2,11 +2,18 @@
+ 
+ import android.os.Bundle
+ import com.getcapacitor.BridgeActivity
++import io.capkit.integrity.Integrity
+ 
+ class MainActivity : BridgeActivity() {
+ 
+   override fun onCreate(savedInstanceState: Bundle?) {
++    // Capture security signals during early boot
+     super.onCreate(savedInstanceState)
++    try {
++      Integrity.onApplicationCreate(this)
++    } catch (t: Throwable) {
++      android.util.Log.e("Integrity", "onApplicationCreate failed", t)
++    }
+   }
+ 
+ }

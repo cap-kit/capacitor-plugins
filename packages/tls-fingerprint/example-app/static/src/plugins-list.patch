@@ -1,0 +1,17 @@
+--- a/src/app/plugins-list.ts
++++ b/src/app/plugins-list.ts
+@@ -13,2 +13,14 @@
+ export const PLUGINS: PluginConfig[] = [
++  {
++    id: 3,
++    name: 'TLS Fingerprint',
++    npmName: '@cap-kit/tls-fingerprint',
++    iconName: 'shield-checkmark',
++    githubUrl:
++      'https://github.com/cap-kit/capacitor-plugins/tree/main/packages/tls-fingerprint',
++    pathName: '/tls-fingerprint',
++    description: 'Runtime TLS leaf certificate SHA-256 fingerprint validation plugin for Capacitor (iOS & Android).',
++    active: true,
++    isVisible: true,
++  }
+ ];

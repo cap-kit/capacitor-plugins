@@ -1,0 +1,465 @@
+<app-page-header [title]="'Integrity Plugin'" />
+
+<ion-content class="ion-padding">
+  <app-info-card
+    [title]="'Integrity'"
+    [subtitle]="'@cap-kit/integrity'"
+    [content]="'A Capacitor plugin for runtime integrity and environment signal detection.'"
+    (githubClick)="openOnGithub()"
+  />
+
+  <!-- REAL-TIME LISTENER CONTROLS ---------------------------------------- -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>
+        Real-time Listener @if (isRealtimeLive()) {
+        <ion-badge color="success" class="ion-margin-start">LIVE</ion-badge>
+        } @else {
+        <ion-badge color="danger" class="ion-margin-start">DOWN</ion-badge>
+        }
+      </ion-card-title>
+    </ion-card-header>
+
+    <ion-card-content>
+      <ion-item lines="none">
+        <ion-label>
+          <strong>Enable listener</strong><br />
+          <small>React to integrity signals detected at runtime.</small>
+        </ion-label>
+
+        <ion-toggle
+          slot="end"
+          [checked]="realtimeListenerEnabled()"
+          (ionChange)="onToggleRealtimeListener($event.detail.checked)"
+        >
+        </ion-toggle>
+      </ion-item>
+
+      <ion-item lines="none">
+        <ion-label>
+          <strong>Silent mode</strong><br />
+          <small>No toast notifications (store only).</small>
+        </ion-label>
+        <ion-toggle slot="end" [checked]="silentModeEnabled()" (ionChange)="onToggleSilentMode($event.detail.checked)">
+        </ion-toggle>
+      </ion-item>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- REAL-TIME SUMMARY ------------------------------------------------ -->
+  <ion-card>
+    <ion-card-content>
+      <strong>Real-time summary</strong><br />
+      <small>
+        {{ realtimeSummary().count }} signals detected<br />
+        High: {{ realtimeSummary().high }}, Medium: {{ realtimeSummary().medium }}, Low: {{ realtimeSummary().low }}
+      </small>
+
+      <ion-item-divider />
+
+      <p>
+        <strong>Policy preview (realtime)</strong><br />
+        <ion-badge [color]="policyColor()"> {{ realtimePolicyPreview() }} </ion-badge>
+      </p>
+
+      <ion-item-divider />
+
+      <ion-button size="small" fill="outline" color="medium" (click)="clearRealtimeSignals()">
+        Clear real-time signals
+      </ion-button>
+
+      <ion-button size="small" fill="outline" color="primary" (click)="exportSignalsJson()"> Export JSON </ion-button>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- SEGMENTS ------------------------------------------------------------ -->
+  <ion-segment [scrollable]="true" color="primary" [value]="activeTab()" (ionChange)="onTabChange($event)">
+    <ion-segment-button value="actions">
+      <ion-icon name="play-outline" />
+      <ion-label>Actions</ion-label>
+    </ion-segment-button>
+
+    <ion-segment-button value="report" [disabled]="!lastReport()">
+      <ion-icon name="analytics-outline" />
+      <ion-label>Report</ion-label>
+    </ion-segment-button>
+
+    <ion-segment-button value="signals" [disabled]="!lastReport()">
+      <ion-icon name="pulse-outline" />
+      <ion-label>Signals</ion-label>
+    </ion-segment-button>
+  </ion-segment>
+
+  @if (isSupported()) {
+  <!-- ACTIONS ------------------------------------------------------------ -->
+  @if (activeTab() === 'actions') {
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Actions</ion-card-title>
+    </ion-card-header>
+
+    <ion-card-content>
+      <ion-text class="ion-padding-start ion-margin-bottom">
+        <small>
+          <strong>Integrity Check</strong><br />
+          Execute integrity checks with different strictness levels.
+        </small>
+      </ion-text>
+
+      <!-- STRICTNESS RANGE -->
+      <div class="integrity-range">
+        <ion-range
+          aria-label="Integrity check strictness"
+          [ticks]="true"
+          [snaps]="true"
+          [min]="0"
+          [max]="2"
+          [value]="checkLevelIndex()"
+          [disabled]="inProgress()"
+          (ionChange)="onCheckLevelChange($event)"
+        >
+        </ion-range>
+
+        <!-- RANGE LABELS -->
+        <div class="range-labels">
+          <span class="range-label" [class.active]="checkLevelIndex() === 0"> Basic </span>
+          <span class="range-label" [class.active]="checkLevelIndex() === 1"> Standard </span>
+          <span class="range-label" [class.active]="checkLevelIndex() === 2"> Strict </span>
+        </div>
+      </div>
+
+      <!-- RANGE LABEL -->
+      <ion-item lines="none">
+        <ion-label>
+          Selected level:
+          <strong>{{ selectedCheckLevelLabel() }}</strong>
+        </ion-label>
+      </ion-item>
+
+      <!-- RUN CHECK BUTTON -->
+      <ion-item>
+        <ion-button expand="block" size="small" (click)="onRunCheck()" [disabled]="inProgress()">
+          <ion-icon name="play-outline" slot="start" />
+          Run check ({{ selectedCheckLevelLabel() }})
+        </ion-button>
+      </ion-item>
+
+      <!-- STATUS -->
+      <ion-item lines="none">
+        <ion-label>Status</ion-label>
+        <ion-badge slot="end" [color]="badgeColor(checkState())"> {{ badgeLabel(checkState()) }} </ion-badge>
+      </ion-item>
+
+      <ion-item lines="none">
+        <ion-label>Include debug info</ion-label>
+        <ion-toggle slot="end" [checked]="includeDebugInfo()" (ionChange)="includeDebugInfo.set($event.detail.checked)">
+        </ion-toggle>
+      </ion-item>
+
+      <ion-item-divider />
+
+      <!-- Block page -->
+      <ion-item>
+        <ion-label> Manual security screen for compromised environments. </ion-label>
+      </ion-item>
+
+      <ion-item lines="none">
+        <ion-text class="ion-margin-top">
+          <strong>Block Page</strong><br />
+          <small>
+            Presents a non-dismissible security screen intended for production use when the application detects a
+            compromised or restricted execution environment.
+          </small>
+        </ion-text>
+      </ion-item>
+
+      <ion-item>
+        <ion-button size="small" color="warning" (click)="onPresentBlockPage()" [disabled]="inProgress()">
+          <ion-icon name="log-in-outline" slot="start" />
+          Block Page
+        </ion-button>
+        <ion-badge slot="end" [color]="badgeColor(presentBlockPageState())">
+          {{ badgeLabel(presentBlockPageState()) }}
+        </ion-badge>
+      </ion-item>
+
+      <ion-item lines="none">
+        <ion-text class="ion-margin-top">
+          <strong>Block Page (demo)</strong><br />
+          <small>
+            Demonstration variant of the block page that can be dismissed by the user. Intended for testing, demos, and
+            development environments only.
+          </small>
+        </ion-text>
+      </ion-item>
+
+      <ion-item>
+        <ion-button size="small" color="warning" (click)="onPresentBlockPageDemo()" [disabled]="inProgress()">
+          <ion-icon name="log-in-outline" slot="start" />
+          Block Page (demo)
+        </ion-button>
+        <ion-badge slot="end" [color]="badgeColor(presentBlockPageDemoState())">
+          {{ badgeLabel(presentBlockPageDemoState()) }}
+        </ion-badge>
+      </ion-item>
+
+      <ion-item lines="none">
+        <ion-text class="ion-margin-top">
+          <strong>Block Page (with context)</strong><br />
+          <small>
+            Test the new customUrl and context features. Passes the last integrity check results as context to the block
+            page.
+          </small>
+        </ion-text>
+      </ion-item>
+
+      <ion-item>
+        <ion-button size="small" color="warning" (click)="onPresentBlockPageWithContext()" [disabled]="inProgress()">
+          <ion-icon name="log-in-outline" slot="start" />
+          Block Page (context)
+        </ion-button>
+        <ion-badge slot="end" [color]="badgeColor(presentBlockPageContextState())">
+          {{ badgeLabel(presentBlockPageContextState()) }}
+        </ion-badge>
+      </ion-item>
+    </ion-card-content>
+  </ion-card>
+  }
+
+  <!-- REPORT ------------------------------------------------------------- -->
+  @if (activeTab() === 'report') {
+
+  <!-- NO REPORT YET ----------------------------------------------------- -->
+  @if (!lastReport()) {
+  <ion-card>
+    <ion-card-content>
+      <p class="ion-text-muted">
+        <small> Run an integrity check from the <strong>Actions</strong> tab to generate an integrity report. </small>
+      </p>
+    </ion-card-content>
+  </ion-card>
+  }
+
+  <!-- REPORT AVAILABLE -------------------------------------------------- -->
+  @if (lastReport()) {
+  <ion-card>
+    <ion-card-header>
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <ion-card-title>Integrity Report</ion-card-title>
+        @if (lastCheckLevelLabel()) {
+        <ion-badge color="tertiary">{{ lastCheckLevelLabel() }}</ion-badge>
+        }
+      </div>
+    </ion-card-header>
+
+    <ion-card-content>
+      <ion-text>
+        <strong>Report overview</strong><br />
+        <small> This report summarizes the integrity signals detected at runtime. </small>
+      </ion-text>
+
+      <ion-item-divider />
+
+      <p>
+        <strong>Score:</strong> {{ lastReport()?.score }}<br />
+        <strong>Compromised:</strong> {{ lastReport()?.compromised }}
+      </p>
+
+      <ion-item-divider />
+
+      <p>
+        <strong>Policy preview</strong><br />
+        <ion-badge [color]="policyColor()">{{ policyPreview() }}</ion-badge>
+      </p>
+
+      <ion-item-divider />
+
+      @if (environmentSummary()) {
+      <p>
+        <strong>Environment</strong><br />
+        <small>Execution context detected during the check.</small>
+      </p>
+      <ul>
+        <li>Platform: {{ environmentSummary()?.platform }}</li>
+        <li>Emulator: {{ environmentSummary()?.isEmulator }}</li>
+        <li>Debug build: {{ environmentSummary()?.isDebugBuild }}</li>
+      </ul>
+      }
+
+      <ion-item-divider />
+
+      <div class="ion-margin-top">
+        <ion-button fill="outline" size="small" (click)="copyReport()">
+          <ion-icon name="copy-outline" slot="start"></ion-icon>
+          Copy JSON
+        </ion-button>
+
+        <ion-button fill="clear" size="small" (click)="toggleRawJson()">
+          <ion-icon [name]="showRawJson() ? 'eye-off-outline' : 'eye-outline'" slot="start"></ion-icon>
+          {{ showRawJson() ? 'Hide Raw' : 'Inspect Raw' }}
+        </ion-button>
+      </div>
+
+      @if (showRawJson()) {
+      <div class="raw-json-container ion-margin-top">
+        <pre><code>{{ rawJsonResponse() }}</code></pre>
+      </div>
+      }
+    </ion-card-content>
+  </ion-card>
+  } }
+
+  <!-- SIGNALS ------------------------------------------------------------ -->
+  @if (activeTab() === 'signals') {
+
+  <!-- NO REPORT YET ------------------------------------------------------- -->
+  @if (!lastReport()) {
+  <ion-card>
+    <ion-card-content>
+      <p class="ion-text-muted">
+        <small>
+          Run an integrity check from the <strong>Actions</strong> tab to view detected integrity signals.
+        </small>
+      </p>
+    </ion-card-content>
+  </ion-card>
+  }
+
+  <!-- REPORT AVAILABLE ---------------------------------------------------- -->
+  @if (lastReport()) {
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Signals</ion-card-title>
+      <ion-card-subtitle>
+        @if (lastCheckLevelLabel()) {
+        <ion-badge color="tertiary">{{ lastCheckLevelLabel() }}</ion-badge>
+        }
+      </ion-card-subtitle>
+    </ion-card-header>
+
+    <ion-card-content>
+      <ion-item-divider />
+
+      <ion-text>
+        <strong>Signals</strong><br />
+        <ion-note> Filter detected integrity signals by type and severity. </ion-note><br />
+        <small>
+          The set of signals depends on the integrity check level selected in the <strong>Actions</strong> tab.
+        </small>
+      </ion-text>
+
+      <ion-item-divider />
+
+      <!-- CATEGORY FILTER ------------------------------------------------ -->
+      <ion-text class="ion-margin-top">
+        <strong>Filter by category</strong><br />
+        <small> Select which type of signals you want to inspect. </small>
+      </ion-text>
+
+      <div class="filter-container">
+        <ion-grid class="ion-no-padding">
+          <ion-row>
+            @for (cat of categories; track cat) {
+            <ion-col size="4" class="ion-no-padding">
+              <ion-chip
+                style="width: 100%; justify-content: center; margin: 4px 0"
+                [outline]="selectedCategory() !== cat"
+                [color]="selectedCategory() === cat ? 'primary' : 'medium'"
+                (click)="setCategory(cat)"
+              >
+                <ion-label>{{ cat | titlecase }}</ion-label>
+              </ion-chip>
+            </ion-col>
+            }
+          </ion-row>
+        </ion-grid>
+      </div>
+
+      <ion-item-divider />
+
+      <!-- CONFIDENCE FILTER ---------------------------------------------- -->
+      <ion-text class="ion-margin-top">
+        <strong>Filter by severity</strong><br />
+        <small> Narrow down signals based on their confidence level. </small>
+      </ion-text>
+
+      <div class="filter-container">
+        <ion-text><strong>Severity</strong></ion-text>
+        <ion-grid class="ion-no-padding">
+          <ion-row>
+            @for (conf of confidences; track conf) {
+            <ion-col size="3" class="ion-no-padding">
+              <ion-chip
+                style="width: calc(100% - 4px); justify-content: center; margin: 2px; font-size: 11px"
+                [outline]="selectedConfidence() !== conf"
+                [color]="selectedConfidence() === conf ? 'primary' : 'medium'"
+                (click)="setConfidence(conf)"
+              >
+                <ion-label>{{ conf | titlecase }}</ion-label>
+              </ion-chip>
+            </ion-col>
+            }
+          </ion-row>
+        </ion-grid>
+      </div>
+
+      <!-- FILTER FEEDBACK ------------------------------------------------ -->
+      <p class="ion-margin-top">
+        <small>
+          Showing
+          <strong>{{ selectedCategory() }}</strong>
+          signals with
+          <strong>{{ selectedConfidence() }}</strong>
+          confidence.
+        </small>
+      </p>
+
+      <!-- NO MATCHING SIGNALS -------------------------------------------- -->
+      @if (filteredSignals().length === 0) {
+      <p class="ion-text-muted">
+        <small> No integrity signals match the selected filters. </small>
+      </p>
+      }
+
+      <!-- SIGNAL LIST ---------------------------------------------------- -->
+      <ul class="signal-list">
+        @for (signal of filteredSignals(); track signal.id) {
+        <li class="ion-margin-bottom">
+          <div class="signal-header">
+            <strong>{{ signal.id }}</strong>
+            <ion-badge class="ion-margin-start" size="small">{{ signal.confidence }}</ion-badge>
+          </div>
+          <div class="signal-details">
+            <small>Category: {{ signal.category }}</small>
+            @if (signal.description) {
+            <br /><em>{{ signal.description }}</em>
+            } @if (signal.id === 'android_runtime_debuggable') {
+            <br /><small class="ion-text-muted">
+              This signal indicates that the process is debuggable at runtime. It does not necessarily mean the app was
+              built in debug mode.
+            </small>
+            } @if (signal.metadata) {
+            <div class="metadata-box">
+              <ion-text color="medium">
+                <small><strong>Metadata:</strong> {{ formatMetadata(signal.metadata) }}</small>
+              </ion-text>
+            </div>
+            }
+          </div>
+        </li>
+        } @empty {
+        <p class="ion-text-muted"><small>No matching signals found.</small></p>
+        }
+      </ul>
+    </ion-card-content>
+  </ion-card>
+  } } @if (inProgress()) {
+  <div class="ion-text-center">
+    <ion-spinner />
+  </div>
+  } } @else {
+  <p>This plugin is not supported on this platform.</p>
+  }
+</ion-content>
+
+<app-page-footer [version]="displayVersion()" [label]="'Plugin Version'" />

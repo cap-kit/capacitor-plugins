@@ -1,0 +1,29 @@
+--- a/capacitor.config.ts
++++ b/capacitor.config.ts
+@@ -1,3 +1,5 @@
++/// <reference types='@cap-kit/rank' />
++
+ import type { CapacitorConfig } from '@capacitor/cli';
+ import { KeyboardResize } from '@capacitor/keyboard';
+ 
+@@ -25,6 +27,20 @@
+     Keyboard: {
+       resize: KeyboardResize.None,
+     },
++    Rank: {
++      /**
++       * Enables verbose native logging.
++       * Logs are printed in Logcat (Android) and Xcode console (iOS).
++       * Default: false
++       */
++      verboseLogging: false,
++      // iOS App Store ID (required for openStore / presentProductPage)
++      appleAppId: 'id1533521326',
++      // Android package name (optional, fallback to host app)
++      androidPackageName: 'com.autopistas.awai',
++      // Default behavior for requestReview
++      fireAndForget: false,
++    },
+   },
+   cordova: {},
+ };

@@ -1,0 +1,17 @@
+--- a/src/app/plugins-list.ts
++++ b/src/app/plugins-list.ts
+@@ -13,2 +13,14 @@
+ export const PLUGINS: PluginConfig[] = [
++  {
++    id: 9,
++    name: 'Fortress',
++    npmName: '@cap-kit/fortress',
++    iconName: 'key',
++    githubUrl:
++      'https://github.com/cap-kit/capacitor-plugins/tree/main/packages/fortress',
++    pathName: '/fortress',
++    description: 'Secure storage and biometric authentication for Capacitor apps',
++    active: true,
++    isVisible: true,
++  }
+ ];

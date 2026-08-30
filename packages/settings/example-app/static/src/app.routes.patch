@@ -1,0 +1,13 @@
+--- a/src/app/app.routes.ts
++++ b/src/app/app.routes.ts
+@@ -6,6 +6,11 @@
+       import('./home/home.page').then((m) => m.HomePage),
+   },
++  {
++    path: 'settings',
++    loadComponent: () =>
++      import('./settings/settings.page').then((m) => m.SettingsPage),
++  },
+   {
+     path: '',
+     redirectTo: 'home',
