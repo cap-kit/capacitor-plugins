@@ -1,0 +1,17 @@
+--- a/src/app/plugins-list.ts
++++ b/src/app/plugins-list.ts
+@@ -13,2 +13,14 @@
+ export const PLUGINS: PluginConfig[] = [
++  {
++    id: 7,
++    name: 'People',
++    npmName: '@cap-kit/people',
++    iconName: 'person',
++    githubUrl:
++      'https://github.com/cap-kit/capacitor-plugins/tree/main/packages/people',
++    pathName: '/people',
++    description: 'High-performance contact management, with zero-permission picking and capability-based access.',
++    active: true,
++    isVisible: true,
++  }
+ ];

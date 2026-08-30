@@ -1,0 +1,17 @@
+--- a/src/app/plugins-list.ts
++++ b/src/app/plugins-list.ts
+@@ -13,2 +13,14 @@
+ export const PLUGINS: PluginConfig[] = [
++  {
++    id: 6,
++    name: 'Redsys',
++    npmName: '@cap-kit/redsys',
++    iconName: 'card',
++    githubUrl:
++      'https://github.com/cap-kit/capacitor-plugins/tree/main/packages/redsys',
++    pathName: '/redsys',
++    description: 'Capacitor implementation of Redsys SDKinApp. Supports native Direct Payment and secure two-phase WebView Payment.',
++    active: true,
++    isVisible: true,
++  }
+ ];

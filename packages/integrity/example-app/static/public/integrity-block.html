@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Integrity Block</title>
+
+    <style>
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        background-color: #f4f4f4;
+        color: #333;
+        text-align: center;
+        padding: 48px 20px;
+      }
+
+      h1 {
+        color: #d9534f;
+        margin-bottom: 16px;
+      }
+
+      p {
+        max-width: 520px;
+        margin: 12px auto;
+        line-height: 1.5;
+      }
+
+      .reason {
+        font-weight: 600;
+        color: #555;
+      }
+
+      .field {
+        text-align: left;
+        max-width: 520px;
+        margin: 16px auto;
+      }
+
+      .field-label {
+        display: block;
+        font-size: 0.78rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #8a8a8a;
+        margin-bottom: 8px;
+      }
+
+      .reason-pill {
+        display: inline-block;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: #fff2f2;
+        border: 1px solid #f1c8c8;
+        color: #b33a37;
+        font-weight: 700;
+        font-size: 0.95rem;
+        text-transform: capitalize;
+      }
+
+      .reason-helper {
+        margin: 10px 0 0;
+        font-size: 0.9rem;
+        color: #555;
+        line-height: 1.45;
+      }
+
+      .reason-code {
+        margin-top: 6px;
+        font-size: 0.78rem;
+        color: #8a8a8a;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      }
+
+      .context-block {
+        display: none;
+        text-align: left;
+        margin-top: 8px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #fafafa;
+        padding: 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 0.82rem;
+        line-height: 1.45;
+        color: #374151;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .box {
+        background: #ffffff;
+        border-radius: 8px;
+        padding: 24px;
+        margin: 32px auto;
+        max-width: 560px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      }
+
+      .note {
+        font-size: 0.9rem;
+        color: #777;
+        margin-top: 24px;
+      }
+
+      button {
+        margin-top: 24px;
+        padding: 12px 20px;
+        font-size: 0.95rem;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        background-color: #6c757d;
+        color: #ffffff;
+      }
+
+      button:hover {
+        background-color: #5a6268;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="box">
+      <h1>Security Alert</h1>
+
+      <p>This application cannot run in the current execution environment.</p>
+
+      <div class="field">
+        <span class="field-label">Detected reason</span>
+        <span class="reason-pill" id="reason">Unknown</span>
+        <p class="reason-helper" id="reason-helper">No specific reason was provided.</p>
+        <div class="reason-code" id="reason-code"></div>
+      </div>
+
+      <div class="field" id="context-section" style="display: none">
+        <span class="field-label">Context payload</span>
+        <pre id="context" class="context-block"></pre>
+      </div>
+
+      <p class="note">
+        This page is shown as part of the <strong>@cap-kit/integrity</strong> plugin demonstration.<br />
+        It illustrates how an application may react to integrity or environment signals reported by the plugin.
+      </p>
+
+      <p class="note">
+        In a real-world production scenario, this screen would typically prevent further interaction with the
+        application.
+      </p>
+    </div>
+
+    <script>
+      // -------------------------------------------------------------------------
+      // Read query parameters
+      // -------------------------------------------------------------------------
+
+      const params = new URLSearchParams(window.location.search);
+
+      // Context (JSON-encoded)
+      const contextJson = params.get('context');
+      const contextSection = document.getElementById('context-section');
+      const contextSpan = document.getElementById('context');
+      let context = null;
+
+      if (contextJson) {
+        try {
+          context = JSON.parse(decodeURIComponent(contextJson));
+          contextSpan.textContent = JSON.stringify(context, null, 2);
+          contextSpan.style.display = 'block';
+          contextSection.style.display = 'block';
+        } catch (e) {
+          contextSpan.textContent = 'Invalid JSON: ' + contextJson;
+          contextSpan.style.display = 'block';
+          contextSection.style.display = 'block';
+        }
+      }
+
+      // Reason
+      const reason = params.get('reason');
+      const reasonMap = {
+        compromised_environment: {
+          title: 'Compromised Environment',
+          message: 'The runtime environment appears compromised based on one or more security signals.',
+        },
+        root_detected: {
+          title: 'Root Detected',
+          message: 'Root-related artifacts were detected on this device.',
+        },
+        jailbreak_detected: {
+          title: 'Jailbreak Detected',
+          message: 'Jailbreak indicators were detected on this device.',
+        },
+        emulator_detected: {
+          title: 'Emulator Detected',
+          message: 'The app is running in an emulator or simulator environment.',
+        },
+        debug_environment: {
+          title: 'Debug Environment',
+          message: 'Debugging or developer-mode indicators were detected.',
+        },
+        integrity_failed: {
+          title: 'Integrity Check Failed',
+          message: 'One or more integrity checks failed for this session.',
+        },
+      };
+
+      const fallbackTitle = reason ? reason.replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : 'Unknown';
+
+      const mapped = reason ? reasonMap[reason] : null;
+
+      const isManualTestTrigger =
+        reason === 'integrity_failed' &&
+        context &&
+        Number(context.score) === 0 &&
+        context.compromised === false &&
+        Number(context.signalCount) === 0;
+
+      const reasonTitle = isManualTestTrigger ? 'Manual Test Trigger' : mapped?.title || fallbackTitle;
+
+      const reasonMessage = isManualTestTrigger
+        ? 'No risk signals were detected. This block page was manually triggered for testing.'
+        : mapped?.message || 'No specific reason was provided by the host application.';
+
+      document.getElementById('reason').textContent = reasonTitle;
+      document.getElementById('reason-helper').textContent = reasonMessage;
+      document.getElementById('reason-code').textContent = reason ? `code: ${reason}` : '';
+    </script>
+  </body>
+</html>

@@ -1,0 +1,17 @@
+--- a/src/app/plugins-list.ts
++++ b/src/app/plugins-list.ts
+@@ -13,2 +13,14 @@
+ export const PLUGINS: PluginConfig[] = [
++  {
++    id: 2,
++    name: 'Settings',
++    npmName: '@cap-kit/settings',
++    iconName: 'cog',
++    githubUrl:
++      'https://github.com/cap-kit/capacitor-plugins/tree/main/packages/settings',
++    pathName: '/settings',
++    description: 'Open native settings screens.',
++    active: true,
++    isVisible: true,
++  }
+ ];

@@ -1,0 +1,7 @@
+{
+  "name": "capkit-plugin-demo",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular-standalone"
+}

@@ -1,0 +1,35 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>CapKit Plugins Demo</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <ion-header collapse="condense">
+    <ion-toolbar>
+      <ion-title size="large">CapKit Plugins</ion-title>
+    </ion-toolbar>
+  </ion-header>
+  <ion-list-header>
+    <ion-label>Default</ion-label>
+  </ion-list-header>
+  <ion-list lines="none">
+    @for (plugin of plugins(); track $index) {
+      <ion-item
+        [button]="plugin.active"
+        [routerLink]="plugin.active ? [plugin.pathName] : null"
+        [class.inactive-item]="!plugin.active"
+      >
+        <ion-icon slot="start" [name]="plugin.iconName" size="large" />
+        <ion-label>
+          {{ plugin.npmName }}
+          <p>
+            <ion-text>{{ plugin.description }}</ion-text>
+          </p>
+        </ion-label>
+      </ion-item>
+    }
+  </ion-list>
+</ion-content>
+
+<app-page-footer [version]="appVersion()" [label]="'App Version'" />

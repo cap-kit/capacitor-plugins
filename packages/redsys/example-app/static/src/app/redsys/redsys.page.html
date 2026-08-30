@@ -1,0 +1,131 @@
+<app-page-header [title]="'Redsys Plugin'" />
+
+<ion-content class="ion-padding">
+  <app-info-card
+    [title]="'Redsys'"
+    [subtitle]="'@cap-kit/redsys'"
+    [content]="'Capacitor implementation of Redsys SDKinApp. Supports native Direct Payment and secure two-phase WebView Payment (3-D Secure) with external signature validation, ensuring PCI-DSS compliance by design.'"
+    (githubClick)="openOnGithub()"
+  />
+
+  @if (isSupported()) {
+  <ion-list lines="full">
+    <!-- Configuration Controls -->
+    <ion-item-divider>
+      <ion-label>Configuration Playground</ion-label>
+    </ion-item-divider>
+
+    <ion-item>
+      <ion-select
+        label="Transaction Type"
+        [value]="selectedTransactionType()"
+        (ionChange)="selectedTransactionType.set($event.detail.value)"
+      >
+        @for (type of RedsysTransactionTypes | keyvalue; track type.key) {
+        <ion-select-option [value]="type.value"> {{ type.key }} </ion-select-option>
+        }
+      </ion-select>
+    </ion-item>
+
+    <ion-item>
+      <ion-select label="Language" [value]="selectedLanguage()" (ionChange)="selectedLanguage.set($event.detail.value)">
+        @for (lang of RedsysLanguages | keyvalue; track lang.key) {
+        <ion-select-option [value]="lang.value"> {{ lang.key }} ({{ lang.value }}) </ion-select-option>
+        }
+      </ion-select>
+    </ion-item>
+
+    <!-- Direct Payment -->
+    <ion-item-divider>
+      <ion-label>Direct Payment Variants</ion-label>
+    </ion-item-divider>
+
+    <ion-button expand="block" (click)="payDirectDefault()"> Direct Default </ion-button>
+
+    <ion-button expand="block" (click)="payDirectToken()"> Direct Token (REQUEST_REFERENCE) </ion-button>
+
+    <ion-button expand="block" (click)="payDirectExtra()"> Direct with extraParams </ion-button>
+
+    <ion-button expand="block" (click)="payDirectAggressiveUI()"> Direct Aggressive UI Override </ion-button>
+
+    <!-- Web Payment -->
+    <ion-item-divider>
+      <ion-label>Web Payment (3DS)</ion-label>
+    </ion-item-divider>
+
+    <ion-button expand="block" color="secondary" (click)="payWebSHA256()"> Web SHA256 </ion-button>
+
+    <ion-button expand="block" color="secondary" (click)="payWebSHA512()"> Web SHA512 </ion-button>
+
+    <ion-button expand="block" color="tertiary" (click)="payWebConfigSignature()">
+      Web using Config Signature
+    </ion-button>
+
+    <!-- Error Simulation -->
+    <ion-item-divider>
+      <ion-label>Error Simulation</ion-label>
+    </ion-item-divider>
+
+    <ion-button expand="block" color="danger" (click)="testInvalidSignature()"> Invalid Signature Test </ion-button>
+  </ion-list>
+  } @else {
+  <p>This plugin is not supported on this platform.</p>
+  }
+
+  <ion-modal [isOpen]="resultOpen()" (didDismiss)="closeResult()">
+    <ng-template>
+      <ion-content class="ion-padding">
+        <!-- Header -->
+        <div class="result-header" [ngClass]="resultIsError() ? 'error' : 'success'">
+          <h2>{{ resultIsError() ? 'Payment Error' : 'Payment Successful' }}</h2>
+
+          <div *ngIf="resultData()?.code !== undefined">Code: {{ resultData()?.code }}</div>
+        </div>
+
+        <!-- Error Block -->
+        <div *ngIf="resultIsError()" class="result-error">
+          <p class="error-message">{{ resultData()?.errorMessage || resultData()?.message }}</p>
+
+          <div *ngIf="resultData()?.data?.sdkCode">
+            <strong>SDK Code:</strong>
+            {{ resultData()?.data?.sdkCode }}
+          </div>
+        </div>
+
+        <!-- Success Block -->
+        <div *ngIf="!resultIsError()" class="result-success">
+          <ion-item>
+            <ion-label>
+              <strong>Order</strong><br />
+              {{ resultData()?.order }}
+            </ion-label>
+          </ion-item>
+
+          <ion-item>
+            <ion-label>
+              <strong>Authorization</strong><br />
+              {{ resultData()?.authorisationCode }}
+            </ion-label>
+          </ion-item>
+
+          <ion-item>
+            <ion-label>
+              <strong>Response Code</strong><br />
+              {{ resultData()?.responseCode }}
+            </ion-label>
+          </ion-item>
+        </div>
+
+        <!-- Raw JSON (collapsible style via simple block) -->
+        <div class="raw-json">
+          <h3>Technical Details</h3>
+          <pre>{{ resultData() | json }}</pre>
+        </div>
+
+        <ion-button expand="block" (click)="closeResult()"> Close </ion-button>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+</ion-content>
+
+<app-page-footer [version]="displayVersion()" [label]="'Plugin Version'" />
