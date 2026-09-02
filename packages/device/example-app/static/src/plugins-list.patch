@@ -1,0 +1,21 @@
+--- a/src/app/plugins-list.ts
++++ b/src/app/plugins-list.ts
+@@ -10,4 +10,17 @@
+   isVisible: boolean;
+ }
+ 
+-export const PLUGINS: PluginConfig[] = [];
++export const PLUGINS: PluginConfig[] = [
++  {
++    id: 10,
++    name: 'Device',
++    npmName: '@cap-kit/device',
++    iconName: 'phone-portrait',
++    githubUrl:
++      'https://github.com/cap-kit/capacitor-plugins/tree/main/packages/device',
++    pathName: '/device',
++    description: 'Device information and plugin version detection.',
++    active: true,
++    isVisible: true,
++  }
++];

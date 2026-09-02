@@ -84,11 +84,27 @@ pnpm run build:android  # build web + cap sync android + open Android Studio
 > **Information:** All plugins are optimized for **Capacitor v8+** and tested for native parity.
 
 <p align="center">
-  📦 <strong>Total Plugins:</strong> 6 &nbsp;&bull;&nbsp; ⚡ <strong>Core:</strong> <img src="https://img.shields.io/badge/Capacitor-v8+-05f.svg?style=flat-square&logo=capacitor&logoColor=white" alt="Capacitor v8+" valign="middle" />
+  📦 <strong>Total Plugins:</strong> 7 &nbsp;&bull;&nbsp; ⚡ <strong>Core:</strong> <img src="https://img.shields.io/badge/Capacitor-v8+-05f.svg?style=flat-square&logo=capacitor&logoColor=white" alt="Capacitor v8+" valign="middle" />
 </p>
 
 <table width="100%">
 <tr>
+
+<td align="center" width="33%" valign="top">
+
+### <a href="./packages/device">📱 Device</a>
+
+<a href="https://www.npmjs.com/package/@cap-kit/device"><code>@cap-kit/device</code></a>
+
+<a href="https://www.npmjs.com/package/@cap-kit/device"><img src="https://img.shields.io/npm/v/@cap-kit/device?style=flat-square&label=npm&logo=npm" alt="npm version" /></a>
+<a href="https://www.npmjs.com/package/@cap-kit/device"><img src="https://img.shields.io/npm/dm/@cap-kit/device?style=flat-square&label=downloads&logo=npm&color=orange" alt="downloads" /></a>
+
+Unified Capacitor v8 plugin for native device information: battery, screen, OS and hardware identifiers.
+
+<a href="./packages/device"><strong>Docs</strong></a> • 
+<a href="https://www.npmjs.com/package/@cap-kit/device"><strong>NPM</strong></a>
+
+</td>
 
 <td align="center" width="33%" valign="top">
 
@@ -121,6 +137,8 @@ Unified, high-performance contact management for Capacitor with zero-permission 
 <a href="https://www.npmjs.com/package/@cap-kit/people"><strong>NPM</strong></a>
 
 </td>
+</tr>
+<tr>
 
 <td align="center" width="33%" valign="top">
 
@@ -137,8 +155,6 @@ Unified Capacitor v8 plugin for native In-App Reviews and cross-platform Store n
 <a href="https://www.npmjs.com/package/@cap-kit/rank"><strong>NPM</strong></a>
 
 </td>
-</tr>
-<tr>
 
 <td align="center" width="33%" valign="top">
 
@@ -171,6 +187,8 @@ Capacitor plugin to open app and system settings on iOS and Android.
 <a href="https://www.npmjs.com/package/@cap-kit/settings"><strong>NPM</strong></a>
 
 </td>
+</tr>
+<tr>
 
 <td align="center" width="33%" valign="top">
 
@@ -187,12 +205,26 @@ Runtime TLS leaf certificate SHA-256 fingerprint validation plugin for Capacitor
 <a href="https://www.npmjs.com/package/@cap-kit/tls-fingerprint"><strong>NPM</strong></a>
 
 </td>
+<td width="33%"></td>
+<td width="33%"></td>
 </tr>
 </table>
 
 <details>
 <summary><strong>📱 Compact View (Mobile Friendly)</strong></summary>
 
+
+### 📱 Device
+
+`@cap-kit/device`
+
+![npm](https://img.shields.io/npm/v/@cap-kit/device?style=flat-square&label=npm&logo=npm) ![downloads](https://img.shields.io/npm/dm/@cap-kit/device?style=flat-square&label=downloads&logo=npm&color=orange)
+
+Unified Capacitor v8 plugin for native device information: battery, screen, OS and hardware identifiers.
+
+[Docs](./packages/device) • [NPM](https://www.npmjs.com/package/@cap-kit/device)
+
+---
 
 ### 🛡️ Integrity
 
