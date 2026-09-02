@@ -50,5 +50,4 @@ jobs:
           commit-message: "chore(release): Version packages"
           pr-title: "chore(release): Version packages"
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
