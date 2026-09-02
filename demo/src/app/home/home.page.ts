@@ -20,6 +20,7 @@ import {
   shieldCheckmark,
   shieldHalf,
   trophy,
+  phonePortrait,
   card,
   person,
   key,
@@ -56,6 +57,17 @@ export class HomePage {
   public readonly appVersion = signal<string | undefined>(APP_VERSION);
 
   constructor() {
-    addIcons({ logoIonic, flask, cog, shieldCheckmark, shieldHalf, trophy, card, person, key });
+    addIcons({
+      logoIonic,
+      flask,
+      cog,
+      shieldCheckmark,
+      shieldHalf,
+      trophy,
+      phonePortrait,
+      card,
+      person,
+      key,
+    });
   }
 }
