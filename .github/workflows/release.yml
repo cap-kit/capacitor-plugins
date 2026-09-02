@@ -45,7 +45,7 @@ jobs:
         id: changesets
         uses: changesets/action@v2.1.1
         with:
-          github-token: ${{ secrets.GH_PAT }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           publish-script: pnpm release
           commit-message: "chore(release): Version packages"
           pr-title: "chore(release): Version packages"
