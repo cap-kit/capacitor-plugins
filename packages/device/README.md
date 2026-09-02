@@ -14,10 +14,13 @@
 </p>
 
 <p align="center">
-  The <strong>Device</strong> for the Cap-Kit ecosystem.<br>
-  This package serves as the definitive <strong>boilerplate and validation ground</strong> for creating new Capacitor plugins.<br>
-  It demonstrates the enforced monorepo structure, build configuration, and native bridges (Swift/Kotlin) required by our standards.<br>
-  <em>Note: This is an internal reference package, primarily used for CI verification and scaffolding.</em>
+  The <strong>Device</strong> plugin for the Cap-Kit ecosystem.<br>
+  A unified Capacitor v8 plugin for native device information: identifiers,
+  OS and hardware details, battery, display, configuration, power and thermal state,
+  memory &amp; CPU usage, storage, system uptime, and app version.<br>
+  All features are implemented across <strong>iOS, Android, and Web</strong>,
+  following the enforced monorepo structure, build configuration, and native bridges
+  (Swift/Kotlin) required by our standards.
 </p>
 
 <p align="center">
