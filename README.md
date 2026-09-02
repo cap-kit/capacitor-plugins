@@ -18,10 +18,10 @@
   <br/>
 
 [Plugins](#-plugins-collection) •
+[Demo App](#-demo-app) •
 [Architecture](#-architecture--standards) •
 [Getting Started](#-getting-started) •
 [Contributing](#-contributing)
-
 </div>
 
 ---
@@ -46,6 +46,37 @@ Each plugin is fully cross-platform:
 - iOS (Swift)
 - Android (Kotlin)
 
+Every plugin also ships a **runnable demo app** — see [Demo App](#-demo-app).
+
+---
+
+## 🧪 Demo App
+
+Every plugin includes a **ready-to-run demo app** built from a shared **Angular + Ionic + Capacitor 8** template.
+
+| Component       | Path                             | Description                                          |
+| --------------- | -------------------------------- | ---------------------------------------------------- |
+| Shared template | [`demo/`](./demo)                | Reference app used as the base for every plugin demo |
+| Per-plugin app  | `packages/<plugin>/example-app/` | Generated demo wiring the local plugin via `file:..` |
+
+The per-plugin `example-app/` is **generated**, never edited by hand. [`scripts/prepare-demo.ts`](./scripts/prepare-demo.ts) copies the shared `demo/` app, applies plugin-specific patches (Capacitor config, routes, native bootstrapping) and copies static pages from each plugin's `example-app/static/`.
+
+### Regenerate a demo
+
+```bash
+pnpm install
+tsx scripts/prepare-demo.ts <plugin-name>
+```
+
+### Run a demo
+
+```bash
+# From packages/<plugin>/example-app/
+pnpm install
+pnpm run build:ios      # build web + cap sync ios + open Xcode
+pnpm run build:android  # build web + cap sync android + open Android Studio
+```
+
 ---
 
 <!-- PLUGINS_TABLE_START -->
@@ -53,7 +84,7 @@ Each plugin is fully cross-platform:
 > **Information:** All plugins are optimized for **Capacitor v8+** and tested for native parity.
 
 <p align="center">
-  📦 <strong>Total Plugins:</strong> 6 &nbsp;&bull;&nbsp; 📈 <strong>Weekly Downloads:</strong> <img src="https://img.shields.io/npm/dw/@cap-kit/test-plugin?style=flat-square&logo=npm&label=&color=orange" alt="Downloads" valign="middle" />
+  📦 <strong>Total Plugins:</strong> 6 &nbsp;&bull;&nbsp; ⚡ <strong>Core:</strong> <img src="https://img.shields.io/badge/Capacitor-v8+-05f.svg?style=flat-square&logo=capacitor&logoColor=white" alt="Capacitor v8+" valign="middle" />
 </p>
 
 <table width="100%">
@@ -245,13 +276,14 @@ Runtime TLS leaf certificate SHA-256 fingerprint validation plugin for Capacitor
 
 This repository follows a **strict pnpm monorepo model**.
 
-| Layer              | Stack                           |
-| ------------------ | ------------------------------- |
-| Package Manager    | `pnpm 11+`                      |
-| Task Orchestration | `Turborepo 2.x`                 |
-| CI/CD              | GitHub Actions (`macos-latest`) |
-| Versioning         | Changesets                      |
-| Minimum Capacitor  | `v8.0.0`                        |
+| Layer              | Stack                               |
+| ------------------ | ----------------------------------- |
+| Package Manager    | `pnpm 11+`                          |
+| Task Orchestration | `Turborepo 2.x`                     |
+| CI/CD              | GitHub Actions (`macos-latest`)     |
+| Versioning         | Changesets                          |
+| Minimum Capacitor  | `v8.0.0`                            |
+| Demo Workspace     | `demo/` + `packages/*/example-app/` |
 
 ### Architectural Guarantees
 
@@ -260,6 +292,7 @@ This repository follows a **strict pnpm monorepo model**.
 - Deterministic CI (path-aware execution)
 - Native parity enforced (Web / iOS / Android)
 - No manual publishing
+- Every plugin ships a runnable `example-app/` generated from the shared `demo/` template
 
 ---
 
@@ -275,6 +308,23 @@ This repository follows a **strict pnpm monorepo model**.
 ```bash
 pnpm add @cap-kit/<plugin-name>
 npx cap sync
+```
+
+### Try a plugin demo
+
+Each plugin ships a runnable demo app wired to the local source:
+
+```bash
+# 1. Build the plugin (run from its package directory)
+cd packages/<plugin-name> && pnpm run build
+
+# 2. Regenerate the demo app from the shared template
+tsx scripts/prepare-demo.ts <plugin-name>
+
+# 3. Run the generated app
+cd packages/<plugin-name>/example-app
+pnpm install
+pnpm run build:ios   # or build:android
 ```
 
 ---
