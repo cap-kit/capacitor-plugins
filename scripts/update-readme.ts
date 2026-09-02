@@ -155,14 +155,19 @@ async function main(): Promise<void> {
   // 2. Stats Line (Total Plugins | Weekly Downloads | Contributors)
   const totalPlugins = plugins.length;
 
-  // Downloads Badge (Orange)
-  const downloadsBadge = `<img src="https://img.shields.io/npm/dw/@cap-kit/test-plugin?style=flat-square&logo=npm&label=&color=orange" alt="Downloads" valign="middle" />`;
+  // Capacitor Version Badge (Blue).
+  // The previous stats line used a hardcoded @cap-kit/test-plugin downloads
+  // badge; shields.io does not support aggregated downloads across packages,
+  // so the stats line shows Capacitor compatibility instead. Per-plugin
+  // download badges already exist in each plugin card.
+  const capVersionBadge = `<img src="https://img.shields.io/badge/Capacitor-v8+-05f.svg?style=flat-square&logo=capacitor&logoColor=white" alt="Capacitor v8+" valign="middle" />`;
 
   // Contributors Badge (Green)
   // const contributorsBadge = `<a href="https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/graphs/contributors"><img src="https://img.shields.io/github/contributors/${GITHUB_OWNER}/${GITHUB_REPO}?style=flat-square&logo=github&label=&color=green" alt="Contributors" valign="middle" /></a>`;
 
-  // Capacitor Version Badge (Blue)
-  // const capVersionBadge = `<a href="https://capacitorjs.com"><img src="https://img.shields.io/badge/Capacitor-v8+-05f.svg?style=flat-square&logo=capacitor&logoColor=white" alt="Capacitor Compatibility" valign="middle" /></a>`;
+  // Weekly Downloads Badge (Orange) — kept commented out because shields.io
+  // cannot aggregate downloads across packages.
+  // const downloadsBadge = `<img src="https://img.shields.io/npm/dm/${plugins[0]?.data.name ?? '@cap-kit/integrity'}?style=flat-square&logo=npm&label=&color=orange" alt="Downloads" valign="middle" />`;
 
   // Size/Performance Badge (Green)
   // const sizeBadge = `<img src="https://img.shields.io/badge/Performance-Lightweight-00e676.svg?style=flat-square&logo=speedtest&logoColor=white" alt="Performance" valign="middle" />`;
@@ -172,9 +177,9 @@ async function main(): Promise<void> {
   // Add active elements to this array.
   const activeStatsElements = [
     `📦 <strong>Total Plugins:</strong> ${totalPlugins}`,
-    `📈 <strong>Weekly Downloads:</strong> ${downloadsBadge}`,
+    `⚡ <strong>Core:</strong> ${capVersionBadge}`,
+    // `📈 <strong>Weekly Downloads:</strong> ${downloadsBadge}`,
     // `👥 <strong>Contributors:</strong> ${contributorsBadge}`,
-    // `⚡ <strong>Core:</strong> ${capVersionBadge}`,
     // `💎 <strong>Quality:</strong> ${sizeBadge}`,
   ];
 

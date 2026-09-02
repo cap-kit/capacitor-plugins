@@ -5,6 +5,6 @@
      "@angular/platform-browser": "^22.1.4",
      "@angular/router": "^22.1.4",
 +    "@cap-kit/settings": "file:..",
-     "@capacitor/android": "^8.5.0",
+     "@capacitor/android": "^8.5.1",
      "@capacitor/app": "^8.1.1",
-     "@capacitor/cli": "^8.5.0",
+     "@capacitor/cli": "^8.5.1",

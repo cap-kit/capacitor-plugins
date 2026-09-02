@@ -20,8 +20,7 @@
     "ionic:add": "ionic capacitor add",
     "ionic:sync": "ionic capacitor sync",
     "ionic:open": "ionic capacitor open",
-    "sanitize:team:id": "tsx scripts/sanitize-team-id.ts",
-    "reset:git": "rm -rf .git && git init && git add . && git commit -m \"Initial commit\""
+    "sanitize:team:id": "tsx scripts/sanitize-team-id.ts"
   },
   "prettier": {
     "printWidth": 100,
@@ -36,7 +35,7 @@
     ]
   },
   "private": true,
-  "packageManager": "pnpm@11.24.0",
+  "packageManager": "pnpm@11.25.0",
   "dependencies": {
     "@angular/common": "^22.1.4",
     "@angular/compiler": "^22.1.4",
@@ -44,12 +43,12 @@
     "@angular/forms": "^22.1.4",
     "@angular/platform-browser": "^22.1.4",
     "@angular/router": "^22.1.4",
-    "@capacitor/android": "^8.5.0",
+    "@capacitor/android": "^8.5.1",
     "@capacitor/app": "^8.1.1",
-    "@capacitor/cli": "^8.5.0",
-    "@capacitor/core": "^8.5.0",
+    "@capacitor/cli": "^8.5.1",
+    "@capacitor/core": "^8.5.1",
     "@capacitor/haptics": "^8.0.2",
-    "@capacitor/ios": "^8.5.0",
+    "@capacitor/ios": "^8.5.1",
     "@capacitor/keyboard": "^8.0.5",
     "@capacitor/status-bar": "^8.0.3",
     "@ionic/angular": "^9.0.1",
@@ -68,7 +67,7 @@
     "@ionic/cli": "7.2.1",
     "@types/node": "^26.4.0",
     "jsdom": "^30.0.1",
-    "tsx": "^4.23.12",
+    "tsx": "^4.23.13",
     "typescript": "~6.0.3",
     "vite": "^8.2.2",
     "vite-plugin-static-copy": "^4.1.1",
