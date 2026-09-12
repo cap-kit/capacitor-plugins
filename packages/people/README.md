@@ -40,6 +40,31 @@
 </p>
 <br>
 
+## Overview
+
+This Capacitor plugin provides a unified, capability-based abstraction over native contact systems: projection-based queries with per-field control, zero-permission contact picking, systemic access with fine-grained capabilities, live change observation, and contact search.
+
+- Queries the address book with configurable projections, creates/updates/deletes contacts, manages groups, observes changes via `peopleChange` listeners, and searches for people natively.
+- It does NOT require any permissions for `pickContact()` — the OS-level contact picker grants zero-permission access.
+- It does NOT support systemic access operations on Web — only the zero-permission contact picker is available; all other methods reject as `unimplemented`.
+
+### Platform Support
+
+| Platform | Status                                                                                    |
+| -------- | ----------------------------------------------------------------------------------------- |
+| iOS      | Supported                                                                                 |
+| Android  | Supported                                                                                 |
+| Web      | Partial - zero-permission contact picker only; systemic access rejects as `unimplemented` |
+
+## Documentation
+
+- [Usage guide](docs/guide.md) — Promise-based usage patterns and error handling with `PeopleErrorCode`
+- [Permissions](docs/permissions.md) — Android manifest entries, iOS Info.plist keys, and Web platform notes
+- [Apple privacy manifest](docs/privacy.md) — Required Reason API declarations via `PrivacyInfo.xcprivacy`
+- [Contributing](CONTRIBUTING.md)
+
+---
+
 ## Install
 
 ```bash
@@ -52,31 +77,7 @@ yarn add @cap-kit/people
 npx cap sync
 ```
 
-## Apple Privacy Manifest
-
-Apple mandates that app developers specify approved reasons for API usage to enhance user privacy.
-
-This plugin includes a skeleton `PrivacyInfo.xcprivacy` file located in `ios/Sources/PeoplePlugin/PrivacyInfo.xcprivacy`.
-
-**You must populate this file if your plugin uses any [Required Reason APIs](https://developer.apple.com/documentation/bundleresources/privacy_manifest_files/describing_use_of_required_reason_api).**
-
-### Example: User Defaults
-
-If your plugin uses `UserDefaults`, you must declare it in the manifest:
-
-```xml
-<dict>
-    <key>NSPrivacyAccessedAPIType</key>
-    <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
-    <key>NSPrivacyAccessedAPITypeReasons</key>
-    <array>
-        <string>CA92.1</string>
-    </array>
-</dict>
-
-```
-
-For detailed steps, please see the [Capacitor Docs](https://capacitorjs.com/docs/ios/privacy-manifest).
+---
 
 ## Configuration
 
@@ -122,129 +123,6 @@ export default config;
 ```
 
 </docgen-config>
-
-## Permissions
-
-### Android
-
-This plugin requires the following permissions be added to your `AndroidManifest.xml`:
-
-```xml
-<uses-permission android:name="android.permission.READ_CONTACTS" />
-<uses-permission android:name="android.permission.WRITE_CONTACTS" />
-
-```
-
-Read about [Setting Permissions](https://capacitorjs.com/docs/android/configuration#setting-permissions) in the [Android Guide](https://capacitorjs.com/docs/android) for more information on setting Android permissions.
-
-### iOS
-
-To use the plugin on iOS, you need to add the following keys to your `Info.plist` file:
-
-#### Contacts
-
-- `NSContactsUsageDescription`
-- _Privacy - Contacts Usage Description_
-
-Read about [Configuring `Info.plist`](https://capacitorjs.com/docs/ios/configuration#configuring-infoplist) in the [iOS Guide](https://capacitorjs.com/docs/ios) for more information on setting iOS permissions in Xcode.
-
-### Web
-
-On the Web platform, only the zero-permission contact picker is supported via the Contact Picker API when available.  
-All systemic access operations (`getContacts`, `getContact`, `searchPeople`, CRUD operations, group management, and `peopleChange` listeners) are not implemented on Web and will reject as unimplemented.
-
----
-
-### ✅ Correct Usage
-
-All People plugin APIs are based on Promise and follow the standard Capacitor v8 reject paradigm. Use `try / catch` to handle native cancellations and errors.
-
-```ts
-import { People, PeopleErrorCode } from '@cap-kit/people';
-
-try {
-  const { contact } = await People.pickContact({
-    projection: ['name', 'phones', 'emails'],
-  });
-  console.log('Picked contact:', contact);
-} catch (err: any) {
-  if (err.code === PeopleErrorCode.CANCELLED) {
-    // User canceled selection
-    console.log('Picker cancelled');
-  } else {
-    console.error('Error:', err.message);
-  }
-}
-```
-
----
-
-### ❌ Incorrect Usage
-
-Do not use checks based on the `success` property in the result, as the methods reject the Promise on error.
-
-```ts
-// ❌ DO NOT DO THIS
-const result = await People.pickContact();
-if (result.success) { ... }
-```
-
----
-
-## Error Handling
-
-All People plugin methods can reject the Promise if they fail. It is recommended to handle standardized error codes using `PeopleErrorCode`.
-
-### Error Codes
-
-All error codes are standardized and exposed via `PeopleErrorCode`:
-
-- `UNAVAILABLE` – Feature not available or OS limitation
-- `CANCELLED` – User cancelled an interactive flow (e.g., contact picker)
-- `PERMISSION_DENIED` – Permission denied or restricted
-- `INIT_FAILED` – Internal initialization or processing failure
-- `INVALID_INPUT` – Invalid, missing, or malformed input
-- `UNKNOWN_TYPE` – Invalid or unsupported projection/type
-
-These codes are consistent across **iOS**, **Android**, and **Web**.
-
-### Example
-
-```ts
-import { People, PeopleErrorCode } from '@cap-kit/people';
-
-try {
-  const { contact } = await People.pickContact();
-  console.log('Contact selected:', contact);
-} catch (err: any) {
-  switch (err.code) {
-    case PeopleErrorCode.CANCELLED:
-      // The user canceled the selection
-      console.log('Picker cancelled by user');
-      break;
-
-    case PeopleErrorCode.UNAVAILABLE:
-      // The user canceled the selection or the picker is not available
-      console.log('Picker unavailable or cancelled by user');
-      break;
-
-    case PeopleErrorCode.PERMISSION_DENIED:
-      // User has denied access to contacts (for methods that require permissions)
-      console.error('Permission to access contacts was denied');
-      break;
-
-    case PeopleErrorCode.INIT_FAILED:
-      // Internal error while processing native data
-      console.error('Native initialization or processing failure');
-      break;
-
-    default:
-      // Generic or unexpected error
-      console.error('An unexpected error occurred:', err.message);
-      break;
-  }
-}
-```
 
 ---
 

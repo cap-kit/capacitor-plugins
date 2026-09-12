@@ -43,6 +43,28 @@
 </p>
 <br>
 
+## Overview
+
+This Capacitor plugin provides a unified, platform-agnostic API for native device information: identifiers, OS and hardware details, battery, display, configuration, power and thermal state, memory and CPU usage, storage, system uptime, and app version. All features are implemented across iOS, Android, and Web.
+
+- Reads device, battery, display, configuration, power, memory, storage, uptime, and app version data on demand from the local OS or browser.
+- It does NOT transmit or upload device data anywhere — all information stays in the app.
+
+### Platform Support
+
+| Platform | Status                                                                                   |
+| -------- | ---------------------------------------------------------------------------------------- |
+| iOS      | Supported                                                                                |
+| Android  | Supported                                                                                |
+| Web      | Supported (partial) - battery extras, power state, and system uptime throw `unavailable` |
+
+## Documentation
+
+- [Usage guide](docs/guide.md) — Apple privacy manifest requirements and configuration
+- [Contributing](CONTRIBUTING.md)
+
+---
+
 ## Install
 
 ```bash
@@ -50,38 +72,7 @@ pnpm add @cap-kit/device
 npx cap sync
 ```
 
-## Apple Privacy Manifest Requirements
-
-Apple mandates that app developers now specify approved reasons for API usage to enhance user privacy. By May 1st, 2024, it's required to include these reasons when submitting apps to the App Store Connect.
-
-When using this specific plugin in your app, you must create a `PrivacyInfo.xcprivacy` file in `/ios/App` or use the VS Code Extension to generate it, specifying the usage reasons.
-
-For detailed steps on how to do this, please see the [Capacitor Docs](https://capacitorjs.com/docs/ios/privacy-manifest).
-
-**For this plugin, the required dictionary key is [NSPrivacyAccessedAPICategoryDiskSpace](https://developer.apple.com/documentation/bundleresources/privacy_manifest_files/describing_use_of_required_reason_api#4278397) and the recommended reason is [85F4.1](https://developer.apple.com/documentation/bundleresources/privacy_manifest_files/describing_use_of_required_reason_api#4278397).**
-
-### Example PrivacyInfo.xcprivacy
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-  <dict>
-    <key>NSPrivacyAccessedAPITypes</key>
-    <array>
-      <!-- Add this dict entry to the array if the PrivacyInfo file already exists -->
-      <dict>
-        <key>NSPrivacyAccessedAPIType</key>
-        <string>NSPrivacyAccessedAPICategoryDiskSpace</string>
-        <key>NSPrivacyAccessedAPITypeReasons</key>
-        <array>
-          <string>85F4.1</string>
-        </array>
-      </dict>
-    </array>
-  </dict>
-</plist>
-```
+---
 
 ## Configuration
 
@@ -127,6 +118,8 @@ export default config;
 ```
 
 </docgen-config>
+
+---
 
 ## API
 
@@ -780,7 +773,7 @@ has been refactored and modernized for **Capacitor v8** and
 
 Original inspiration:
 
-- [https://github.com/](https://github.com/)
+- [https://capacitorjs.com/docs/apis/device](https://capacitorjs.com/docs/apis/device)
 
 ---
 
