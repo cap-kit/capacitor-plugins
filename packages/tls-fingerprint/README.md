@@ -44,18 +44,8 @@
 
 This Capacitor plugin validates the SHA-256 fingerprint of a server's TLS leaf certificate at runtime.
 
-### What this plugin does
-
-- Extracts the leaf certificate from an HTTPS connection
-- Computes its SHA-256 fingerprint
-- Compares against expected fingerprints provided at runtime or in static configuration
-
-### What this plugin does NOT do
-
-- It does NOT perform anchor-based certificate pinning
-- It does NOT load local certificate files
-- It does NOT modify or override the system trust store
-- It does NOT validate the certificate chain
+- Extracts the leaf certificate from an HTTPS connection, computes its SHA-256 fingerprint, and compares it against expected fingerprints provided at runtime or in static configuration.
+- It does NOT perform anchor-based certificate pinning, load local certificate files, override the system trust store, or validate the certificate chain.
 
 ### Platform Support
 
@@ -64,6 +54,12 @@ This Capacitor plugin validates the SHA-256 fingerprint of a server's TLS leaf c
 | iOS      | Supported                                           |
 | Android  | Supported                                           |
 | Web      | Unsupported - methods reject with `unimplemented()` |
+
+## Documentation
+
+- [Usage guide](docs/guide.md) — obtaining fingerprints and usage examples
+- [Security considerations](docs/security.md)
+- [Contributing](CONTRIBUTING.md)
 
 ---
 
@@ -78,41 +74,6 @@ yarn add @cap-kit/tls-fingerprint
 # then run:
 npx cap sync
 ```
-
----
-
-## Obtaining Fingerprints
-
-To use this plugin, you need the SHA-256 fingerprint of the server certificate.
-
-### Method 1 — Using OpenSSL
-
-```bash
-openssl x509 -noout -fingerprint -sha256 -inform pem -in /path/to/cert.pem
-```
-
-Example output:
-
-```bash
-SHA256 Fingerprint=EF:BA:26:D8:C1:CE:37:79:AC:77:63:0A:90:F8:21:63:A3:D6:89:2E:D6:AF:EE:40:86:72:CF:19:EB:A7:A3:62
-```
-
-> The plugin normalizes fingerprints to lowercase hex with no separators.
-> For example, `EF:BA:26:...` becomes `efba26...`
-
-### Method 2 — Using the Built-in CLI Tool
-
-This project includes a CLI utility to retrieve certificates from remote servers:
-
-```bash
-npx cap-kit-tls-fingerprint example.com
-```
-
-```bash
-npx cap-kit-tls-fingerprint example.com api.example.com --mode multi
-```
-
-The CLI is for development-time certificate inspection only. It does not perform runtime validation.
 
 ---
 
@@ -169,8 +130,6 @@ export default config;
 ```
 
 </docgen-config>
-
-> **Note:** All network operations have a 10-second timeout. If the server does not respond within this time, the Promise is rejected with `TLSFingerprintErrorCode.TIMEOUT`.
 
 ---
 
@@ -321,80 +280,6 @@ Result returned by the getPluginVersion method.
 | **`SSL_ERROR`**         | <code>'SSL_ERROR'</code>         | SSL/TLS specific error (certificate expired, handshake failure, etc.).         |
 
 </docgen-api>
-
----
-
-## Security Considerations
-
-This plugin validates fingerprint equality only.
-
-### What this means
-
-- The plugin compares the server's leaf certificate SHA-256 fingerprint against expected values
-- It does NOT replace TLS validation
-- It does NOT override trust evaluation
-- Expired or self-signed certificates will validate if the fingerprint matches
-
-### Limitations
-
-- Fingerprint validation requires active maintenance
-- Certificate rotation requires configuration updates
-- Misconfiguration may result in loss of network connectivity
-
-This plugin is provided as-is, without warranty. Always test thoroughly before production deployment.
-
----
-
-## Usage Examples
-
-### Single fingerprint check
-
-```ts
-import { TLSFingerprint } from '@cap-kit/tls-fingerprint';
-
-const result = await TLSFingerprint.checkCertificate({
-  url: 'https://example.com',
-  fingerprint: 'aabbccdd...',
-});
-
-if (result.fingerprintMatched) {
-  console.log('Certificate is trusted');
-} else {
-  console.log('Fingerprint mismatch:', result.error);
-}
-```
-
-### Multiple fingerprints (certificate rotation)
-
-```ts
-import { TLSFingerprint } from '@cap-kit/tls-fingerprint';
-
-const result = await TLSFingerprint.checkCertificates({
-  url: 'https://example.com',
-  fingerprints: ['aabbccdd...', '11223344...'],
-});
-
-if (result.fingerprintMatched) {
-  console.log('Certificate matched:', result.matchedFingerprint);
-}
-```
-
-### Using static configuration
-
-```ts
-// capacitor.config.ts
-plugins: {
-  TLSFingerprint: {
-    fingerprint: 'aabbccdd...',
-    excludedDomains: ['localhost', 'analytics.example.com']
-  }
-}
-
-// App code
-const result = await TLSFingerprint.checkCertificate({
-  url: 'https://example.com',
-});
-```
 
 ---
 

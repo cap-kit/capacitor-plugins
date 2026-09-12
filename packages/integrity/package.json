@@ -30,7 +30,8 @@
     "Package.swift",
     "CapKitIntegrity.podspec",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "docs/"
   ],
   "author": "CapKit Team",
   "funding": {
