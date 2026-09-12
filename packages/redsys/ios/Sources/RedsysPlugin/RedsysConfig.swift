@@ -36,7 +36,7 @@ public struct RedsysConfig {
         static let merchantConsumerLanguage = "merchantConsumerLanguage"
         static let signature = "signature"
 
-        static let ui = "ui"
+        static let uiCustomization = "ui"
     }
 
     // MARK: - Core Configuration
@@ -158,19 +158,19 @@ public struct RedsysConfig {
         self.signature = config.getString(Keys.signature)
 
         // UI configuration
-        let ui = config.getObject(Keys.ui) ?? [:]
+        let uiConfig = config.getObject(Keys.uiCustomization) ?? [:]
 
-        self.uiLogo = ui["logo"] as? String
-        self.uiBackgroundColor = ui["backgroundColor"] as? String
-        self.uiBackgroundImage = ui["iosBackgroundImage"] as? String
-        self.uiConfirmButtonText = ui["confirmButtonText"] as? String
-        self.uiCancelButtonText = ui["iosCancelButtonText"] as? String
+        self.uiLogo = uiConfig["logo"] as? String
+        self.uiBackgroundColor = uiConfig["backgroundColor"] as? String
+        self.uiBackgroundImage = uiConfig["iosBackgroundImage"] as? String
+        self.uiConfirmButtonText = uiConfig["confirmButtonText"] as? String
+        self.uiCancelButtonText = uiConfig["iosCancelButtonText"] as? String
 
         // UI Label
-        self.cardNumberLabel = ui["cardNumberLabel"] as? String
-        self.expirationLabel = ui["expirationLabel"] as? String
-        self.cvvLabel = ui["cvvLabel"] as? String
-        self.infoLabel = ui["infoLabel"] as? String
-        self.labelTextColor = ui["labelTextColor"] as? String
+        self.cardNumberLabel = uiConfig["cardNumberLabel"] as? String
+        self.expirationLabel = uiConfig["expirationLabel"] as? String
+        self.cvvLabel = uiConfig["cvvLabel"] as? String
+        self.infoLabel = uiConfig["infoLabel"] as? String
+        self.labelTextColor = uiConfig["labelTextColor"] as? String
     }
 }

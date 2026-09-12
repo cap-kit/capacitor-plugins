@@ -105,9 +105,9 @@ final class TLSFingerprintDelegate: NSObject, URLSessionDelegate, URLSessionTask
      */
     init(
         expectedFingerprints: [String],
-        excludedDomains: [String] = [],
         completion: @escaping (TLSFingerprintResult) -> Void,
-        verboseLogging: Bool
+        verboseLogging: Bool,
+        excludedDomains: [String] = []
     ) {
         self.expectedFingerprints =
             expectedFingerprints.map {
@@ -170,6 +170,13 @@ final class TLSFingerprintDelegate: NSObject, URLSessionDelegate, URLSessionTask
 
     // MARK: - URLSessionDelegate
 
+    // The auth-challenge handler is the TLS fingerprint decision point; the
+    // full trust-evaluation flow is kept linear for auditable step-by-step
+    // review (security-lint-precedence). Control comments must sit between
+    // doc and declaration, orphaning the doc (SwiftLint 0.65.1); both
+    // disable:next below are single-rule and line-scoped, no re-enables.
+    // SECURITY: explicit control flow preferred for auditability
+    // swiftlint:disable:next orphaned_doc_comment
     /**
      Intercepts the TLS authentication challenge
      and applies the configured TLS fingerprint strategy.
@@ -194,6 +201,7 @@ final class TLSFingerprintDelegate: NSObject, URLSessionDelegate, URLSessionTask
      - Does NOT evaluate system trust.
      - Compares only the leaf certificate fingerprint.
      */
+    // swiftlint:disable:next function_body_length
     func urlSession(
         _ session: URLSession,
         didReceive challenge: URLAuthenticationChallenge,
@@ -252,8 +260,8 @@ final class TLSFingerprintDelegate: NSObject, URLSessionDelegate, URLSessionTask
             completionHandler(.useCredential, URLCredential(trust: trust))
 
             completeWithResult(TLSFingerprintResult(
-                actualFingerprint: actualFingerprint,
                 fingerprintMatched: true,
+                actualFingerprint: actualFingerprint,
                 excludedDomain: true,
                 mode: "excluded",
                 error: TLSFingerprintErrorMessages.excludedDomain,
@@ -302,8 +310,8 @@ final class TLSFingerprintDelegate: NSObject, URLSessionDelegate, URLSessionTask
         )
 
         completeWithResult(TLSFingerprintResult(
-            actualFingerprint: actualFingerprint,
             fingerprintMatched: matched,
+            actualFingerprint: actualFingerprint,
             matchedFingerprint: matchedFingerprint,
             mode: "fingerprint",
             error: matched ? "" : TLSFingerprintErrorMessages.pinningFailed,

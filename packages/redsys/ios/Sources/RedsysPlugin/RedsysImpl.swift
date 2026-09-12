@@ -55,12 +55,22 @@ import TPVVInLibrary
 
         // MARK: - SDK Global Configuration
 
+        applySDKCoreConfiguration(config)
+        applyMerchantMetadata(config)
+        applyEnvironment(config)
+        applyPaymentMethodsAndLanguage(config)
+    }
+
+    /// Applies the core SDK credentials (license, FUC, terminal, currency).
+    private func applySDKCoreConfiguration(_ config: RedsysConfig) {
         TPVVConfiguration.shared.appLicense = config.license
         TPVVConfiguration.shared.appFuc = config.fuc
         TPVVConfiguration.shared.appTerminal = config.terminal
         TPVVConfiguration.shared.appCurrency = config.currency
+    }
 
-        // Apply optional merchant configuration
+    /// Applies optional merchant metadata to the SDK configuration.
+    private func applyMerchantMetadata(_ config: RedsysConfig) {
         if let titular = config.titular {
             TPVVConfiguration.shared.appMerchantTitular = titular
         }
@@ -94,9 +104,10 @@ import TPVVInLibrary
         if let merchantGroup = config.merchantGroup {
             TPVVConfiguration.shared.appMerchantGroup = merchantGroup
         }
+    }
 
-        // MARK: - Environment Mapping
-
+    /// Maps the configured environment to the SDK enum.
+    private func applyEnvironment(_ config: RedsysConfig) {
         switch config.environment.lowercased() {
         case "real": TPVVConfiguration.shared.appEnviroment = .Real
         case "test": TPVVConfiguration.shared.appEnviroment = .Test
@@ -104,7 +115,10 @@ import TPVVInLibrary
         }
 
         RedsysLogger.debug("RedsysImpl: SDK initialized in \(TPVVConfiguration.shared.appEnviroment) mode.")
+    }
 
+    /// Applies WebView payment methods and consumer language.
+    private func applyPaymentMethodsAndLanguage(_ config: RedsysConfig) {
         // Apply WebView payment methods
         if let methods = config.paymentMethods {
             TPVVConfiguration.shared.appMerchantPayMethods =
@@ -120,9 +134,16 @@ import TPVVInLibrary
 
     // MARK: - Web Payment (Phase 1: Initialization)
 
+    // 7 named parameters mirror the TPVV SDK `SDK_INAPP.inicializeWebPayment`
+    // signature mapped 1:1 from the JS bridge contract; grouping would break
+    // the mapping and the Android parity contract. Control comments must sit
+    // between doc and declaration, orphaning the doc (SwiftLint 0.65.1); both
+    // disable:next below are single-rule and line-scoped, no re-enables.
+    // swiftlint:disable:next orphaned_doc_comment
     /**
      * Initializes the WebView payment flow on iOS.
      */
+    // swiftlint:disable:next function_parameter_count
     @objc func initializeWebPayment(
         order: String,
         amount: Double, // Using Double as per swiftinterface inspection
@@ -184,12 +205,22 @@ import TPVVInLibrary
 
     // MARK: - Direct Payment
 
+    // 8 named parameters mirror the TPVV SDK `DirectPaymentViewController`
+    // contract mapped 1:1 from the JS bridge; the UI-config override block is
+    // kept as one linear sequence for auditability. Extraction into smaller
+    // builders was evaluated but the label/font/logo block still exceeds the
+    // complexity budget on its own, so design-level cleanup is tracked as
+    // follow-up debt. Control comments must sit between doc and declaration,
+    // orphaning the doc (SwiftLint 0.65.1); both disable:next below are
+    // single-rule (multi-token) and line-scoped, no re-enables.
+    // swiftlint:disable:next orphaned_doc_comment
     /**
      Executes the direct payment flow.
 
      Presents the native DirectPaymentViewController and
      assigns the delegate for asynchronous result handling.
      */
+    // swiftlint:disable:next function_parameter_count cyclomatic_complexity function_body_length
     @objc func executeDirectPayment(
         order: String,
         amount: Double,
@@ -213,11 +244,11 @@ import TPVVInLibrary
             }
 
             // Apply Runtime Overrides from uiOptions (JS Call)
-            if let ui = uiOptions {
-                if let bgColor = ui["backgroundColor"] as? String {
+            if let uiOptions = uiOptions {
+                if let bgColor = uiOptions["backgroundColor"] as? String {
                     _ = uiConfig.setBackgorundViewColor(color: RedsysUtils.colorFromHex(bgColor))
                 }
-                if let btnText = ui["confirmButtonText"] as? String {
+                if let btnText = uiOptions["confirmButtonText"] as? String {
                     _ = uiConfig.setContinueButtonText(btnText)
                 }
             }

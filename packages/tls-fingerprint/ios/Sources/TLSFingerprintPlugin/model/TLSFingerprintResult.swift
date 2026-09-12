@@ -25,8 +25,8 @@ struct TLSFingerprintResult {
     let errorCode: String?
 
     init(
-        actualFingerprint: String? = nil,
         fingerprintMatched: Bool,
+        actualFingerprint: String? = nil,
         matchedFingerprint: String? = nil,
         excludedDomain: Bool? = nil,
         mode: String? = nil,
