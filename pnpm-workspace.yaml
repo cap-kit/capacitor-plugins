@@ -10,7 +10,6 @@ allowBuilds:
   swiftlint: true
   unrs-resolver: true
 minimumReleaseAgeExclude:
-  - typescript-eslint@8.68.0
   - tsx@4.23.13
   - '@rollup/rollup-android-arm-eabi@4.63.2'
   - '@rollup/rollup-android-arm64@4.63.2'
