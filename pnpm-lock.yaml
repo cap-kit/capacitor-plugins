@@ -1584,36 +1584,11 @@ packages:
   '@cacheable/utils@2.5.0':
     resolution: {integrity: sha512-buipgOVDkkPXNR5+xBpDw7Zk2n1EvU7qBJCNUcL7rhQ//kfpOXPAvQ511Os0vpLYJ1pZnvudNytkQt2hst3wqA==}
 
-  '@cap-kit/device@file:packages/device':
-    resolution: {directory: packages/device, type: directory}
-    engines: {node: '>=24.0.0', pnpm: '>=11.0.0'}
-    peerDependencies:
-      '@capacitor/core': ^8.5.2
-
   '@cap-kit/docgen@file:local_lib/cap-kit-docgen-0.3.1.tgz':
     resolution: {integrity: sha512-qHIdHGpFu55ANzXZvRLDBobb5ePsj40+SjdZASCdYVYtGzFjXt4H9xfG4lJYFh+8LjsC0F/1vpNVBZyEoROdtA==, tarball: file:local_lib/cap-kit-docgen-0.3.1.tgz}
     version: 0.3.1
     engines: {node: '>=24.0.0', pnpm: '>=11.0.0'}
     hasBin: true
-
-  '@cap-kit/rank@file:packages/rank':
-    resolution: {directory: packages/rank, type: directory}
-    engines: {node: '>=24.0.0', pnpm: '>=11.0.0'}
-    peerDependencies:
-      '@capacitor/core': ^8.5.2
-
-  '@cap-kit/settings@file:packages/settings':
-    resolution: {directory: packages/settings, type: directory}
-    engines: {node: '>=24.0.0', pnpm: '>=11.0.0'}
-    peerDependencies:
-      '@capacitor/core': ^8.5.2
-
-  '@cap-kit/tls-fingerprint@file:packages/tls-fingerprint':
-    resolution: {directory: packages/tls-fingerprint, type: directory}
-    engines: {node: '>=24.0.0', pnpm: '>=11.0.0'}
-    hasBin: true
-    peerDependencies:
-      '@capacitor/core': ^8.5.2
 
   '@capacitor/android@8.5.1':
     resolution: {integrity: sha512-o8fUIPDSEASeXHHrDz26WU7OlyiRb+QqtI9KFdnLS1jUL77o5iGrvegibaZX8rWpiCyDJ6jlUhhhHlfeq3ou9A==}
@@ -7131,29 +7106,12 @@ snapshots:
       hashery: 1.5.1
       keyv: 5.6.0
 
-  '@cap-kit/device@file:packages/device(@capacitor/core@8.5.1)':
-    dependencies:
-      '@capacitor/core': 8.5.1
-
   '@cap-kit/docgen@file:local_lib/cap-kit-docgen-0.3.1.tgz':
     dependencies:
       colorette: 2.0.20
       github-slugger: 2.0.0
       minimist: 1.2.8
       typescript: 5.9.3
-
-  '@cap-kit/rank@file:packages/rank(@capacitor/core@8.5.1)':
-    dependencies:
-      '@capacitor/core': 8.5.1
-
-  '@cap-kit/settings@file:packages/settings(@capacitor/core@8.5.1)':
-    dependencies:
-      '@capacitor/core': 8.5.1
-
-  '@cap-kit/tls-fingerprint@file:packages/tls-fingerprint(@capacitor/core@8.5.1)':
-    dependencies:
-      '@capacitor/core': 8.5.1
-      yargs: 18.1.0
 
   '@capacitor/android@8.5.1(@capacitor/core@8.5.1)':
     dependencies:
