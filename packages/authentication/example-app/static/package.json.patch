@@ -1,0 +1,15 @@
+--- a/package.json
++++ b/package.json
+@@ -1,3 +1,3 @@
+ {
+-  "name": "capkit-plugin-demo",
++  "name": "capkit-plugin-demo-authentication",
+   "version": "1.0.0",
+@@ -44,6 +44,7 @@
+     "@angular/forms": "^22.1.4",
+     "@angular/platform-browser": "^22.1.4",
+     "@angular/router": "^22.1.4",
++    "@cap-kit/authentication": "file:..",
+     "@capacitor/android": "^8.5.1",
+     "@capacitor/app": "^8.1.1",
+     "@capacitor/cli": "^8.5.1",

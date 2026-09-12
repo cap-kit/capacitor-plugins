@@ -1,0 +1,139 @@
+buildscript {
+    ext.kotlin_version = project.hasProperty("kotlin_version") ? project.property("kotlin_version") : '2.3.21'
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:9.4.0'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.10"
+        classpath "org.jetbrains.kotlin:kotlin-serialization:$kotlin_version"
+    }
+}
+
+plugins {
+    id "org.jlleitschuh.gradle.ktlint" version "14.2.0" apply false
+}
+
+ext {
+    junitVersion = project.hasProperty('junitVersion') ? project.property('junitVersion') : '4.13.2'
+    androidxAppCompatVersion = project.hasProperty('androidxAppCompatVersion') ? project.property('androidxAppCompatVersion') : '1.8.0'
+    androidxJunitVersion = project.hasProperty('androidxJunitVersion') ? project.property('androidxJunitVersion') : '1.3.0'
+    androidxEspressoCoreVersion = project.hasProperty('androidxEspressoCoreVersion') ? project.property('androidxEspressoCoreVersion') : '3.7.0'
+    // Google Identity / Google Sign-In (Android Credential Manager One Tap + full-button chooser)
+    playServicesAuthVersion = project.hasProperty('playServicesAuthVersion') ? project.property('playServicesAuthVersion') : '21.3.0'
+    // androidx.credentials >= 1.5.0 required for Restore Credentials; 1.7.0-alpha03 is the
+    // documented version for CreateRestoreCredentialRequest / GetRestoreCredentialOption.
+    androidxCredentialsVersion = project.hasProperty('androidxCredentialsVersion') ? project.property('androidxCredentialsVersion') : '1.7.0-alpha03'
+    // Google ID runtime for Credential Manager (GetGoogleIdOption / GetSignInWithGoogleOption /
+    // GoogleIdTokenCredential). Moved out of androidx.credentials into this artifact as of 1.7.x.
+    googleIdVersion = project.hasProperty('googleIdVersion') ? project.property('googleIdVersion') : '1.2.0'
+    // security-crypto 1.1.0-alpha06 is the last release where EncryptedSharedPreferences is the
+    // intended, non-deprecated API (alpha07 deprecates it in favour of raw Android Keystore).
+    androidxSecurityCryptoVersion = project.hasProperty('androidxSecurityCryptoVersion') ? project.property('androidxSecurityCryptoVersion') : '1.1.0-alpha06'
+    // Refresh HTTP transport (OkHttp on Android; serverAuthCode stays raw).
+    okhttpVersion = project.hasProperty('okhttpVersion') ? project.property('okhttpVersion') : '4.12.0'
+    // Facebook Sign-In: facebook-login 18.3.0 (the ONLY declared facebook artifact — it
+    // transitively pulls facebook-core/facebook-common 18.3.0, which merge FacebookActivity,
+    // CustomTabActivity and FacebookInitProvider; the plugin manifest stays unchanged).
+    facebookLoginVersion = project.hasProperty('facebookLoginVersion') ? project.property('facebookLoginVersion') : '18.3.0'
+}
+
+apply plugin: 'com.android.library'
+if (project.extensions.findByName('kotlin') == null) {
+    apply plugin: 'kotlin-android'
+}
+apply plugin: 'kotlin-parcelize'
+apply plugin: 'org.jlleitschuh.gradle.ktlint'
+if (!project.plugins.hasPlugin('kotlinx-serialization')) {
+    apply plugin: 'kotlinx-serialization'
+}
+
+import groovy.json.JsonSlurper
+
+def getPluginVersion() {
+    try {
+        def packageJsonFile = file('../package.json')
+        if (packageJsonFile.exists()) {
+            def packageJson = new JsonSlurper().parseText(packageJsonFile.text)
+            if (packageJson.version) {
+                return packageJson.version
+            }
+        }
+    } catch (Exception e) {
+        throw new GradleException("Failed to read plugin version from package.json", e)
+    }
+
+    throw new GradleException("Plugin version not found in ../package.json")
+}
+
+def pluginVersion = getPluginVersion()
+
+android {
+    namespace = "io.capkit.authentication"
+    compileSdk = Math.max(36, project.hasProperty('compileSdkVersion') ? project.property('compileSdkVersion') as int : 36)
+
+    // AGP 8.0+ disables BuildConfig by default for libraries.
+    // We need to enable it to inject the plugin version.
+    buildFeatures {
+        buildConfig = true
+    }
+
+    defaultConfig {
+        minSdkVersion Math.max(24, project.hasProperty('minSdkVersion') ? project.property('minSdkVersion') as int : 24)
+        targetSdkVersion Math.max(36, project.hasProperty('targetSdkVersion') ? project.property('targetSdkVersion') as int : 36)
+        versionCode 1
+
+        // Dynamic versioning (feature enabled)
+        versionName = pluginVersion
+
+        // Injects the version into the BuildConfig class ONLY if feature is enabled
+        buildConfigField "String", "PLUGIN_VERSION", "\"${pluginVersion}\""
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+    buildTypes {
+        release {
+            minifyEnabled = false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    lint {
+        abortOnError = false
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+}
+
+repositories {
+    google()
+    mavenCentral()
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation project(':capacitor-android')
+
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0"
+
+    // Google Sign-In: Credential Manager One Tap (GetGoogleIdOption) and the full-button
+    // chooser (GetSignInWithGoogleOption) via play-services-auth.
+    implementation "com.google.android.gms:play-services-auth:$playServicesAuthVersion"
+    implementation "androidx.credentials:credentials:$androidxCredentialsVersion"
+    implementation "androidx.credentials:credentials-play-services-auth:$androidxCredentialsVersion"
+    implementation "com.google.android.libraries.identity.googleid:googleid:$googleIdVersion"
+    // Secure token vault: EncryptedSharedPreferences (read-only from JS; per-provider namespace).
+    implementation "androidx.security:security-crypto:$androidxSecurityCryptoVersion"
+    // Refresh HTTP transport (OkHttp on Android).
+    implementation "com.squareup.okhttp3:okhttp:$okhttpVersion"
+    // Facebook Sign-In SDK: CallbackManager/LoginManager/GraphRequest.
+    implementation "com.facebook.android:facebook-login:$facebookLoginVersion"
+
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+}

@@ -1,0 +1,97 @@
+.demo-section {
+  margin-top: 28px;
+}
+
+.section-hint {
+  color: var(--ion-color-medium);
+  font-size: 13px;
+  margin: 4px 0 12px;
+}
+
+.provider-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.status-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+
+  ion-chip {
+    cursor: pointer;
+  }
+}
+
+.session-segment {
+  margin-bottom: 12px;
+}
+
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.apple-note {
+  border-left: 3px solid var(--ion-color-medium);
+  color: var(--ion-color-medium);
+  font-size: 12px;
+  font-style: italic;
+  margin: 8px 0;
+  padding: 8px;
+}
+
+.result-fields {
+  padding: 0;
+}
+
+.actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.token-line {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  margin-top: 10px;
+}
+
+.muted {
+  color: var(--ion-color-medium);
+}
+
+.config-hint {
+  color: var(--ion-color-medium);
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.config-snippet {
+  background: var(--ion-color-light);
+  border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 0;
+  overflow-x: auto;
+  padding: 12px;
+}
+
+.error-card {
+  border: 1px solid var(--ion-color-danger);
+  border-radius: 12px;
+  margin-top: 20px;
+}
+
+.error-message {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  margin: 10px 0;
+  white-space: pre-wrap;
+}
