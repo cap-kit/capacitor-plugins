@@ -185,9 +185,9 @@ private extension Integrity {
                     id: "ios_frida_port_detected",
                     category: "hook",
                     confidence: "medium",
+                    includeDebug: includeDebug,
                     description: "Known instrumentation service port is reachable on localhost",
-                    metadata: ["port": 27042],
-                    includeDebug: includeDebug
+                    metadata: ["port": 27042]
                 )
             )
         }
@@ -198,9 +198,9 @@ private extension Integrity {
                     id: "ios_frida_correlation_confirmed",
                     category: "hook",
                     confidence: "high",
+                    includeDebug: includeDebug,
                     description: "Multiple instrumentation indicators detected simultaneously",
-                    metadata: ["source": "library+port"],
-                    includeDebug: includeDebug
+                    metadata: ["source": "library+port"]
                 )
             )
         }
@@ -243,9 +243,9 @@ private extension Integrity {
                             id: "ios_entitlement_debuggable",
                             category: "tamper",
                             confidence: "high",
+                            includeDebug: includeDebug,
                             description: "Production app has 'get-task-allow' enabled in provisioning profile",
-                            metadata: entData,
-                            includeDebug: includeDebug
+                            metadata: entData
                         )
                     )
                 }
@@ -256,9 +256,9 @@ private extension Integrity {
                             id: "ios_keychain_entitlement_missing",
                             category: "tamper",
                             confidence: "medium",
+                            includeDebug: includeDebug,
                             description: "Expected keychain-access-groups are missing from provisioning profile",
-                            metadata: entData,
-                            includeDebug: includeDebug
+                            metadata: entData
                         )
                     )
                 }
@@ -314,9 +314,9 @@ private extension Integrity {
                     id: "ios_sandbox_escaped",
                     category: "tamper",
                     confidence: "high",
+                    includeDebug: includeDebug,
                     description: "Successfully wrote to a protected system directory (Sandbox violation)",
-                    metadata: ["path": "/private/integrity_test.txt"],
-                    includeDebug: includeDebug
+                    metadata: ["path": "/private/integrity_test.txt"]
                 )
             )
         }
@@ -327,8 +327,8 @@ private extension Integrity {
                     id: "ios_suspicious_symlink",
                     category: "jailbreak",
                     confidence: "high",
-                    description: "System directories are redirected via symbolic links",
-                    includeDebug: includeDebug
+                    includeDebug: includeDebug,
+                    description: "System directories are redirected via symbolic links"
                 )
             )
         }
@@ -348,9 +348,9 @@ private extension Integrity {
                     id: "ios_simulator",
                     category: "emulator",
                     confidence: "high",
+                    includeDebug: includeDebug,
                     description: "Application is running in an iOS simulator environment",
-                    metadata: ["type": "apple_simulator"],
-                    includeDebug: includeDebug
+                    metadata: ["type": "apple_simulator"]
                 )
             )
         }

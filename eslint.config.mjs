@@ -47,6 +47,10 @@ export default [
       'no-constant-condition': 'off',
       '@typescript-eslint/no-this-alias': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_' },
+      ],
       '@typescript-eslint/explicit-module-boundary-types': [
         'warn',
         { allowArgumentsExplicitlyTypedAsAny: true },
