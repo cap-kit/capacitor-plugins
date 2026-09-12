@@ -10,7 +10,7 @@ let package = Package(
             targets: ["AuthenticationPlugin"])
     ],
     dependencies: [
-        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", from: "8.5.1"),
+        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", from: "8.5.2"),
         .package(url: "https://github.com/google/GoogleSignIn-iOS.git", from: "7.1.0"),
         .package(url: "https://github.com/facebook/facebook-ios-sdk.git", from: "18.1.0")
     ],
