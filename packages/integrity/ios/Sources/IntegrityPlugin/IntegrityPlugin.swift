@@ -271,40 +271,18 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
         let dismissible = call.getBool("dismissible") ?? false
         let customURL = call.getString("customUrl")
 
-        // Apply URL limit validation
-        if let custom = customURL, custom.count > 2048 {
-            reject(call, error: .invalidInput("customUrl exceeds maximum length of 2048 characters"))
-            return
-        }
-
-        // Determine final URL: customUrl takes precedence over config
-        let urlBase = customURL ?? baseURL
-
-        // Build query string with reason and context
-        var queryParams: [String] = []
-
-        if let reason = reason {
-            if let encoded = reason.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
-                queryParams.append("reason=\(encoded)")
-            }
-        }
-
-        if let contextObj = call.getObject("context"), !contextObj.isEmpty {
-            if let contextData = try? JSONSerialization.data(withJSONObject: contextObj),
-               let contextString = String(data: contextData, encoding: .utf8),
-               let encoded = contextString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
-                queryParams.append("context=\(encoded)")
-            }
-        }
-
         let finalURL: String
-        if queryParams.isEmpty {
-            finalURL = urlBase
-        } else {
-            let queryString = queryParams.joined(separator: "&")
-            finalURL = urlBase.contains("?")
-                ? "\(urlBase)&\(queryString)"
-                : "\(urlBase)?\(queryString)"
+        switch buildBlockPageURL(
+            baseURL: baseURL,
+            customURL: customURL,
+            reason: reason,
+            context: call.getObject("context")
+        ) {
+        case .failure(let error):
+            reject(call, error: error)
+            return
+        case .success(let url):
+            finalURL = url
         }
 
         DispatchQueue.main.async {
@@ -324,6 +302,54 @@ public final class IntegrityPlugin: CAPPlugin, CAPBridgedPlugin {
                 call.resolve(["presented": true])
             }
         }
+    }
+
+    /**
+     Builds the final block page URL applying the custom URL limit validation
+     and merging reason/context query parameters.
+     */
+    private func buildBlockPageURL(
+        baseURL: String,
+        customURL: String?,
+        reason: String?,
+        context: [String: Any]?
+    ) -> Result<String, NativeError> {
+        // Apply URL limit validation
+        if let custom = customURL, custom.count > 2048 {
+            return .failure(.invalidInput("customUrl exceeds maximum length of 2048 characters"))
+        }
+
+        // Determine final URL: customUrl takes precedence over config
+        let urlBase = customURL ?? baseURL
+
+        // Build query string with reason and context
+        var queryParams: [String] = []
+
+        if let reason = reason {
+            if let encoded = reason.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+                queryParams.append("reason=\(encoded)")
+            }
+        }
+
+        if let context = context, !context.isEmpty {
+            if let contextData = try? JSONSerialization.data(withJSONObject: context),
+               let contextString = String(data: contextData, encoding: .utf8),
+               let encoded = contextString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+                queryParams.append("context=\(encoded)")
+            }
+        }
+
+        let finalURL: String
+        if queryParams.isEmpty {
+            finalURL = urlBase
+        } else {
+            let queryString = queryParams.joined(separator: "&")
+            finalURL = urlBase.contains("?")
+                ? "\(urlBase)&\(queryString)"
+                : "\(urlBase)?\(queryString)"
+        }
+
+        return .success(finalURL)
     }
 
     // MARK: - Version

@@ -128,6 +128,14 @@ import Foundation
 
     // MARK: - Shared implementation
 
+    // The TLS evaluation flow (excluded-domain bypass, continuation, session
+    // and timeout) is ONE linear auditable sequence; extraction would fragment
+    // the security decision path (security-lint-precedence). Control comments
+    // must sit between doc and declaration, orphaning the doc (SwiftLint
+    // 0.65.1); both disable:next below are single-rule and line-scoped, no
+    // re-enables.
+    // SECURITY: explicit control flow preferred for auditability
+    // swiftlint:disable:next orphaned_doc_comment
     /**
      Performs SSL fingerprint validation for a given HTTPS URL.
 
@@ -143,6 +151,7 @@ import Foundation
      - `TLSFingerprintError.unknownType`
      - `TLSFingerprintError.initFailed`
      */
+    // swiftlint:disable:next function_body_length
     private func performCheck(
         urlString: String,
         fingerprints: [String]
@@ -178,11 +187,11 @@ import Foundation
 
                 let delegate = TLSFingerprintDelegate(
                     expectedFingerprints: [],
-                    excludedDomains: config?.excludedDomains ?? [],
                     completion: { result in
                         continuation.resume(returning: result)
                     },
-                    verboseLogging: config?.verboseLogging ?? false
+                    verboseLogging: config?.verboseLogging ?? false,
+                    excludedDomains: config?.excludedDomains ?? []
                 )
 
                 let session = URLSession(
@@ -220,11 +229,11 @@ import Foundation
 
             let delegate = TLSFingerprintDelegate(
                 expectedFingerprints: fingerprints,
-                excludedDomains: config?.excludedDomains ?? [],
                 completion: { result in
                     continuation.resume(returning: result)
                 },
-                verboseLogging: config?.verboseLogging ?? false
+                verboseLogging: config?.verboseLogging ?? false,
+                excludedDomains: config?.excludedDomains ?? []
             )
 
             let session = URLSession(

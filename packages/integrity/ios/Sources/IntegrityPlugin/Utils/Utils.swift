@@ -5,9 +5,9 @@ struct Utils {
         id: String,
         category: String,
         confidence: String,
+        includeDebug: Bool,
         description: String? = nil,
-        metadata: [String: Any]? = nil,
-        includeDebug: Bool
+        metadata: [String: Any]? = nil
     ) -> [String: Any] {
         var signal: [String: Any] = [
             "id": id,
