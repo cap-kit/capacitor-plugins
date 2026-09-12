@@ -41,13 +41,30 @@
 </p>
 <br>
 
+## Overview
+
+This Capacitor plugin provides a unified Promise-based API for opening system and application settings on **iOS and Android**.
+
+- Navigates users to relevant settings screens: app settings, notifications, connectivity, and other system sections.
+- It only navigates to settings screens — it does NOT read or modify settings values.
+- On Web, the plugin is not supported and methods reject.
+
+## Documentation
+
+- [Usage guide](docs/guide.md) — usage examples and configuration guidance
+- [Platform limitations](docs/security.md) — iOS and Android limitations
+- [Contributing](CONTRIBUTING.md)
+
+---
+
 ## Install
 
 ```bash
 pnpm add @cap-kit/settings
 npx cap sync
-
 ```
+
+---
 
 ## Configuration
 
@@ -94,9 +111,9 @@ export default config;
 
 </docgen-config>
 
-## API
+---
 
-The plugin provides a generic `open()` method for cross-platform usage, and platform-specific aliases (`openIOS()`, `openAndroid()`) for direct invocation. While `openIOS()` and `openAndroid()` can be used, it's generally recommended to use `open()` with `PlatformOptions` for a more unified approach.
+## API
 
 <docgen-index>
 
@@ -316,42 +333,6 @@ Result object returned by the `getPluginVersion()` method.
 | **`VPN`**                      | <code>'vpn'</code>                      | Opens VPN settings.                                                                                                                                           |
 
 </docgen-api>
-
----
-
-## Platform limitations
-
-### iOS
-
-Apple officially supports opening only the app-specific settings screen.
-Other settings destinations rely on undocumented URL schemes and may change
-or be restricted by future iOS versions or App Store review policies.
-
-### Android
-
-Some Android system settings are not guaranteed to be available on all devices.
-
-Certain options (such as Zen Mode / Do Not Disturb related settings) rely on
-device-specific or undocumented system intents. Availability may vary depending on:
-
-- Android version
-- device manufacturer (OEM)
-- system configuration or user restrictions
-
-When a requested settings screen is not supported on the current device,
-the plugin rejects the Promise with the error code:
-
-- `UNAVAILABLE`
-
-Consumers are expected to handle this case using standard `try / catch`
-error handling.
-
-This behavior is intentional and aligns with real-world Android platform constraints.
-
-For historical context on Android intent limitations, see the discussion in the
-original implementation:
-[https://github.com/RaphaelWoude/capacitor-native-settings/pull/63](https://github.com/RaphaelWoude/capacitor-native-settings/pull/63)
-Note that this plugin does not use the state-based result model found in that implementation.
 
 ---
 
