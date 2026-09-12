@@ -14,9 +14,9 @@ struct CorrelationUtils {
             id: "ios_jailbreak_correlation_confirmed",
             category: "jailbreak",
             confidence: "high",
+            includeDebug: includeDebug,
             description: "Multiple jailbreak/tamper indicators detected simultaneously",
-            metadata: ["source": "jailbreak+tamper"],
-            includeDebug: includeDebug
+            metadata: ["source": "jailbreak+tamper"]
         )
     }
 
@@ -33,9 +33,9 @@ struct CorrelationUtils {
             id: "ios_jailbreak_hook_correlation_confirmed",
             category: "hook",
             confidence: "high",
+            includeDebug: includeDebug,
             description: "Jailbreak and instrumentation indicators detected simultaneously",
-            metadata: ["source": "jailbreak+hook"],
-            includeDebug: includeDebug
+            metadata: ["source": "jailbreak+hook"]
         )
     }
 }

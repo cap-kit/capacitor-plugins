@@ -108,9 +108,9 @@ struct RedsysUtils {
         let maskChars = Array(mask)
         var index = 0
 
-        for i in 0..<maskChars.count {
-            let c = maskChars[i]
-            switch c {
+        for maskIndex in 0..<maskChars.count {
+            let maskChar = maskChars[maskIndex]
+            switch maskChar {
             case "#":
                 if index < cardNumberChars.count {
                     maskedNumber.append(cardNumberChars[index])

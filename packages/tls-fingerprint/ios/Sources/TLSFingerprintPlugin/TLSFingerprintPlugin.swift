@@ -112,7 +112,7 @@ public final class TLSFingerprintPlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        if let fp = fingerprint, !TLSFingerprintUtils.isValidFingerprintFormat(fp) {
+        if let fingerprint = fingerprint, !TLSFingerprintUtils.isValidFingerprintFormat(fingerprint) {
             call.reject(
                 TLSFingerprintErrorMessages.invalidFingerprintFormat,
                 "INVALID_INPUT"
@@ -173,8 +173,10 @@ public final class TLSFingerprintPlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         if let fps = fingerprints {
-            for fp in fps {
-                if !TLSFingerprintUtils.isValidFingerprintFormat(fp) {
+            for fingerprint in fps {
+                // SECURITY: explicit control flow preferred for auditability
+                // swiftlint:disable:next for_where
+                if !TLSFingerprintUtils.isValidFingerprintFormat(fingerprint) {
                     call.reject(
                         TLSFingerprintErrorMessages.invalidFingerprintFormat,
                         "INVALID_INPUT"
