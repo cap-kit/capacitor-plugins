@@ -141,7 +141,7 @@ jobs:
 
       - name: Build (PR - impacted + downstream)
         if: github.ref != 'refs/heads/main' && steps.changes.outputs.packages_changed == 'true'
-        run: pnpm --filter "...[origin/main]" run build
+        run: pnpm exec turbo run build --filter=...[origin/main]
 
       # ---- TEST ----
 
