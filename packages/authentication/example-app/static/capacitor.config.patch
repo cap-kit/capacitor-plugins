@@ -1,0 +1,54 @@
+--- a/capacitor.config.ts
++++ b/capacitor.config.ts
+@@ -1,3 +1,5 @@
++/// <reference types='@cap-kit/authentication' />
++
+ import type { CapacitorConfig } from '@capacitor/cli';
+ import { KeyboardResize } from '@capacitor/keyboard';
+ 
+@@ -25,6 +27,45 @@
+     Keyboard: {
+       resize: KeyboardResize.None,
+     },
++    Authentication: {
++      /**
++       * Enables verbose native logging.
++       * Logs are printed in Logcat (Android) and Xcode console (iOS).
++       * Default: false
++       */
++      verboseLogging: false,
++      /**
++       * Google provider configuration (Android sub-object).
++       * iOS reads the flat `googleScopes`/`googleAutoSelect` keys instead.
++       * `serverClientId` is required for native token exchange.
++       */
++      google: {
++        serverClientId: 'YOUR_SERVER_CLIENT_ID',
++        scopes: ['openid', 'email', 'profile'],
++        autoSelect: false,
++      },
++      /**
++       * Apple provider configuration (Android sub-object).
++       * iOS reads the flat `appleClientId`/`appleRedirectURI`/`appleScopes`/
++       * `appleNonce`/`appleState` keys instead.
++       */
++      apple: {
++        clientId: 'YOUR_APPLE_SERVICES_ID',
++        redirectURI: 'YOUR_REDIRECT_URI',
++        scopes: ['name', 'email'],
++      },
++      /**
++       * Facebook provider configuration (Android sub-object).
++       * iOS reads the flat `facebookAppId`/`facebookClientToken`/
++       * `facebookVersion`/`facebookScopes` keys instead.
++       */
++      facebook: {
++        facebookAppId: 'YOUR_APP_ID',
++        facebookClientToken: 'YOUR_CLIENT_TOKEN',
++        facebookVersion: 'v17.0',
++        scopes: ['public_profile', 'email'],
++      },
++    },
+   },
+   cordova: {},
+ };

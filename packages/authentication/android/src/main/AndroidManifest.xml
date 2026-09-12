@@ -1,0 +1,19 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+        AppleSignInActivity: internal WebView-based Apple OAuth sign-in flow.
+        - exported=false: launched only by this plugin (explicit intent); never
+          reachable from outside the app.
+        - singleTask + configChanges: the WebView survives config changes without
+          being recreated mid-auth.
+    -->
+    <application>
+        <activity
+            android:name=".apple.AppleSignInActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:configChanges="orientation|screenSize|keyboardHidden|uiMode"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+    </application>
+
+</manifest>
