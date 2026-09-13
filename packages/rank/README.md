@@ -38,6 +38,22 @@ A high-performance Capacitor v8 plugin for unified <strong>In-App Reviews</stron
 </p>
 <br>
 
+## Overview
+
+This Capacitor plugin provides a unified API for **In-App Reviews** and **Market Navigation** on iOS and Android, with store navigation fallbacks on Web.
+
+- Requests the native store review prompt and opens App Store / Play Store pages, listings, developer pages, collections, and searches.
+- It does NOT control whether the native review dialog is displayed — the operating system decides when and how often the review prompt appears.
+
+## Documentation
+
+- [Usage guide](docs/guide.md) — best practices and error handling
+- [Configuration guide](docs/configuration.md) — plugin configuration, native requirements, and permissions
+- [Security considerations](docs/security.md) — platform limitations
+- [Contributing](CONTRIBUTING.md)
+
+---
+
 ## Install
 
 ```bash
@@ -49,94 +65,6 @@ yarn add @cap-kit/rank
 # then run:
 npx cap sync
 ```
-
-## Configuration
-
-Configuration options for the Rank plugin.
-
-| Prop                     | Type                 | Description                                                                                                                                    | Default            | Since |
-| ------------------------ | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ----- |
-| **`verboseLogging`**     | <code>boolean</code> | Enables verbose native logging. When enabled, additional debug information is printed to the native console (Logcat on Android, Xcode on iOS). | <code>false</code> | 8.0.0 |
-| **`appleAppId`**         | <code>string</code>  | The Apple App ID used for App Store redirection on iOS. Example: '123456789' \* @since 8.0.0                                                   |                    |       |
-| **`androidPackageName`** | <code>string</code>  | The Android Package Name used for Play Store redirection. Example: 'com.example.app' \* @since 8.0.0                                           |                    |       |
-| **`fireAndForget`**      | <code>boolean</code> | If true, the `requestReview` method will resolve immediately without waiting for the native OS review flow to complete. \* @default false      |                    | 8.0.0 |
-
-### Examples
-
-In `capacitor.config.json`:
-
-```json
-{
-  "plugins": {
-    "Rank": {
-      "verboseLogging": true,
-      "appleAppId": "123456789",
-      "androidPackageName": "com.example.app",
-      "fireAndForget": false
-    }
-  }
-}
-```
-
-In `capacitor.config.ts`:
-
-```ts
-/// <reference types="@cap-kit/rank" />
-
-import { CapacitorConfig } from '@capacitor/cli';
-
-const config: CapacitorConfig = {
-  plugins: {
-    Rank: {
-      verboseLogging: true,
-      appleAppId: '123456789',
-      androidPackageName: 'com.example.app',
-      fireAndForget: false,
-    },
-  },
-};
-
-export default config;
-```
-
-## Native Requirements
-
-### Android
-
-- Requires **Google Play Services** for In-App Reviews.
-- To support **Android 11+ (API 30+)** and allow navigation to the Play Store, you must include the following in your `AndroidManifest.xml`:
-
-```xml
-<queries>
-    <intent>
-        <action android:name="android.intent.action.VIEW" />
-        <data android:scheme="market" />
-    </intent>
-    <intent>
-        <action android:name="android.intent.action.VIEW" />
-        <data android:scheme="https" android:host="play.google.com" />
-    </intent>
-</queries>
-```
-
-### iOS
-
-- Requires **Xcode 26** and **iOS 15+**.
-- To allow the plugin to open the App Store review page, ensure your `Info.plist` includes the appropriate URL schemes if you perform programmatic checks.
-
----
-
-## Permissions
-
-### Android
-
-This plugin requires the following permission, which is automatically merged into your application's `AndroidManifest.xml`:
-
-- `android.permission.INTERNET`: Required to communicate with Google Play Services for the review flow and store navigation.
-
-### iOS
-
-No specific usage descriptions (Privacy Manifest) are required for the standard `SKStoreReviewController` flow.
 
 ---
 
@@ -469,87 +397,6 @@ Result object returned by the `getPluginVersion()` method.
 | **`version`** | <code>string</code> | The native plugin version string. |
 
 </docgen-api>
-
----
-
-## Limitations
-
-### General
-
-- **`openCollection`**: This feature is specific to the Google Play Store and is unavailable on iOS/Web.
-- **`openDevPage`**: On iOS, this method performs a store search for the developer name as a fallback, as direct developer page IDs are not consistently supported via deep links.
-
-### iOS
-
-- The in-app review prompt is **not guaranteed to appear**.
-  Apple internally controls when and how often the review dialog is shown.
-- Calling `requestReview()` may result in **no visible UI**, even if the API is available.
-- On iOS, `requestReview()` is effectively always fire-and-forget because StoreKit does not provide a completion callback; the `fireAndForget` option does not change this behavior on iOS.
-
-### Android
-
-- Google Play In-App Review requires **Google Play Services** to be available on the device.
-- The review flow may silently fail if Play Services are missing, outdated, or restricted.
-- As with iOS, the system ultimately decides whether the review dialog is displayed.
-
----
-
-## Best practices
-
-- Call `requestReview()` only after a **positive user interaction**
-  (e.g. completed task, successful checkout, achieved milestone).
-- Avoid calling the review prompt on app startup or without user context.
-- Always check availability first:
-
-```ts
-const { value } = await Rank.isAvailable();
-if (value) {
-  await Rank.requestReview();
-}
-```
-
-- Use `fireAndForget: true` only when you do not need to track completion
-  and want to avoid blocking UI flows.
-
----
-
-## Error handling
-
-All Rank plugin methods return Promises and may reject in case of failure.
-Consumers should always handle errors using `try / catch`.
-
-### Example
-
-```ts
-import { Rank, RankErrorCode } from '@cap-kit/rank';
-
-try {
-  await Rank.requestReview();
-} catch (err: any) {
-  switch (err.code) {
-    case RankErrorCode.UNAVAILABLE:
-      // Feature not supported on this device or platform
-      break;
-
-    case RankErrorCode.INIT_FAILED:
-      // Native initialization or runtime failure
-      break;
-
-    default:
-      // Unknown or unexpected error
-      console.error(err.message);
-  }
-}
-```
-
-### Error codes
-
-The following error codes may be returned by the plugin:
-
-- `UNAVAILABLE` — The feature is not supported on the current device or platform
-- `PERMISSION_DENIED` — A required permission was denied (platform-dependent)
-- `INIT_FAILED` — Native initialization or runtime failure
-- `UNKNOWN_TYPE` — Invalid or unsupported input
 
 ---
 
