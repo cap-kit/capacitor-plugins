@@ -29,6 +29,7 @@ const EXCLUDE = new Set([
   ".git",
   ".angular",
   ".turbo",
+  ".build",
   "pnpm-lock.yaml",
   "pnpm-workspace.yaml",
 ]);
