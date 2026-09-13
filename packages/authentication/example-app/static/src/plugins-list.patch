@@ -1,0 +1,18 @@
+--- a/src/app/plugins-list.ts
++++ b/src/app/plugins-list.ts
+@@ -13,1 +13,14 @@
+-export const PLUGINS: PluginConfig[] = [];
++export const PLUGINS: PluginConfig[] = [
++  {
++    id: 12,
++    name: 'Authentication',
++    npmName: '@cap-kit/authentication',
++    iconName: 'cog',
++    githubUrl:
++      'https://github.com/cap-kit/capacitor-plugins/tree/main/packages/authentication',
++    pathName: '/authentication',
++    description: 'Google, Apple and Facebook sign-in for Capacitor v8.',
++    active: true,
++    isVisible: true,
++  }
++];

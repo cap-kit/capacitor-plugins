@@ -1,0 +1,317 @@
+<app-page-header [title]="'Authentication Plugin'" />
+
+<ion-content class="ion-padding">
+  <app-info-card
+    [title]="'Authentication'"
+    [subtitle]="'@cap-kit/authentication'"
+    [content]="'OAuth2/social sign-in for Google, Apple and Facebook through one provider-keyed facade. Every flow resolves or rejects with a structured error carrying one of 10 stable codes (UNAVAILABLE, CANCELLED, USER_CANCELLED, PERMISSION_DENIED, INIT_FAILED, INVALID_INPUT, UNKNOWN_TYPE, NOT_FOUND, CONFLICT, TIMEOUT).'"
+    (githubClick)="openOnGithub()"
+  />
+
+  <!-- Before you run: credentials + where they live -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Before you run</ion-card-title>
+      <ion-card-subtitle
+        >Real provider credentials are required — placeholders only, never real
+        secrets</ion-card-subtitle
+      >
+    </ion-card-header>
+    <ion-card-content>
+      <ion-list lines="none">
+        <ion-item>
+          <ion-label class="ion-text-wrap">
+            <h3>Google</h3>
+            <p>
+              Web: OAuth web client (server client) whose id ends in
+              <code>apps.googleusercontent.com</code>; register the host origin as authorized
+              JavaScript origin and redirect URI. Native: <code>googleServerClientId</code> from the
+              Google Cloud Console.
+            </p>
+          </ion-label>
+        </ion-item>
+        <ion-item>
+          <ion-label class="ion-text-wrap">
+            <h3>Apple</h3>
+            <p>
+              <code>appleClientId</code> = Apple Services ID (Web popup) or bundle id (iOS). iOS
+              needs the Sign in with Apple capability + team signing; Android uses a WebView OAuth
+              flow; Web loads <code>appleid.auth.js</code> from Apple's CDN on the host page.
+            </p>
+          </ion-label>
+        </ion-item>
+        <ion-item>
+          <ion-label class="ion-text-wrap">
+            <h3>Facebook</h3>
+            <p>
+              <code>facebookAppId</code> + <code>facebookClientToken</code>. iOS Info.plist:
+              <code>FacebookAppID</code>, <code>FacebookClientToken</code>,
+              <code>FacebookDisplayName</code>, URL scheme <code>fb{{ '{' }}APPID{{ '}' }}</code
+              >. Android host strings.xml: <code>facebook_app_id</code>,
+              <code>facebook_client_token</code>, <code>fb_login_protocol_scheme</code>.
+            </p>
+          </ion-label>
+        </ion-item>
+        <ion-item>
+          <ion-label class="ion-text-wrap">
+            <h3>Facebook key hash (Android)</h3>
+            <p>
+              Sign-in only succeeds when the build's development key hash is registered with Meta
+              (<code>keytool -list -v -keystore ~/.android/debug.keystore</code> — debug and release
+              hashes differ). Unregistered key surfaces as <code>INIT_FAILED</code> (code 1349094).
+            </p>
+          </ion-label>
+        </ion-item>
+        <ion-item>
+          <ion-label class="ion-text-wrap">
+            <h3>Missing or blank config never crashes the demo</h3>
+            <p>
+              Absent keys reject with <code>INIT_FAILED</code>, blank values with
+              <code>INVALID_INPUT</code> — both render in the error panel below.
+            </p>
+          </ion-label>
+        </ion-item>
+      </ion-list>
+      <p class="config-hint">capacitor.config.ts · plugins.Authentication:</p>
+      <pre class="config-snippet">
+webClientId: 'YOUR_GOOGLE_WEB_CLIENT_ID.apps.googleusercontent.com', // web
+webRedirectUri: 'https://YOUR_ORIGIN/oauth2/callback',              // web
+googleServerClientId: 'YOUR_GOOGLE_SERVER_CLIENT_ID',               // native
+appleClientId: 'YOUR_APPLE_SERVICES_ID',                            // apple
+facebookAppId: 'YOUR_FACEBOOK_APP_ID',                              // facebook
+facebookClientToken: 'YOUR_FACEBOOK_CLIENT_TOKEN',                  // native only</pre>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Provider sign-in -->
+  <section class="demo-section">
+    <h2>Sign in</h2>
+    <p class="section-hint">
+      Scopes are omitted so the plugin applies its defaults (google: openid email profile · apple:
+      name email · facebook: public_profile email). Sign-in is single-flight per provider — the
+      button disables while a flow is in flight.
+    </p>
+    <div class="provider-grid">
+      <ion-button
+        expand="block"
+        color="light"
+        [disabled]="isBusy('google')"
+        (click)="signIn('google')"
+      >
+        <ion-icon slot="start" name="logo-google" />Google
+      </ion-button>
+      <ion-button
+        expand="block"
+        color="dark"
+        [disabled]="isBusy('apple')"
+        (click)="signIn('apple')"
+      >
+        <ion-icon slot="start" name="logo-apple" />Apple
+      </ion-button>
+      <ion-button
+        expand="block"
+        color="primary"
+        [disabled]="isBusy('facebook')"
+        (click)="signIn('facebook')"
+      >
+        <ion-icon slot="start" name="logo-facebook" />Facebook
+      </ion-button>
+    </div>
+  </section>
+
+  <!-- Session state + result display + actions -->
+  <section class="demo-section">
+    <h2>Session</h2>
+    <div class="status-chips">
+      @for (provider of providers; track provider) {
+        <ion-chip
+          [color]="state()[provider].signedIn ? 'success' : 'medium'"
+          (click)="selectProvider(provider)"
+        >
+          {{ providerLabel(provider) }}:
+          {{ state()[provider].signedIn ? 'signed in' : 'signed out' }}
+        </ion-chip>
+      }
+    </div>
+
+    <ion-segment
+      [value]="selectedProvider()"
+      (ionChange)="onSegmentChange($event)"
+      class="session-segment"
+    >
+      <ion-segment-button value="google">Google</ion-segment-button>
+      <ion-segment-button value="apple">Apple</ion-segment-button>
+      <ion-segment-button value="facebook">Facebook</ion-segment-button>
+    </ion-segment>
+
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>{{ providerLabel(selectedProvider()) }}</ion-card-title>
+        <ion-card-subtitle>{{
+          selectedSession().signedIn ? 'Signed in' : 'Signed out'
+        }}</ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content>
+        @if (selectedSession().busy) {
+          <ion-chip color="warning"><ion-label>Working…</ion-label></ion-chip>
+        }
+
+        @if (selectedTokens(); as tokens) {
+          <div class="badge-row">
+            @if (tokens.idToken) {
+              <ion-badge color="primary">idToken {{ mask(tokens.idToken) }}</ion-badge>
+            }
+            @if (tokens.accessToken) {
+              <ion-badge color="success">accessToken {{ mask(tokens.accessToken) }}</ion-badge>
+            }
+            @if (tokens.refreshToken) {
+              <ion-badge color="warning">refreshToken {{ mask(tokens.refreshToken) }}</ion-badge>
+            }
+            @if (tokens.serverAuthCode) {
+              <ion-badge color="tertiary"
+                >serverAuthCode {{ mask(tokens.serverAuthCode) }}</ion-badge
+              >
+            }
+            @if (tokens.authorizationCode) {
+              <ion-badge color="danger"
+                >authorizationCode {{ mask(tokens.authorizationCode) }}</ion-badge
+              >
+            }
+          </div>
+
+          @if (selectedProvider() === 'apple' && tokens.authorizationCode) {
+            <p class="apple-note">
+              Apple's authorizationCode MUST be exchanged server-side (POST to
+              appleid.apple.com/auth/token with a client_secret). It is never a refresh token, and
+              the plugin never refreshes it client-side.
+            </p>
+          }
+
+          <ion-list lines="none" class="result-fields">
+            @if (selectedUser(); as user) {
+              <ion-item>
+                <ion-label class="ion-text-wrap">
+                  <h3>User</h3>
+                  <p>email: {{ user.email ?? 'not shared' }}</p>
+                  <p>name: {{ formatName(user.name) }}</p>
+                  @if (user.id) {
+                    <p>id: {{ user.id }}</p>
+                  }
+                  @if (user.realUserStatus) {
+                    <p>realUserStatus: {{ user.realUserStatus }} (iOS only)</p>
+                  }
+                  @if (user.picture) {
+                    <p>picture: available</p>
+                  }
+                </ion-label>
+              </ion-item>
+            }
+            @if (tokens.userId) {
+              <ion-item>
+                <ion-label class="ion-text-wrap">
+                  <h3>userId (facebook)</h3>
+                  <p>{{ tokens.userId }}</p>
+                </ion-label>
+              </ion-item>
+            }
+            @if (tokens.grantedPermissions && tokens.grantedPermissions.length > 0) {
+              <ion-item>
+                <ion-label class="ion-text-wrap">
+                  <h3>grantedPermissions</h3>
+                  <p>{{ permissionsLabel(tokens.grantedPermissions) }}</p>
+                </ion-label>
+              </ion-item>
+            }
+            @if (tokens.declinedPermissions && tokens.declinedPermissions.length > 0) {
+              <ion-item>
+                <ion-label class="ion-text-wrap">
+                  <h3>declinedPermissions</h3>
+                  <p>{{ permissionsLabel(tokens.declinedPermissions) }}</p>
+                </ion-label>
+              </ion-item>
+            }
+            @if (tokens.expiresAt !== undefined) {
+              <ion-item>
+                <ion-label class="ion-text-wrap">
+                  <h3>expiresAt (facebook, epoch seconds)</h3>
+                  <p>{{ formatExpiry(tokens.expiresAt) }}</p>
+                </ion-label>
+              </ion-item>
+            }
+            @if (tokens.accessTokenExpiresIn !== undefined) {
+              <ion-item>
+                <ion-label class="ion-text-wrap">
+                  <h3>accessTokenExpiresIn</h3>
+                  <p>{{ tokens.accessTokenExpiresIn }} seconds</p>
+                </ion-label>
+              </ion-item>
+            }
+          </ion-list>
+        } @else {
+          <p class="muted">No sign-in result for {{ providerLabel(selectedProvider()) }} yet.</p>
+        }
+
+        <div class="actions-row">
+          <ion-button
+            size="small"
+            color="medium"
+            [disabled]="!selectedSession().signedIn || selectedSession().busy"
+            (click)="signOut()"
+          >
+            <ion-icon slot="start" name="log-out-outline" />Sign out
+          </ion-button>
+          <ion-button
+            size="small"
+            color="medium"
+            [disabled]="selectedSession().busy"
+            (click)="currentAccessToken()"
+          >
+            <ion-icon slot="start" name="key-outline" />Current access token
+          </ion-button>
+          <ion-button
+            size="small"
+            color="medium"
+            [disabled]="selectedSession().busy"
+            (click)="refresh()"
+          >
+            <ion-icon slot="start" name="refresh-outline" />Refresh
+          </ion-button>
+        </div>
+
+        @if (selectedSession().accessToken) {
+          <p class="token-line">
+            Current access token: <code>{{ mask(selectedSession().accessToken) }}</code>
+          </p>
+        }
+
+        <p class="section-hint">
+          Refresh: google refreshes when a refresh token is stored; apple and facebook reject with
+          INVALID_INPUT by design — the structured error is shown in the panel below.
+        </p>
+      </ion-card-content>
+    </ion-card>
+  </section>
+
+  <!-- Shared structured-error surface -->
+  @if (currentError(); as error) {
+    <ion-card class="error-card">
+      <ion-card-header>
+        <ion-card-title
+          >Error — {{ error.action }} · {{ providerLabel(error.provider) }}</ion-card-title
+        >
+        <ion-card-subtitle>{{
+          error.structured ? 'Structured AuthenticationError' : 'Non-structured rejection'
+        }}</ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-badge color="danger">code: {{ error.code }}</ion-badge>
+        <p class="error-message">{{ error.message }}</p>
+        <ion-button size="small" fill="outline" color="medium" (click)="dismissError()"
+          >Dismiss</ion-button
+        >
+      </ion-card-content>
+    </ion-card>
+  }
+</ion-content>
+
+<app-page-footer [version]="displayVersion()" [label]="'Plugin Version'" />
