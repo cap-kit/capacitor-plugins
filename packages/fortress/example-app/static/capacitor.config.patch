@@ -1,0 +1,119 @@
+--- a/capacitor.config.ts
++++ b/capacitor.config.ts
+@@ -1,3 +1,5 @@
++/// <reference types='@cap-kit/fortress' />
++
+ import type { CapacitorConfig } from '@capacitor/cli';
+ import { KeyboardResize } from '@capacitor/keyboard';
+ 
+@@ -25,6 +27,110 @@
+     Keyboard: {
+       resize: KeyboardResize.None,
+     },
++    Fortress: {
++      /**
++       * Enables verbose native logging.
++       * Logs are printed in Logcat (Android) and Xcode console (iOS).
++       * Default: false
++       */
++      verboseLogging: false,
++      /**
++       * Global auto-lock timeout in milliseconds.
++       * Default: 60000 (1 minute)
++       */
++      lockAfterMs: 60000,
++      /**
++       * Security level for biometric hardware access.
++       * - 'biometryAny': Any enrolled biometry
++       * - 'biometryCurrentSet': Currently enrolled biometry only (default)
++       * - 'passcodeAny': Any passcode set
++       * - 'devicePasscode': Device passcode
++       */
++      accessControl: 'biometryCurrentSet',
++      /**
++       * Enables or disables privacy protection for app snapshots.
++       * Default: true
++       */
++      enablePrivacyScreen: true,
++      /**
++       * Optional text rendered over the privacy overlay.
++       */
++      privacyOverlayText: 'Session Locked',
++      /**
++       * Optional native asset image rendered over the privacy overlay.
++       * - iOS: asset catalog image name
++       * - Android: drawable resource name
++       */
++      privacyOverlayImageName: 'fortress_lock',
++      /**
++       * Controls text visibility on privacy overlay.
++       */
++      privacyOverlayShowText: true,
++      /**
++       * Controls image visibility on privacy overlay.
++       */
++      privacyOverlayShowImage: true,
++      /**
++       * Overlay text color (hex format).
++       */
++      privacyOverlayTextColor: '#FFFFFF',
++      /**
++       * Overlay background scrim opacity (0.0 - 1.0).
++       */
++      privacyOverlayBackgroundOpacity: 0.7,
++      /**
++       * Privacy overlay visual theme.
++       * - 'system': follow device appearance
++       * - 'light': force light appearance
++       * - 'dark': force dark appearance
++       */
++      // @ts-ignore - available after updating local fortress package
++      privacyOverlayTheme: 'dark',
++      /**
++       * Prefix used by key obfuscation utilities.
++       * Default: 'ftrss_'
++       */
++      obfuscationPrefix: 'ftrss_',
++      /**
++       * Global prefix applied to Fortress storage keys (native layer).
++       * Use this to namespace keys per app/environment/tenant and avoid collisions.
++       * Default: ''
++       */
++      // @ts-ignore - available after updating local fortress package
++      prefix: 'tenantA_',
++      /**
++       * Enables in-memory cached authentication for unlock operations.
++       * Default: false
++       */
++      allowCachedAuthentication: false,
++      /**
++       * Cached authentication validity window in milliseconds.
++       * Default: 30000 (30 seconds)
++       */
++      cachedAuthenticationTimeoutMs: 30000,
++      /**
++       * Maximum failed biometric attempts before temporary lockout.
++       * Default: 5
++       */
++      maxBiometricAttempts: 5,
++      /**
++       * Temporary lockout duration in milliseconds after reaching the
++       * biometric failure threshold.
++       * Default: 30000 (30 seconds)
++       */
++      lockoutDurationMs: 30000,
++      /**
++       * Fallback behavior when biometric prompt fails/unavailable.
++       * - 'deviceCredential': force device credential fallback
++       * - 'none': biometric-only
++       * - 'systemDefault': platform default behavior
++       */
++      fallbackStrategy: 'systemDefault',
++      /**
++       * Web-only: persist session lock/auth state across reloads.
++       */
++      persistSessionState: true,
++    },
+   },
+   cordova: {},
+ };

@@ -1,0 +1,22 @@
+ion-badge {
+  margin-left: 0.75rem;
+}
+
+.log-container {
+  max-height: 200px;
+  overflow-y: auto;
+  background: var(--ion-color-light);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.log-entry {
+  padding: 4px 0;
+  border-bottom: 1px solid var(--ion-color-light-tint);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11px;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
