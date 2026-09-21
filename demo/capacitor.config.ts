@@ -1,9 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
-import { KeyboardResize } from '@capacitor/keyboard';
 
 const config: CapacitorConfig = {
   appId: 'capkit.plugin.demo',
-  appName: 'capkit-plugin-demo',
+  appName: 'CapKit Plugin',
   webDir: 'dist/capkit-plugin-demo/browser',
   server: {
     cleartext: false,
@@ -19,14 +18,10 @@ const config: CapacitorConfig = {
       enabled: true,
     },
     SystemBars: {
-      insetsHandling: 'css', // 'css' | 'disable'
       style: 'DEFAULT', // 'DARK' | 'LIGHT' | 'DEFAULT'
-    },
-    Keyboard: {
-      resize: KeyboardResize.None,
+      insetsHandling: 'native', // 'css' | 'native' | 'disable'
     },
   },
-  cordova: {},
 };
 
 export default config;

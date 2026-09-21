@@ -4,11 +4,11 @@
 +/// <reference types='@cap-kit/fortress' />
 +
  import type { CapacitorConfig } from '@capacitor/cli';
- import { KeyboardResize } from '@capacitor/keyboard';
  
-@@ -25,6 +27,110 @@
-     Keyboard: {
-       resize: KeyboardResize.None,
+ const config: CapacitorConfig = {
+@@ -21,6 +23,110 @@
+       style: 'DEFAULT', // 'DARK' | 'LIGHT' | 'DEFAULT'
+       insetsHandling: 'native', // 'css' | 'native' | 'disable'
      },
 +    Fortress: {
 +      /**
@@ -115,5 +115,5 @@
 +      persistSessionState: true,
 +    },
    },
-   cordova: {},
  };
+ 

@@ -4,11 +4,11 @@
 +/// <reference types='@cap-kit/rank' />
 +
  import type { CapacitorConfig } from '@capacitor/cli';
- import { KeyboardResize } from '@capacitor/keyboard';
  
-@@ -25,6 +27,20 @@
-     Keyboard: {
-       resize: KeyboardResize.None,
+ const config: CapacitorConfig = {
+@@ -21,6 +23,20 @@
+       style: 'DEFAULT', // 'DARK' | 'LIGHT' | 'DEFAULT'
+       insetsHandling: 'native', // 'css' | 'native' | 'disable'
      },
 +    Rank: {
 +      /**
@@ -25,5 +25,5 @@
 +      fireAndForget: false,
 +    },
    },
-   cordova: {},
  };
+ 

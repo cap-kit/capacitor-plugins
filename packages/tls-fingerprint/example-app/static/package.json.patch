@@ -6,9 +6,9 @@
 +  "name": "capkit-plugin-demo-tls-fingerprint",
   "version": "1.0.0",
 @@ -44,6 +44,7 @@
-     "@angular/forms": "^22.1.4",
-     "@angular/platform-browser": "^22.1.4",
-     "@angular/router": "^22.1.4",
+     "@angular/forms": "^22.1.7",
+     "@angular/platform-browser": "^22.1.7",
+     "@angular/router": "^22.1.7",
 +    "@cap-kit/tls-fingerprint": "file:..",
      "@capacitor/android": "^8.5.2",
      "@capacitor/app": "^8.1.1",
