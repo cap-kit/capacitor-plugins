@@ -1,10 +1,9 @@
 --- a/capacitor.config.ts
 +++ b/capacitor.config.ts
-@@ -1,5 +1,13 @@
+@@ -1,4 +1,12 @@
 +/// <reference types='@cap-kit/redsys' />
 +
  import type { CapacitorConfig } from '@capacitor/cli';
- import { KeyboardResize } from '@capacitor/keyboard';
 +import {
 +  RedsysEnvironment,
 +  RedsysLanguage,
@@ -14,9 +13,9 @@
  
  const config: CapacitorConfig = {
    appId: 'capkit.plugin.demo',
-@@ -25,6 +33,82 @@
-     Keyboard: {
-       resize: KeyboardResize.None,
+@@ -21,6 +29,82 @@
+       style: 'DEFAULT', // 'DARK' | 'LIGHT' | 'DEFAULT'
+       insetsHandling: 'native', // 'css' | 'native' | 'disable'
      },
 +    Redsys: {
 +      /**
@@ -95,5 +94,5 @@
 +      },
 +    },
    },
-   cordova: {},
  };
+ 

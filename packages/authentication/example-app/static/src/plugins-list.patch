@@ -1,6 +1,9 @@
 --- a/src/app/plugins-list.ts
 +++ b/src/app/plugins-list.ts
-@@ -13,1 +13,14 @@
+@@ -10,4 +10,17 @@
+   isVisible: boolean;
+ }
+ 
 -export const PLUGINS: PluginConfig[] = [];
 +export const PLUGINS: PluginConfig[] = [
 +  {

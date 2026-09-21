@@ -4,11 +4,11 @@
 +/// <reference types='@cap-kit/authentication' />
 +
  import type { CapacitorConfig } from '@capacitor/cli';
- import { KeyboardResize } from '@capacitor/keyboard';
  
-@@ -25,6 +27,45 @@
-     Keyboard: {
-       resize: KeyboardResize.None,
+ const config: CapacitorConfig = {
+@@ -21,6 +23,45 @@
+       style: 'DEFAULT', // 'DARK' | 'LIGHT' | 'DEFAULT'
+       insetsHandling: 'native', // 'css' | 'native' | 'disable'
      },
 +    Authentication: {
 +      /**
@@ -50,5 +50,5 @@
 +      },
 +    },
    },
-   cordova: {},
  };
+ 

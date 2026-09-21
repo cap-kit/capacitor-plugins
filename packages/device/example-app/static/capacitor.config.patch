@@ -4,11 +4,11 @@
 +/// <reference types='@cap-kit/device' />
 +
  import type { CapacitorConfig } from '@capacitor/cli';
- import { KeyboardResize } from '@capacitor/keyboard';
  
-@@ -25,6 +27,14 @@
-     Keyboard: {
-       resize: KeyboardResize.None,
+ const config: CapacitorConfig = {
+@@ -21,6 +23,14 @@
+       style: 'DEFAULT', // 'DARK' | 'LIGHT' | 'DEFAULT'
+       insetsHandling: 'native', // 'css' | 'native' | 'disable'
      },
 +    Device: {
 +      /**
@@ -19,5 +19,5 @@
 +      verboseLogging: false,
 +    },
    },
-   cordova: {},
  };
+ 

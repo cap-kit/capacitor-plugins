@@ -4,11 +4,11 @@
 +/// <reference types='@cap-kit/tls-fingerprint' />
 +
  import type { CapacitorConfig } from '@capacitor/cli';
- import { KeyboardResize } from '@capacitor/keyboard';
  
-@@ -25,6 +27,51 @@
-     Keyboard: {
-       resize: KeyboardResize.None,
+ const config: CapacitorConfig = {
+@@ -21,6 +23,51 @@
+       style: 'DEFAULT', // 'DARK' | 'LIGHT' | 'DEFAULT'
+       insetsHandling: 'native', // 'css' | 'native' | 'disable'
      },
 +    TLSFingerprint: {
 +      /**
@@ -56,5 +56,5 @@
 +      excludedDomains: ['google-analytics.com', 'sentry.io', 'doubleclick.net']
 +    },
    },
-   cordova: {},
  };
+ 
