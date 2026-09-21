@@ -1,6 +1,6 @@
 {
   "name": "@cap-kit/device",
-  "version": "8.0.0",
+  "version": "8.1.0",
   "description": "Unified Capacitor v8 plugin for native device information: battery, screen, OS and hardware identifiers.",
   "type": "module",
   "private": false,
