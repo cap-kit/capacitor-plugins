@@ -1,6 +1,6 @@
 --- a/src/app/app.routes.ts
 +++ b/src/app/app.routes.ts
-@@ -6,6 +6,11 @@
+@@ -6,5 +6,10 @@
        import('./home/home.page').then((m) => m.HomePage),
    },
 +  {
