@@ -1,0 +1,571 @@
+<app-page-header [title]="'Fortress'" />
+
+<ion-content class="ion-padding">
+  <app-info-card
+    [title]="'Fortress'"
+    [subtitle]="'@cap-kit/fortress'"
+    [content]="'Secure storage and biometric authentication for Capacitor apps.'"
+    (githubClick)="openOnGithub()"
+  />
+
+  @if (isSupported()) {
+  <!-- SECURITY STATUS CARD ------------------------------------------------ -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="shield-checkmark-outline" class="ion-margin-end" />
+        Security Status
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <!-- @if (securityStatus()) {
+          <ion-item lines="none">
+            <ion-label>
+              <strong>Biometrics Available</strong>
+            </ion-label>
+            <ion-badge
+              slot="end"
+              [color]="securityStatus()!.isBiometricsAvailable ? 'success' : 'medium'"
+            >
+              {{ securityStatus()!.isBiometricsAvailable ? 'Yes' : 'No' }}
+            </ion-badge>
+          </ion-item>
+          <ion-item lines="none">
+            <ion-label>
+              <strong>Biometrics Enabled</strong>
+            </ion-label>
+            <ion-badge
+              slot="end"
+              [color]="securityStatus()!.isBiometricsEnabled ? 'success' : 'medium'"
+            >
+              {{ securityStatus()!.isBiometricsEnabled ? 'Yes' : 'No' }}
+            </ion-badge>
+          </ion-item>
+          <ion-item lines="none">
+            <ion-label>
+              <strong>Device Secure</strong>
+            </ion-label>
+            <ion-badge
+              slot="end"
+              [color]="securityStatus()!.isDeviceSecure ? 'success' : 'warning'"
+            >
+              {{ securityStatus()!.isDeviceSecure ? 'Yes' : 'No' }}
+            </ion-badge>
+          </ion-item>
+          <ion-item lines="none">
+            <ion-label>
+              <strong>Biometry Type</strong>
+            </ion-label>
+            <ion-badge slot="end" color="tertiary">
+              {{ biometryTypeLabel(securityStatus()!.biometryType) }}
+            </ion-badge>
+          </ion-item>
+        } @else {
+          <p class="ion-text-muted">
+            <small>Tap "Check Status" to retrieve security information.</small>
+          </p>
+        } -->
+      <ion-button expand="block" size="small" (click)="checkStatus()" [disabled]="inProgress()">
+        <ion-icon name="refresh" slot="start" />
+        Check Status
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- SESSION STATUS CARD -------------------------------------------------- -->
+  <ion-card>
+    <ion-card-header>
+      <!-- <ion-card-title>
+          <ion-icon
+            [name]="session()?.isLocked ? 'lock-closed' : 'lock-open'"
+            class="ion-margin-end"
+          />
+          Session
+        </ion-card-title> -->
+    </ion-card-header>
+    <ion-card-content>
+      <ion-item lines="none">
+        <ion-label>
+          <strong>Lock Status</strong>
+        </ion-label>
+        <!-- <ion-badge slot="end" [color]="session()?.isLocked ? 'danger' : 'success'">
+            {{ session()?.isLocked ? 'LOCKED' : 'UNLOCKED' }}
+          </ion-badge> -->
+      </ion-item>
+      <!-- @if (session()?.lastActiveAt) {
+          <ion-item lines="none">
+            <ion-label>
+              <strong>Last Active</strong>
+            </ion-label>
+            <ion-note slot="end">
+              {{ session()!.lastActiveAt | date: 'medium' }}
+            </ion-note>
+          </ion-item>
+        } -->
+      <div class="ion-margin-top">
+        <ion-button size="small" color="success" (click)="onUnlock()" [disabled]="inProgress()">
+          <ion-icon name="lock-open" slot="start" />
+          Unlock
+        </ion-button>
+        <ion-button size="small" color="danger" (click)="onLock()" [disabled]="inProgress()">
+          <ion-icon name="lock-closed" slot="start" />
+          Lock
+        </ion-button>
+        <ion-button size="small" fill="outline" (click)="refreshSession()">
+          <ion-icon name="refresh" slot="start" />
+          Refresh
+        </ion-button>
+      </div>
+      <ion-item-divider />
+      <ion-button size="small" fill="clear" color="medium" (click)="onResetSession()">
+        <ion-icon name="refresh" slot="start" />
+        Reset Session
+      </ion-button>
+      <ion-button size="small" fill="clear" color="medium" (click)="onTouchSession()">
+        <ion-icon name="finger-print" slot="start" />
+        Touch Session
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- TABS ------------------------------------------------------------------ -->
+  <ion-segment [scrollable]="true" color="primary" [value]="activeTab()" (ionChange)="onTabChange($event)">
+    <ion-segment-button value="storage">
+      <ion-icon name="key-outline" />
+      <ion-label>Storage</ion-label>
+    </ion-segment-button>
+
+    <ion-segment-button value="session">
+      <ion-icon name="terminal-outline" />
+      <ion-label>Session</ion-label>
+    </ion-segment-button>
+
+    <ion-segment-button value="crypto">
+      <ion-icon name="construct-outline" />
+      <ion-label>Crypto</ion-label>
+    </ion-segment-button>
+
+    <ion-segment-button value="config">
+      <ion-icon name="settings-outline" />
+      <ion-label>Config</ion-label>
+    </ion-segment-button>
+  </ion-segment>
+
+  <!-- STORAGE TAB ---------------------------------------------------------- -->
+  @if (activeTab() === 'storage') {
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Secure Storage</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-item>
+        <ion-label position="stacked">Key</ion-label>
+        <ion-input
+          [value]="storageKey()"
+          (ionChange)="storageKey.set($event.detail.value ?? '')"
+          placeholder="Enter key"
+        />
+      </ion-item>
+      <ion-item>
+        <ion-label position="stacked">Value</ion-label>
+        <ion-input
+          [value]="storageValue()"
+          (ionChange)="storageValue.set($event.detail.value ?? '')"
+          placeholder="Enter value"
+        />
+      </ion-item>
+
+      <div class="ion-margin-top">
+        <ion-button size="small" color="primary" (click)="onSetValue()" [disabled]="inProgress()">
+          <ion-icon name="add-circle" slot="start" />
+          Set
+        </ion-button>
+        <ion-button size="small" color="secondary" (click)="onGetValue()" [disabled]="inProgress()">
+          <ion-icon name="key" slot="start" />
+          Get
+        </ion-button>
+        <ion-button size="small" color="warning" (click)="onRemoveValue()" [disabled]="inProgress()">
+          <ion-icon name="trash" slot="start" />
+          Remove
+        </ion-button>
+        <ion-button size="small" color="danger" (click)="onClearAll()" [disabled]="inProgress()">
+          <ion-icon name="trash" slot="start" />
+          Clear All
+        </ion-button>
+      </div>
+
+      <ion-item-divider />
+
+      <!-- QUICK KEYS -------------------------------------------------------- -->
+      <ion-text>
+        <strong>Quick Select</strong><br />
+        <small>Click a key to select it for get/remove operations.</small>
+      </ion-text>
+      <div class="ion-margin-top">
+        @for (key of storedKeys(); track key) {
+        <ion-chip
+          [outline]="storageKey() !== key"
+          [color]="storageKey() === key ? 'primary' : 'medium'"
+          (click)="selectKey(key)"
+        >
+          {{ key }}
+        </ion-chip>
+        }
+        <ion-button size="small" fill="clear" (click)="loadStoredKeys()">
+          <ion-icon name="refresh" slot="start" />
+          Load Keys
+        </ion-button>
+      </div>
+
+      <!-- LAST RETRIEVED VALUE --------------------------------------------- -->
+      @if (lastRetrievedValue() !== null) {
+      <ion-item-divider />
+      <ion-item lines="none">
+        <ion-label>
+          <strong>Retrieved Value</strong>
+        </ion-label>
+        <ion-button slot="end" size="small" fill="clear" (click)="copyValue()">
+          <ion-icon name="copy-outline" slot="icon-only" />
+        </ion-button>
+      </ion-item>
+      <ion-item lines="none">
+        <ion-note class="ion-text-wrap"> {{ lastRetrievedValue() }} </ion-note>
+      </ion-item>
+      }
+    </ion-card-content>
+  </ion-card>
+  }
+
+  <!-- SESSION TAB ---------------------------------------------------------- -->
+  @if (activeTab() === 'session') {
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Session Management</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-text>
+        <small>
+          The session tracks lock state and auto-lock timing. Use "Touch Session" to extend the session without
+          re-authenticating.
+        </small>
+      </ion-text>
+
+      <ion-item-divider />
+
+      <ion-item lines="none">
+        <ion-label>
+          <strong>Current Lock State</strong>
+        </ion-label>
+        <!-- <ion-badge slot="end" [color]="session()?.isLocked ? 'danger' : 'success'">
+              {{ session()?.isLocked ? 'LOCKED' : 'UNLOCKED' }}
+            </ion-badge> -->
+      </ion-item>
+
+      <!-- @if (session()?.lastActiveAt) { -->
+      <ion-item lines="none">
+        <ion-label>
+          <strong>Last Active Timestamp</strong>
+        </ion-label>
+        <ion-note slot="end">
+          <!-- {{ session()!.lastActiveAt }} -->
+        </ion-note>
+      </ion-item>
+      <ion-item lines="none">
+        <ion-label>
+          <strong>Last Active (Human)</strong>
+        </ion-label>
+        <ion-note slot="end">
+          <!-- {{ session()!.lastActiveAt | date: 'medium' }} -->
+        </ion-note>
+      </ion-item>
+      <!-- } -->
+
+      <ion-item-divider />
+
+      <ion-button expand="block" (click)="refreshSession()" [disabled]="inProgress()">
+        <ion-icon name="refresh" slot="start" />
+        Refresh Session
+      </ion-button>
+
+      <ion-button expand="block" color="primary" (click)="onTouchSession()" [disabled]="inProgress()">
+        <ion-icon name="finger-print" slot="start" />
+        Touch Session
+      </ion-button>
+
+      <ion-button expand="block" color="danger" (click)="onResetSession()" [disabled]="inProgress()">
+        <ion-icon name="refresh" slot="start" />
+        Reset Session
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+  }
+
+  <!-- CRYPTO TAB ----------------------------------------------------------- -->
+  @if (activeTab() === 'crypto') {
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Biometric Keys</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-text>
+        <small>
+          Create and manage biometric-protected cryptographic key pairs. These keys are stored in hardware-backed secure
+          storage.
+        </small>
+      </ion-text>
+
+      <ion-item-divider />
+
+      <ion-item lines="none">
+        <ion-label>
+          <strong>Keys Exist</strong>
+        </ion-label>
+        @if (biometricKeysExist() !== null) {
+        <ion-badge slot="end" [color]="biometricKeysExist()! ? 'success' : 'medium'">
+          {{ biometricKeysExist()! ? 'Yes' : 'No' }}
+        </ion-badge>
+        } @else {
+        <ion-badge slot="end" color="medium">Unknown</ion-badge>
+        }
+      </ion-item>
+
+      <div class="ion-margin-top">
+        <ion-button size="small" (click)="onCheckBiometricKeysExist()" [disabled]="inProgress()">
+          <ion-icon name="key" slot="start" />
+          Check Keys
+        </ion-button>
+        <ion-button size="small" color="primary" (click)="onCreateKeys()" [disabled]="inProgress()">
+          <ion-icon name="add-circle" slot="start" />
+          Create Keys
+        </ion-button>
+        <ion-button size="small" color="danger" (click)="onDeleteKeys()" [disabled]="inProgress()">
+          <ion-icon name="trash" slot="start" />
+          Delete Keys
+        </ion-button>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Signature</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-text>
+        <small>
+          Create a biometric-protected cryptographic signature. Requires unlocked vault and existing biometric keys.
+        </small>
+      </ion-text>
+
+      <ion-item-divider />
+
+      @if (lastSignature()) {
+      <ion-item lines="none">
+        <ion-label>
+          <strong>Last Signature</strong>
+        </ion-label>
+        <ion-note slot="end" class="ion-text-wrap" style="max-width: 150px">
+          {{ lastSignature()!.substring(0, 30) }}...
+        </ion-note>
+      </ion-item>
+      }
+
+      <ion-button expand="block" (click)="onCreateSignature()" [disabled]="inProgress()">
+        <ion-icon name="finger-print" slot="start" />
+        Create Signature
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+  }
+
+  <!-- CONFIG TAB ----------------------------------------------------------- -->
+  @if (activeTab() === 'config') {
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Runtime Configuration</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-text>
+        <small> Apply runtime configuration options. These override settings from capacitor.config.ts. </small>
+      </ion-text>
+
+      <ion-item-divider />
+
+      <ion-item lines="none">
+        <ion-label>
+          <strong>Verbose Logging</strong><br />
+          <ion-note>Enable detailed native console logging</ion-note>
+        </ion-label>
+        <ion-toggle slot="end" [checked]="verboseLogging()" (ionChange)="verboseLogging.set($event.detail.checked)" />
+      </ion-item>
+
+      <ion-item lines="none">
+        <ion-label>
+          <strong>Privacy Screen</strong><br />
+          <ion-note>Enable snapshot protection</ion-note>
+        </ion-label>
+        <ion-toggle slot="end" [checked]="privacyScreen()" (ionChange)="privacyScreen.set($event.detail.checked)" />
+      </ion-item>
+
+      <ion-item>
+        <ion-label position="stacked">Overlay Text</ion-label>
+        <ion-input
+          [value]="privacyOverlayText()"
+          (ionInput)="privacyOverlayText.set($event.detail.value ?? '')"
+          [placeholder]="appliedPrivacyOverlayText() || 'Runtime value (empty)'"
+        />
+      </ion-item>
+      @if (isPrivacyOverlayTextDirty()) {
+      <ion-note color="warning" class="ion-padding-start ion-display-block">
+        Pending change (not applied yet)
+      </ion-note>
+      }
+      <ion-note class="ion-padding-start ion-display-block">
+        Applied now: {{ appliedPrivacyOverlayText() || '(empty)' }}
+      </ion-note>
+
+      <ion-item>
+        <ion-label position="stacked">Overlay Image Name</ion-label>
+        <ion-input
+          [value]="privacyOverlayImageName()"
+          (ionInput)="privacyOverlayImageName.set($event.detail.value ?? '')"
+          placeholder="fortress_lock"
+        />
+      </ion-item>
+
+      <ion-item lines="none">
+        <ion-label>
+          <strong>Show Overlay Text</strong>
+        </ion-label>
+        <ion-toggle
+          slot="end"
+          [checked]="privacyOverlayShowText()"
+          (ionChange)="privacyOverlayShowText.set($event.detail.checked)"
+        />
+      </ion-item>
+
+      <ion-item lines="none">
+        <ion-label>
+          <strong>Show Overlay Image</strong>
+        </ion-label>
+        <ion-toggle
+          slot="end"
+          [checked]="privacyOverlayShowImage()"
+          (ionChange)="privacyOverlayShowImage.set($event.detail.checked)"
+        />
+      </ion-item>
+
+      <ion-item>
+        <ion-label position="stacked">Overlay Text Color (Hex)</ion-label>
+        <ion-input
+          [value]="privacyOverlayTextColor()"
+          (ionInput)="privacyOverlayTextColor.set($event.detail.value ?? '')"
+          placeholder="#FFFFFF"
+        />
+      </ion-item>
+
+      <ion-item>
+        <ion-label position="stacked">Overlay Background Opacity (0-1)</ion-label>
+        <ion-input
+          type="number"
+          inputmode="decimal"
+          [value]="privacyOverlayBackgroundOpacity()"
+          (ionInput)="privacyOverlayBackgroundOpacity.set($event.detail.value ?? '')"
+          placeholder="0.8"
+        />
+      </ion-item>
+
+      <ion-item>
+        <ion-label>Overlay Theme</ion-label>
+        <ion-select
+          slot="end"
+          interface="popover"
+          [value]="privacyOverlayTheme()"
+          (ionChange)="privacyOverlayTheme.set($event.detail.value)"
+        >
+          <ion-select-option value="system">system</ion-select-option>
+          <ion-select-option value="light">light</ion-select-option>
+          <ion-select-option value="dark">dark</ion-select-option>
+        </ion-select>
+      </ion-item>
+
+      <ion-item>
+        <ion-label>Fallback Strategy</ion-label>
+        <ion-select
+          slot="end"
+          interface="popover"
+          [value]="fallbackStrategy()"
+          (ionChange)="fallbackStrategy.set($event.detail.value)"
+        >
+          <ion-select-option value="systemDefault">systemDefault</ion-select-option>
+          <ion-select-option value="deviceCredential">deviceCredential</ion-select-option>
+          <ion-select-option value="none">none</ion-select-option>
+        </ion-select>
+      </ion-item>
+
+      <ion-item lines="none">
+        <ion-label>
+          <strong>Persist Session State (Web)</strong>
+        </ion-label>
+        <ion-toggle
+          slot="end"
+          [checked]="persistSessionState()"
+          (ionChange)="persistSessionState.set($event.detail.checked)"
+        />
+      </ion-item>
+
+      <ion-note class="ion-margin-top ion-padding-start ion-display-block">
+        For image overlay tests, use a valid native asset name (iOS asset catalog / Android drawable). Demo assets:
+        <strong>fortress_lock</strong>, <strong>fortress_lock_alt</strong>.
+      </ion-note>
+
+      <ion-button expand="block" class="ion-margin-top" (click)="onConfigure()" [disabled]="inProgress()">
+        <ion-icon name="settings-outline" slot="start" />
+        {{ isPrivacyOverlayTextDirty() ? 'Apply Configuration (pending)' : 'Apply Configuration' }}
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+  }
+
+  <!-- LOGS CARD ------------------------------------------------------------ -->
+  <ion-card>
+    <ion-card-header>
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <ion-card-title>
+          <ion-icon name="terminal-outline" class="ion-margin-end" />
+          Event Log
+        </ion-card-title>
+        <ion-button size="small" fill="clear" color="medium" (click)="clearLogs()"> Clear </ion-button>
+      </div>
+    </ion-card-header>
+    <ion-card-content>
+      @if (logs().length === 0) {
+      <p class="ion-text-muted">
+        <small>No events logged yet. Actions will appear here.</small>
+      </p>
+      } @else {
+      <div class="log-container">
+        @for (log of logs(); track $index) {
+        <div class="log-entry">
+          <ion-note>{{ log }}</ion-note>
+        </div>
+        }
+      </div>
+      }
+    </ion-card-content>
+  </ion-card>
+
+  @if (inProgress()) {
+  <div class="ion-text-center ion-padding">
+    <ion-spinner />
+  </div>
+  } } @else {
+  <ion-card>
+    <ion-card-content>
+      <p class="ion-text-muted">This plugin is not supported on this platform.</p>
+    </ion-card-content>
+  </ion-card>
+  }
+</ion-content>
+
+<app-page-footer [version]="displayVersion()" [label]="'Plugin Version'" />
