@@ -48,3 +48,18 @@ minimumReleaseAgeExclude:
   - '@typescript-eslint/utils@8.70.1'
   - '@typescript-eslint/visitor-keys@8.70.1'
   - typescript-eslint@8.70.1
+  - '@analogjs/vite-plugin-angular@2.7.5'
+  - '@analogjs/vitest-angular@2.7.5'
+  - '@turbo/darwin-64@2.11.4'
+  - '@turbo/darwin-arm64@2.11.4'
+  - '@turbo/linux-64@2.11.4'
+  - '@turbo/linux-arm64@2.11.4'
+  - '@turbo/windows-64@2.11.4'
+  - '@turbo/windows-arm64@2.11.4'
+  - '@vitest/mocker@5.0.2'
+  - '@vitest/spy@5.0.2'
+  - turbo@2.11.4
+  - vitest@5.0.2
+  - '@angular/compiler-cli@22.2.0'
+  - '@angular/language-service@22.2.0'
+  - '@types/node@26.6.2'
