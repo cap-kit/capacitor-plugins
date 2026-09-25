@@ -68,7 +68,7 @@
     "hmac"
   ],
   "scripts": {
-    "setup-sdk": "echo 'Manual SDK setup required'",
+    "setup-redsys-sdk": "node ./scripts/setup-redsys-sdk.mjs",
     "verify": "pnpm run verify:ios && pnpm run verify:android && pnpm run verify:web",
     "verify:ios": "node ./scripts/sync-version.mjs && echo 'iOS Native build skipped'",
     "verify:android": "echo 'Android Native build skipped'",

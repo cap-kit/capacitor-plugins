@@ -15,12 +15,13 @@ Create a folder named `sdks/` in your project root (next to `package.json`) and 
 
 ### 2. Run the Orchestrator Script
 
-Execute the following command to distribute the SDKs to the persistent native directories:
+From your **app root** (the folder that contains your `package.json`), run:
 
 ```bash
-npm run setup-redsys-sdk
-
+node node_modules/@cap-kit/redsys/scripts/setup-redsys-sdk.mjs
 ```
+
+> **Note:** Run the script with `node` from your app root — not with `npm run`. Package managers resolve scripts only from the `package.json` of the current project, never from an installed dependency, and the orchestrator resolves every path relative to your app root.
 
 This script performs two critical actions:
 
