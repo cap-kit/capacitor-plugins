@@ -1,5 +1,11 @@
 # @cap-kit/test-plugin
 
+## 8.2.0
+
+### Minor Changes
+
+- bdd5a6d: Bump minor versions for all published plugins.
+
 ## 8.1.0
 
 ### Minor Changes

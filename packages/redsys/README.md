@@ -48,7 +48,7 @@
 
 - Supports both **Direct Payment** and **WebView (3DS) Payment** flows with a consistent cross-platform API.
 - Provides a **platform-agnostic JavaScript API**, native SDK orchestration, unified response structure, standardized error handling, and built-in HMAC signature utilities.
-- It does NOT bundle the official Redsys SDK binaries — download them from the Redsys Portal and run `npm run setup-redsys-sdk` (see the [configuration guide](docs/configuration.md)).
+- It does NOT bundle the official Redsys SDK binaries — download them from the Redsys Portal and run the bundled orchestrator script from your app root (see the [configuration guide](docs/configuration.md)).
 - It does NOT generate production web payment signatures — the **Merchant Secret Key** must stay on your secure backend (see the [security considerations](docs/security.md)).
 
 ## Documentation

@@ -1,5 +1,11 @@
 # @cap-kit/tls-fingerprint
 
+## 8.1.0
+
+### Minor Changes
+
+- bdd5a6d: Bump minor versions for all published plugins.
+
 ## 8.0.1
 
 ### Patch Changes

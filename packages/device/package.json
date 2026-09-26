@@ -1,6 +1,6 @@
 {
   "name": "@cap-kit/device",
-  "version": "8.0.0",
+  "version": "8.1.0",
   "description": "Unified Capacitor v8 plugin for native device information: battery, screen, OS and hardware identifiers.",
   "type": "module",
   "private": false,
@@ -96,10 +96,10 @@
     "eslint": "^10.11.0",
     "eslint-plugin-import-x": "^4.17.1",
     "globals": "^17.12.0",
-    "prettier": "^3.9.8",
+    "prettier": "^3.9.9",
     "prettier-plugin-java": "^2.10.4",
     "rimraf": "^6.1.3",
-    "rollup": "^4.63.4",
+    "rollup": "^4.63.5",
     "swiftlint": "^2.0.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.70.1"

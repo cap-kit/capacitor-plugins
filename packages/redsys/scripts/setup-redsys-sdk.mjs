@@ -106,7 +106,6 @@ function printVisualTree(androidOk, iosOk) {
   console.log(`│                   └── ${ANDROID_ARTIFACT_ID}-${ANDROID_VERSION}.pom`);
   console.log('├── ios/');
   console.log('│   └── App/');
-  console.log('│       ├── build.gradle');
   console.log(`│       └── ${IOS_FILENAME}  ${iosOk ? '✅' : '❌'}`);
   console.log('------------------');
   
