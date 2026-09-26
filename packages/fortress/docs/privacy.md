@@ -33,6 +33,48 @@ await Fortress.configure({
 });
 ```
 
+## Manual runtime control (Ionic API parity)
+
+Beyond the follow-lock policy, privacy can be driven manually per screen —
+the same `enable() / disable() / isEnabled()` contract as the official
+`@capacitor/privacy-screen` plugin:
+
+```ts
+// Protect a sensitive screen while the vault stays unlocked.
+await Fortress.enable({
+  android: { dimBackground: true, privacyModeOnActivityHidden: 'splash' },
+  ios: { blurEffect: 'dark' },
+});
+
+// Leave protection for a public screen.
+await Fortress.disable();
+
+// Independent from the vault lock state.
+const { enabled } = await Fortress.isEnabled();
+const { isLocked } = await Fortress.isLocked();
+```
+
+Semantics:
+
+- `enable()` / `disable()` apply immediately and detach privacy from the
+  follow-lock policy. Explicit manual control wins from that moment on.
+- `configure({ enablePrivacyScreen })` or `resetRuntimeConfig()` re-attaches
+  the policy and clears the manual override.
+- `getRuntimeConfig()` snapshots the effective state in `privacyScreenEnabled`.
+- Visual style stays Fortress-driven (`privacyOverlay*`); the
+  `PrivacyScreenConfig` knobs are accepted for API compatibility.
+
+Screenshot observability (Capawesome parity):
+
+```ts
+const handle = await Fortress.addListener('screenshotTaken', () => {
+  console.log('Screenshot taken (after the fact — cannot be prevented)');
+});
+// iOS: delivered via system notification.
+// Android: API 34+ only, delivered while protection is active.
+await Fortress.removeAllListeners();
+```
+
 ## Platform behavior notes
 
 - **Android recents/task switcher:** Android applies snapshot protection with

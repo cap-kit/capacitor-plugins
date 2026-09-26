@@ -47,6 +47,8 @@ data class FortressRuntimeConfig(
   val privacyOverlayBackgroundOpacity: Double,
   @SerialName("privacyOverlayTheme")
   val privacyOverlayTheme: String,
+  @SerialName("privacyScreenEnabled")
+  val privacyScreenEnabled: Boolean,
   @SerialName("fallbackStrategy")
   val fallbackStrategy: String,
   @SerialName("allowCachedAuthentication")
@@ -147,4 +149,16 @@ data class FortressSessionResult(
 data class IsLockedResult(
   @SerialName("isLocked")
   val isLocked: Boolean,
+)
+
+@Serializable
+data class PrivacyScreenActionResult(
+  @SerialName("success")
+  val success: Boolean,
+)
+
+@Serializable
+data class PrivacyScreenStatus(
+  @SerialName("enabled")
+  val enabled: Boolean,
 )

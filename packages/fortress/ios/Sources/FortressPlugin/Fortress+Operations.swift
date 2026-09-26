@@ -205,7 +205,10 @@ extension Fortress {
     }
 
     func isPrivacyScreenEnabled() -> Bool {
-        runtimeEnablePrivacyScreenOverride ?? (config?.enablePrivacyScreen ?? true)
+        if let manual = privacyScreenManualOverride {
+            return manual
+        }
+        return runtimeEnablePrivacyScreenOverride ?? (config?.enablePrivacyScreen ?? true)
     }
 
     func resolveAllowPasscode() -> Bool {

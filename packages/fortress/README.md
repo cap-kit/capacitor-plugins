@@ -249,7 +249,12 @@ export default config;
 - [`addListener('onLockStatusChanged', ...)`](#addlisteneronlockstatuschanged-)
 - [`addListener('onVaultInvalidated', ...)`](#addlisteneronvaultinvalidated-)
 - [`addListener('onAppResume', ...)`](#addlisteneronappresume-)
+- [`addListener('screenshotTaken', ...)`](#addlistenerscreenshottaken-)
 - [`getPluginVersion()`](#getpluginversion)
+- [`enable(...)`](#enable)
+- [`disable()`](#disable)
+- [`isEnabled()`](#isenabled)
+- [`removeAllListeners()`](#removealllisteners)
 - [Interfaces](#interfaces)
 - [Type Aliases](#type-aliases)
 
@@ -998,6 +1003,30 @@ This event is emitted when the app/tab becomes active in foreground.
 
 ---
 
+### addListener('screenshotTaken', ...)
+
+```typescript
+addListener(eventName: "screenshotTaken", listenerFunc: () => void) => Promise<PluginListenerHandle>
+```
+
+Adds a listener for screenshot events.
+
+The event fires after the screenshot has been taken and therefore
+cannot prevent it. On Android it is only emitted on API 34+ while
+privacy protection is active; on older versions the listener is
+never called.
+
+| Param              | Type                           |
+| ------------------ | ------------------------------ |
+| **`eventName`**    | <code>'screenshotTaken'</code> |
+| **`listenerFunc`** | <code>() =&gt; void</code>     |
+
+**Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
 ### getPluginVersion()
 
 ```typescript
@@ -1018,6 +1047,90 @@ bundled with the application.
 ```ts
 const { version } = await Fortress.getPluginVersion();
 ```
+
+---
+
+### enable(...)
+
+```typescript
+enable(config?: PrivacyScreenConfig) => Promise<PrivacyScreenActionResult>
+```
+
+Enables privacy-screen protection independently of the vault lock state.
+
+This is the manual runtime control from the official
+`@capacitor/privacy-screen` API: protection applies immediately and
+stays in effect regardless of later `lock()` / `unlock()` transitions.
+
+Relationship with the lock policy:
+
+- While `enablePrivacyScreen` is set, lock/unlock transitions drive the
+  overlay automatically (follow-lock policy, the historical behavior).
+- Calling `enable()` / `disable()` detaches privacy from that policy:
+  explicit manual control wins from that moment on.
+- `configure({ enablePrivacyScreen })` or `resetRuntimeConfig()`
+  re-attaches the policy and clears the manual override.
+
+| Param        | Type                                                                | Description                                    |
+| ------------ | ------------------------------------------------------------------- | ---------------------------------------------- |
+| **`config`** | <code><a href="#privacyscreenconfig">PrivacyScreenConfig</a></code> | - Optional platform-specific display behavior. |
+
+**Returns:** <code>Promise&lt;<a href="#privacyscreenactionresult">PrivacyScreenActionResult</a>&gt;</code>
+
+**Since:** 8.0.0
+
+#### Example
+
+```ts
+await Fortress.enable({ ios: { blurEffect: 'dark' } });
+```
+
+---
+
+### disable()
+
+```typescript
+disable() => Promise<PrivacyScreenActionResult>
+```
+
+Disables privacy-screen protection independently of the vault lock state.
+
+Use this only when the current screen must stay visible in system
+previews (screenshots, screen recording, app switcher).
+
+**Returns:** <code>Promise&lt;<a href="#privacyscreenactionresult">PrivacyScreenActionResult</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### isEnabled()
+
+```typescript
+isEnabled() => Promise<PrivacyScreenStatus>
+```
+
+Returns the current privacy-screen enabled state.
+
+This state is independent from `isLocked()`: the vault can be unlocked
+while privacy protection stays on (e.g. hiding balances in the
+app switcher).
+
+**Returns:** <code>Promise&lt;<a href="#privacyscreenstatus">PrivacyScreenStatus</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### removeAllListeners()
+
+```typescript
+removeAllListeners() => Promise<void>
+```
+
+Removes all listeners for this plugin.
+
+**Since:** 8.0.0
 
 ---
 
@@ -1043,6 +1156,7 @@ runtime overrides applied via `configure(...)`.
 | **`privacyOverlayTextColor`**         | <code>string</code>                                              |
 | **`privacyOverlayBackgroundOpacity`** | <code>number</code>                                              |
 | **`privacyOverlayTheme`**             | <code>'system' \| 'light' \| 'dark'</code>                       |
+| **`privacyScreenEnabled`**            | <code>boolean</code>                                             |
 | **`fallbackStrategy`**                | <code>'none' \| 'deviceCredential' \| 'systemDefault'</code>     |
 | **`allowCachedAuthentication`**       | <code>boolean</code>                                             |
 | **`cachedAuthenticationTimeoutMs`**   | <code>number</code>                                              |
@@ -1327,6 +1441,40 @@ Result object returned by the `getPluginVersion()` method.
 | Prop          | Type                | Description                       |
 | ------------- | ------------------- | --------------------------------- |
 | **`version`** | <code>string</code> | The native plugin version string. |
+
+#### PrivacyScreenActionResult
+
+Result returned when privacy protection is toggled.
+
+Mirrors the official `@capacitor/privacy-screen` API.
+
+| Prop          | Type                 | Description                             |
+| ------------- | -------------------- | --------------------------------------- |
+| **`success`** | <code>boolean</code> | Whether the native operation completed. |
+
+#### PrivacyScreenConfig
+
+Platform-specific display options for the privacy screen.
+
+This shape mirrors the official `@capacitor/privacy-screen` configuration
+so Fortress stays a drop-in replacement. Visual style beyond these knobs
+is governed by the richer Fortress overlay options
+(`privacyOverlayText`, `privacyOverlayImageName`, `privacyOverlayTheme`, ...).
+
+| Prop          | Type                                                                                                                               |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **`android`** | <code>{ dimBackground?: boolean; preventScreenshots?: boolean; privacyModeOnActivityHidden?: 'none' \| 'dim' \| 'splash'; }</code> |
+| **`ios`**     | <code>{ blurEffect?: 'none' \| 'light' \| 'dark'; }</code>                                                                         |
+
+#### PrivacyScreenStatus
+
+Current privacy-screen state.
+
+Mirrors the official `@capacitor/privacy-screen` API.
+
+| Prop          | Type                 | Description                                      |
+| ------------- | -------------------- | ------------------------------------------------ |
+| **`enabled`** | <code>boolean</code> | Whether privacy protection is currently enabled. |
 
 ### Type Aliases
 

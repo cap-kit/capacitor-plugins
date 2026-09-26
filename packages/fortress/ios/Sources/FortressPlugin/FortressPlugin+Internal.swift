@@ -56,6 +56,7 @@ extension FortressPlugin {
             "privacyOverlayTextColor": config.privacyOverlayTextColor,
             "privacyOverlayBackgroundOpacity": config.privacyOverlayBackgroundOpacity,
             "privacyOverlayTheme": config.privacyOverlayTheme,
+            "privacyScreenEnabled": implementation.isPrivacyScreenEnabled(),
             "fallbackStrategy": config.fallbackStrategy,
             "allowCachedAuthentication": config.allowCachedAuthentication,
             "cachedAuthenticationTimeoutMs": config.cachedAuthenticationTimeoutMs,

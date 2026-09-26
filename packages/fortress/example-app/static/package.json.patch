@@ -9,7 +9,7 @@
      "@angular/forms": "^22.2.0",
      "@angular/platform-browser": "^22.2.0",
      "@angular/router": "^22.2.0",
-+    "@cap-kit/fortress": "file:..",
++    "@cap-kit/fortress": "workspace:*",
      "@capacitor/android": "^8.5.2",
      "@capacitor/app": "^8.1.1",
      "@capacitor/cli": "^8.5.2",

@@ -20,6 +20,9 @@ import {
   KeyAliasOptions,
   ObfuscatedKeyResult,
   PluginVersionResult,
+  PrivacyScreenActionResult,
+  PrivacyScreenConfig,
+  PrivacyScreenStatus,
   RegisterWithChallengeResult,
   SecureValue,
   SetBiometryIsEnrolledOptions,
@@ -106,6 +109,8 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
   private securityOverrides: Partial<DeviceSecurityStatus> = {};
   private currentLogLevel: 'error' | 'warn' | 'info' | 'debug' | 'verbose' = 'info';
   private vaultState: VaultState = 'LOCKED';
+  private privacyScreenEnabled = true;
+  private privacyScreenConfig: PrivacyScreenConfig = {};
   private readonly visibilityChangeHandler = (): void => {
     void this.handleVisibilityChange();
   };
@@ -119,6 +124,7 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
     this.config = this.loadPersistedRuntimeConfig();
     this.currentLogLevel = this.resolveLogLevel(this.config.logLevel, this.config.verboseLogging);
     this.loadSession();
+    this.privacyScreenEnabled = this.config.enablePrivacyScreen ?? true;
 
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', this.visibilityChangeHandler);
@@ -144,6 +150,7 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
       privacyOverlayTextColor: this.config.privacyOverlayTextColor ?? '',
       privacyOverlayBackgroundOpacity: this.config.privacyOverlayBackgroundOpacity ?? -1,
       privacyOverlayTheme: this.config.privacyOverlayTheme ?? 'system',
+      privacyScreenEnabled: this.privacyScreenEnabled,
       fallbackStrategy: this.config.fallbackStrategy ?? 'systemDefault',
       allowCachedAuthentication: this.config.allowCachedAuthentication ?? false,
       cachedAuthenticationTimeoutMs: this.config.cachedAuthenticationTimeoutMs ?? 30000,
@@ -166,6 +173,10 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
     this.config = nextConfig;
     this.saveRuntimeConfigOverrides(nextConfig);
     this.currentLogLevel = this.resolveLogLevel(nextConfig.logLevel, nextConfig.verboseLogging);
+    if (sanitizedOverrides.enablePrivacyScreen !== undefined) {
+      // A policy change re-attaches privacy to the lock policy and clears manual control.
+      this.privacyScreenEnabled = sanitizedOverrides.enablePrivacyScreen;
+    }
     this.logDebug('Configuration applied', `logLevel=${this.currentLogLevel}`);
 
     const isPersisting = this.config.persistSessionState === true;
@@ -185,6 +196,7 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
 
     localStorage.removeItem(FortressWeb.RUNTIME_CONFIG_KEY);
     this.config = {};
+    this.privacyScreenEnabled = true;
     this.currentLogLevel = this.resolveLogLevel(this.config.logLevel, this.config.verboseLogging);
 
     const isPersisting = this.config.persistSessionState === true;
@@ -425,6 +437,30 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
 
   async isLocked(): Promise<{ isLocked: boolean }> {
     return { isLocked: this.session.isLocked };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Privacy Screen (manual runtime control — Ionic API parity)
+  // ---------------------------------------------------------------------------
+
+  async enable(config?: PrivacyScreenConfig): Promise<PrivacyScreenActionResult> {
+    if (config !== undefined) {
+      this.privacyScreenConfig = config;
+    }
+    // Web has no OS-level snapshot protection; track the state for API parity.
+    this.privacyScreenEnabled = true;
+    this.logDebug('Privacy screen enabled (web: state-tracked only)', this.privacyScreenConfig);
+    return { success: true };
+  }
+
+  async disable(): Promise<PrivacyScreenActionResult> {
+    this.privacyScreenEnabled = false;
+    this.logDebug('Privacy screen disabled (web: state-tracked only)');
+    return { success: true };
+  }
+
+  async isEnabled(): Promise<PrivacyScreenStatus> {
+    return { enabled: this.privacyScreenEnabled };
   }
 
   async getSession(): Promise<FortressSession> {

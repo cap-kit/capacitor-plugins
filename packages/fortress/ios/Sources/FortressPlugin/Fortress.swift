@@ -38,6 +38,9 @@ public final class Fortress: NSObject {
     let sessionManager = SessionManager()
     let privacyScreen = PrivacyScreen()
     var runtimeEnablePrivacyScreenOverride: Bool?
+    /// Manual runtime override from `enable()` / `disable()`. Non-nil detaches
+    /// privacy from the follow-lock policy until cleared by configure/reset.
+    var privacyScreenManualOverride: Bool?
     var lastSuccessfulAuthAtMs: Int64 = 0
     var failedBiometricAttempts: Int = 0
     var lockoutUntilMs: Int64 = 0
@@ -108,6 +111,16 @@ public final class Fortress: NSObject {
 
     func setRuntimeEnablePrivacyScreen(_ enabled: Bool?) {
         runtimeEnablePrivacyScreenOverride = enabled
+    }
+
+    /**
+     Manual privacy override from `enable()` / `disable()`.
+
+     A non-nil value detaches privacy from the follow-lock policy:
+     explicit manual control wins until cleared (configure/reset pass nil).
+     */
+    func setPrivacyScreenManualOverride(_ enabled: Bool?) {
+        privacyScreenManualOverride = enabled
     }
 
     func isPrivacyScreenActive() -> Bool {

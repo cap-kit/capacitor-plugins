@@ -1,5 +1,6 @@
 package io.capkit.fortress
 
+import android.os.Build
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -27,6 +28,8 @@ import io.capkit.fortress.model.HasKeyResult
 import io.capkit.fortress.model.IsLockedResult
 import io.capkit.fortress.model.ObfuscatedKeyResult
 import io.capkit.fortress.model.PluginVersionResult
+import io.capkit.fortress.model.PrivacyScreenActionResult
+import io.capkit.fortress.model.PrivacyScreenStatus
 import io.capkit.fortress.model.RegisterWithChallengeResult
 import io.capkit.fortress.model.ValueResult
 import kotlinx.serialization.encodeToString
@@ -86,6 +89,14 @@ class FortressPlugin :
   private lateinit var runtimeConfigStore: RuntimeConfigStore
   private var lastSecurityStatus: JSObject? = null
   private var overlayUnlockInProgress = false
+
+  /**
+   * Opaque handle for the API 34+ screen-capture callback.
+   *
+   * Typed as Any to avoid class-verification issues on older runtimes;
+   * every use is guarded by an SDK_INT check.
+   */
+  private var screenCaptureCallback: Any? = null
 
   /**
    * Serializer instance configured to encode result models into JSObject string payloads.
@@ -172,7 +183,7 @@ class FortressPlugin :
     // ProcessLifecycle onStart may not fire immediately when observer is
     // registered while app is already in foreground.
     val hostActivity = currentActivityOrNull()
-    if (config.enablePrivacyScreen) {
+    if (implementation.isPrivacyScreenActive()) {
       implementation.setContentVisibility(hostActivity, true)
       val locked = implementation.isLocked(hostActivity)
       implementation.setPrivacyProtection(hostActivity, locked)
@@ -187,7 +198,7 @@ class FortressPlugin :
 
   // Lifecycle Handlers
   override fun onPause(owner: LifecycleOwner) {
-    if (config.enablePrivacyScreen) {
+    if (implementation.isPrivacyScreenActive()) {
       val hostActivity = currentActivityOrNull()
       implementation.setWindowSecure(hostActivity, true)
       implementation.setPrivacyProtection(hostActivity, true)
@@ -203,7 +214,7 @@ class FortressPlugin :
    */
   override fun handleOnPause() {
     super.handleOnPause()
-    if (config.enablePrivacyScreen) {
+    if (implementation.isPrivacyScreenActive()) {
       val hostActivity = currentActivityOrNull()
       implementation.setWindowSecure(hostActivity, true)
       implementation.setPrivacyProtection(hostActivity, true)
@@ -214,11 +225,12 @@ class FortressPlugin :
   override fun handleOnResume() {
     super.handleOnResume()
     val hostActivity = currentActivityOrNull()
-    if (config.enablePrivacyScreen) {
+    if (implementation.isPrivacyScreenActive()) {
       implementation.setContentVisibility(hostActivity, true)
       val locked = implementation.isLocked(hostActivity)
       implementation.setPrivacyProtection(hostActivity, locked)
     }
+    syncScreenshotCallback()
   }
 
   override fun onStop(owner: LifecycleOwner) {
@@ -227,7 +239,7 @@ class FortressPlugin :
     // 1. Register background timestamp for grace-period evaluation.
     implementation.setSessionBackgroundTimestamp()
 
-    if (config.enablePrivacyScreen) {
+    if (implementation.isPrivacyScreenActive()) {
       // 2. Enable privacy protection while app is in background.
       implementation.setPrivacyProtection(hostActivity, true)
 
@@ -243,7 +255,7 @@ class FortressPlugin :
     // 1. Evaluate whether session expired while the app was in stop/background.
     implementation.evaluateSessionBackgroundGracePeriod(lockAfterMs)
 
-    if (config.enablePrivacyScreen) {
+    if (implementation.isPrivacyScreenActive()) {
       // 2. Restore content visibility.
       implementation.setContentVisibility(hostActivity, true)
 
@@ -254,6 +266,37 @@ class FortressPlugin :
 
     notifySecurityStateIfChanged()
     notifyListeners("onAppResume", null)
+  }
+
+  /**
+   * Reconciles the API 34+ screen-capture callback with the effective
+   * privacy state. Re-registers on every resume so activity recreation
+   * never leaves a stale handle behind. No-op below API 34.
+   */
+  private fun syncScreenshotCallback() {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+      return
+    }
+    val hostActivity = currentActivityOrNull()
+    (screenCaptureCallback as? android.app.Activity.ScreenCaptureCallback)?.let { previous ->
+      try {
+        hostActivity?.unregisterScreenCaptureCallback(previous)
+      } catch (_: Exception) {
+      }
+      screenCaptureCallback = null
+    }
+    if (hostActivity == null || !implementation.isPrivacyScreenActive()) {
+      return
+    }
+    val callback =
+      android.app.Activity.ScreenCaptureCallback {
+        notifyListeners("screenshotTaken", null)
+      }
+    try {
+      hostActivity.registerScreenCaptureCallback(hostActivity.mainExecutor, callback)
+      screenCaptureCallback = callback
+    } catch (_: Exception) {
+    }
   }
 
   private fun parsePromptOptions(call: PluginCall): BiometricAuth.PromptOptions? {
@@ -409,6 +452,7 @@ class FortressPlugin :
           privacyOverlayTextColor = config.privacyOverlayTextColor,
           privacyOverlayBackgroundOpacity = config.privacyOverlayBackgroundOpacity,
           privacyOverlayTheme = config.privacyOverlayTheme,
+          privacyScreenEnabled = implementation.isPrivacyScreenActive(),
           fallbackStrategy = config.fallbackStrategy,
           allowCachedAuthentication = config.allowCachedAuthentication,
           cachedAuthenticationTimeoutMs = config.cachedAuthenticationTimeoutMs,
@@ -432,8 +476,9 @@ class FortressPlugin :
 
       implementation.configure(config)
       runtimeConfigStore.saveOverrides(config.toRuntimeOverrides())
+      implementation.setPrivacyScreenManualOverride(null)
 
-      if (config.enablePrivacyScreen) {
+      if (implementation.isPrivacyScreenActive()) {
         val locked = implementation.isLocked(activity)
         implementation.setPrivacyProtection(activity, locked)
       } else {
@@ -453,8 +498,9 @@ class FortressPlugin :
       config.applyRuntimeOverrides(staticConfigBaseline)
       implementation.configure(config)
       runtimeConfigStore.clearOverrides()
+      implementation.setPrivacyScreenManualOverride(null)
 
-      if (config.enablePrivacyScreen) {
+      if (implementation.isPrivacyScreenActive()) {
         val locked = implementation.isLocked(activity)
         implementation.setPrivacyProtection(activity, locked)
       } else {
@@ -589,6 +635,56 @@ class FortressPlugin :
       // Use the activity inherited from the Capacitor Plugin base class.
       val isLocked = implementation.isLocked(activity)
       call.resolve(toJSObject(IsLockedResult(isLocked = isLocked)))
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  /**
+   * Enables privacy-screen protection independently of the vault lock state.
+   *
+   * The official `PrivacyScreenConfig` shape (`android` / `ios` display knobs)
+   * is accepted for API compatibility; visual style stays Fortress-driven.
+   * Explicit manual control detaches privacy from the follow-lock policy
+   * until configure()/resetRuntimeConfig() re-attaches it.
+   */
+  @PluginMethod
+  fun enable(call: PluginCall) {
+    try {
+      implementation.setPrivacyScreenManualOverride(true)
+      implementation.setPrivacyProtection(currentActivityOrNull(), true)
+      syncScreenshotCallback()
+      call.resolve(toJSObject(PrivacyScreenActionResult(success = true)))
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  /**
+   * Disables privacy-screen protection independently of the vault lock state.
+   *
+   * Use only when the current screen must stay visible in system previews.
+   */
+  @PluginMethod
+  fun disable(call: PluginCall) {
+    try {
+      implementation.setPrivacyScreenManualOverride(false)
+      implementation.setPrivacyProtection(currentActivityOrNull(), false)
+      syncScreenshotCallback()
+      call.resolve(toJSObject(PrivacyScreenActionResult(success = true)))
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  /**
+   * Returns the current privacy-screen enabled state, independent from
+   * the vault lock state.
+   */
+  @PluginMethod
+  fun isEnabled(call: PluginCall) {
+    try {
+      call.resolve(toJSObject(PrivacyScreenStatus(enabled = implementation.isPrivacyScreenActive())))
     } catch (error: Throwable) {
       handleError(call, error)
     }

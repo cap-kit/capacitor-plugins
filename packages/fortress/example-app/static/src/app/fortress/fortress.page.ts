@@ -124,7 +124,8 @@ export class FortressPage implements OnDestroy {
     return current ?? 'Unknown';
   });
 
-  private readonly GH_URL = 'https://github.com/cap-kit/capacitor-plugins/tree/main/packages/fortress';
+  private readonly GH_URL =
+    'https://github.com/cap-kit/capacitor-plugins/tree/main/packages/fortress';
 
   // readonly securityStatus = signal<DeviceSecurityStatus | null>(null);
   // readonly session = signal<FortressSession | null>(null);
@@ -152,7 +153,9 @@ export class FortressPage implements OnDestroy {
   readonly privacyScreen = signal(true);
   readonly privacyOverlayText = signal('');
   readonly appliedPrivacyOverlayText = signal('');
-  readonly isPrivacyOverlayTextDirty = computed(() => this.privacyOverlayText() !== this.appliedPrivacyOverlayText());
+  readonly isPrivacyOverlayTextDirty = computed(
+    () => this.privacyOverlayText() !== this.appliedPrivacyOverlayText(),
+  );
   readonly privacyOverlayImageName = signal('');
   readonly privacyOverlayShowText = signal(true);
   readonly privacyOverlayShowImage = signal(true);
@@ -161,6 +164,9 @@ export class FortressPage implements OnDestroy {
   readonly privacyOverlayTheme = signal<OverlayTheme>('system');
   readonly fallbackStrategy = signal<FallbackStrategy>('systemDefault');
   readonly persistSessionState = signal(false);
+  readonly privacyProtectionEnabled = signal<boolean | null>(null);
+  readonly privacyEnableState = signal<ResultState>('idle');
+  readonly privacyDisableState = signal<ResultState>('idle');
 
   readonly logs = signal<string[]>([]);
 
@@ -235,6 +241,10 @@ export class FortressPage implements OnDestroy {
     //     this.refreshSession();
     //   });
     //   this.listeners.push(appResumeHandle);
+    //   const screenshotHandle = await Fortress.addListener('screenshotTaken', () => {
+    //     this.addLog('Screenshot taken (privacy event)');
+    //   });
+    //   this.listeners.push(screenshotHandle);
     //   this.addLog('Event listeners registered');
     // } catch (e) {
     //   console.error('Failed to register listeners', e);
@@ -624,6 +634,51 @@ export class FortressPage implements OnDestroy {
     //   await this.refreshSession();
     // } catch (e) {
     //   await this.presentError(e);
+    // }
+  }
+
+  async onPrivacyEnable(): Promise<void> {
+    // if (!this.isSupported()) return;
+    // this.inProgress.set(true);
+    // this.privacyEnableState.set('idle');
+    // try {
+    //   await Fortress.enable({ ios: { blurEffect: 'dark' }, android: { dimBackground: true } });
+    //   this.privacyEnableState.set('success');
+    //   this.addLog('Privacy screen enabled (manual)');
+    //   await this.refreshPrivacyState();
+    // } catch (e) {
+    //   this.privacyEnableState.set('error');
+    //   await this.presentError(e);
+    // } finally {
+    //   this.inProgress.set(false);
+    // }
+  }
+
+  async onPrivacyDisable(): Promise<void> {
+    // if (!this.isSupported()) return;
+    // this.inProgress.set(true);
+    // this.privacyDisableState.set('idle');
+    // try {
+    //   await Fortress.disable();
+    //   this.privacyDisableState.set('success');
+    //   this.addLog('Privacy screen disabled (manual)');
+    //   await this.refreshPrivacyState();
+    // } catch (e) {
+    //   this.privacyDisableState.set('error');
+    //   await this.presentError(e);
+    // } finally {
+    //   this.inProgress.set(false);
+    // }
+  }
+
+  async refreshPrivacyState(): Promise<void> {
+    // if (!this.isSupported()) return;
+    // try {
+    //   const { enabled } = await Fortress.isEnabled();
+    //   this.privacyProtectionEnabled.set(enabled);
+    //   this.addLog(`Privacy enabled=${enabled}`);
+    // } catch (e) {
+    //   console.error('Failed to read privacy state', e);
     // }
   }
 

@@ -25,6 +25,7 @@ extension FortressPlugin {
         self.config = runtimeConfig
         implementation.configure(runtimeConfig)
         runtimeConfigStore.saveOverrides(runtimeConfigSnapshot(runtimeConfig))
+        implementation.setPrivacyScreenManualOverride(nil)
         implementation.setRuntimeEnablePrivacyScreen(runtimeConfig.enablePrivacyScreen)
 
         if runtimeConfig.enablePrivacyScreen {
@@ -46,6 +47,7 @@ extension FortressPlugin {
         config = baselineConfig
         implementation.configure(baselineConfig)
         runtimeConfigStore.clearOverrides()
+        implementation.setPrivacyScreenManualOverride(nil)
         implementation.setRuntimeEnablePrivacyScreen(baselineConfig.enablePrivacyScreen)
 
         if baselineConfig.enablePrivacyScreen {

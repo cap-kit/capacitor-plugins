@@ -56,7 +56,10 @@ public final class FortressPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "checkStatus", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setBiometryType", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setBiometryIsEnrolled", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "setDeviceIsSecure", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "setDeviceIsSecure", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "enable", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "disable", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "isEnabled", returnType: CAPPluginReturnPromise)
     ]
 
     // MARK: - Properties
@@ -123,6 +126,12 @@ public final class FortressPlugin: CAPPlugin, CAPBridgedPlugin {
             name: privacyTapNotification,
             object: nil
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleUserDidTakeScreenshot),
+            name: UIApplication.userDidTakeScreenshotNotification,
+            object: nil
+        )
 
         implementation.setSessionLockCallback { [weak self] isLocked in
             if isLocked {
@@ -187,6 +196,10 @@ public final class FortressPlugin: CAPPlugin, CAPBridgedPlugin {
     @MainActor
     @objc private func handlePrivacyScreenTapUnlock() {
         triggerBiometricUnlock()
+    }
+
+    @objc private func handleUserDidTakeScreenshot() {
+        notifyListeners("screenshotTaken", data: nil)
     }
 
     deinit {

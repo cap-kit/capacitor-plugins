@@ -52,6 +52,14 @@ class Fortress(
   private val biometricAuth = BiometricAuth(context)
   private val sessionManager = SessionManager()
   private val privacyScreen = PrivacyScreen()
+
+  /**
+   * Manual runtime override from `enable()` / `disable()`.
+   *
+   * Non-null detaches privacy from the follow-lock policy until cleared
+   * by configure/reset.
+   */
+  private var privacyScreenManualOverride: Boolean? = null
   private var lastSuccessfulAuthAtMs: Long = 0
   private var failedBiometricAttempts: Int = 0
   private var lockoutUntilMs: Long = 0
@@ -677,7 +685,19 @@ class Fortress(
     }
   }
 
-  private fun isPrivacyScreenEnabled(): Boolean = config.enablePrivacyScreen
+  /**
+   * Manual privacy override from `enable()` / `disable()`.
+   *
+   * A non-null value detaches privacy from the follow-lock policy:
+   * explicit manual control wins until cleared (configure/reset pass null).
+   */
+  fun setPrivacyScreenManualOverride(enabled: Boolean?) {
+    privacyScreenManualOverride = enabled
+  }
+
+  fun isPrivacyScreenActive(): Boolean = isPrivacyScreenEnabled()
+
+  private fun isPrivacyScreenEnabled(): Boolean = privacyScreenManualOverride ?: config.enablePrivacyScreen
 
   /**
    * Resolves whether passcode/device credential fallback is allowed
