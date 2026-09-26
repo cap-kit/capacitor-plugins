@@ -1,5 +1,5 @@
 import XCTest
-@testable import Redsys
+@testable import RedsysPlugin
 
 /**
  Basic functional tests for the Redsys plugin native implementation.

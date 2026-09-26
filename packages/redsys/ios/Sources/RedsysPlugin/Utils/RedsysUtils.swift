@@ -120,7 +120,7 @@ struct RedsysUtils {
                 maskedNumber.append("x")
                 index += 1
             default:
-                maskedNumber.append(c)
+                maskedNumber.append(maskChar)
             }
         }
         return maskedNumber
