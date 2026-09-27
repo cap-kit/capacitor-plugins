@@ -44,7 +44,7 @@ class StandardStorage(
     key: String,
     value: String,
   ) {
-    prefs.edit().putString(key, value).apply()
+    prefs.edit().putString(key, value).commit()
   }
 
   /**
@@ -61,7 +61,7 @@ class StandardStorage(
    * @param key Unique key identifier
    */
   fun remove(key: String) {
-    prefs.edit().remove(key).apply()
+    prefs.edit().remove(key).commit()
   }
 
   /**
@@ -86,7 +86,7 @@ class StandardStorage(
           putString(key, "DELETED")
           remove(key)
         }
-      }.apply()
+      }.commit()
   }
 
   /**
@@ -96,4 +96,15 @@ class StandardStorage(
    * @return true if the key exists, false otherwise
    */
   fun hasKey(key: String): Boolean = prefs.contains(key)
+
+  /**
+   * Lists stored keys starting with any of the given prefixes.
+   *
+   * The suite file is plugin-private, but enumeration stays
+   * prefix-scoped by contract.
+   */
+  fun listKeys(matchingPrefixes: List<String>): List<String> =
+    prefs.all.keys.filter { key ->
+      matchingPrefixes.any { key.startsWith(it) }
+    }
 }

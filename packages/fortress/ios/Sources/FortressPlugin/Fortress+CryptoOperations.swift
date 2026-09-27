@@ -194,11 +194,18 @@ extension Fortress {
     }
 
     func getInsecureValue(key: String) throws -> String? {
-        standardStorage.get(key: getObfuscatedKeyValue(key))
+        for name in insecureNameCandidates(key) {
+            if let value = standardStorage.get(key: name) {
+                return value
+            }
+        }
+        return nil
     }
 
     func removeInsecureValue(key: String) throws {
-        try standardStorage.remove(key: getObfuscatedKeyValue(key))
+        for name in insecureNameCandidates(key) {
+            try standardStorage.remove(key: name)
+        }
     }
 
     func getObfuscatedKey(key: String) throws -> String {
@@ -207,10 +214,10 @@ extension Fortress {
 
     func hasKey(key: String, secure: Bool) throws -> Bool {
         if secure {
-            return try secureStorage.hasKey(key: key)
+            return try secureNameCandidates(for: key).contains { try secureStorage.hasKey(key: $0) }
         }
 
-        return standardStorage.hasKey(key: getObfuscatedKeyValue(key))
+        return insecureNameCandidates(key).contains { standardStorage.hasKey(key: $0) }
     }
 }
 
@@ -250,6 +257,39 @@ extension Fortress {
     func getObfuscatedKeyValue(_ key: String) -> String {
         let obfuscationPrefix = config?.obfuscationPrefix ?? "ftrss_"
         let globalPrefix = config?.prefix ?? ""
-        return KeyUtils.obfuscate(key, prefix: obfuscationPrefix, globalPrefix: globalPrefix)
+        let body = (config?.obfuscateKeys ?? false) ? KeyUtils.encodeB64(key) : key
+        return KeyUtils.obfuscate(body, prefix: obfuscationPrefix, globalPrefix: globalPrefix)
+    }
+
+    /**
+     Candidate insecure stored names, primary first. Reads try each in
+     order so toggling the flag never orphans existing entries.
+     */
+    func insecureNameCandidates(_ key: String) -> [String] {
+        let obfuscationPrefix = config?.obfuscationPrefix ?? "ftrss_"
+        let globalPrefix = config?.prefix ?? ""
+        noteObfuscationPrefix(obfuscationPrefix)
+        var prefixes = [obfuscationPrefix]
+        for seen in seenObfuscationPrefixes where seen != obfuscationPrefix {
+            prefixes.append(seen)
+        }
+        var names: [String] = []
+        for prefix in prefixes {
+            let plain = KeyUtils.obfuscate(key, prefix: prefix, globalPrefix: globalPrefix)
+            let encoded = KeyUtils.obfuscate(
+                KeyUtils.encodeB64(key),
+                prefix: prefix,
+                globalPrefix: globalPrefix
+            )
+            names.append(contentsOf: (config?.obfuscateKeys ?? false) ? [encoded, plain] : [plain, encoded])
+        }
+        return names
+    }
+
+    func noteObfuscationPrefix(_ prefix: String) {
+        guard !prefix.isEmpty else {
+            return
+        }
+        seenObfuscationPrefixes.insert(prefix)
     }
 }

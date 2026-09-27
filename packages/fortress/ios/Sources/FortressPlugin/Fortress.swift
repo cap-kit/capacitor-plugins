@@ -41,6 +41,12 @@ public final class Fortress: NSObject {
     /// Manual runtime override from `enable()` / `disable()`. Non-nil detaches
     /// privacy from the follow-lock policy until cleared by configure/reset.
     var privacyScreenManualOverride: Bool?
+    /// Session-scoped default Keychain accessibility name (see
+    /// `KeychainAccess`). Nil preserves the legacy sync-driven behavior.
+    var defaultKeychainAccess: String?
+    /// Obfuscation prefixes observed this session. Reads span all of
+    /// them so prefix changes never orphan existing entries.
+    var seenObfuscationPrefixes = Set<String>()
     /// Credential class of the last successful native authentication in this
     /// session (`biometric`, `deviceCredential`, `unknown`). iOS cannot tell
     /// which one satisfied a passcode-allowing policy, so those report
@@ -111,6 +117,7 @@ public final class Fortress: NSObject {
             Logger.warn("Invalid fallbackStrategy value. Falling back to systemDefault semantics.")
         }
 
+        noteObfuscationPrefix(config.obfuscationPrefix)
         applyConfig(config)
     }
 

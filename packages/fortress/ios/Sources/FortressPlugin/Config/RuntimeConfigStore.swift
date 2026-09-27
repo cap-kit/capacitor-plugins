@@ -24,7 +24,9 @@ struct RuntimeConfigStore {
         "lockoutDurationMs",
         "requireFreshAuthenticationMs",
         "encryptionAlgorithm",
-        "persistSessionState"
+        "persistSessionState",
+        "obfuscateKeys",
+        "obfuscationPrefix"
     ]
 
     private let defaults: UserDefaults

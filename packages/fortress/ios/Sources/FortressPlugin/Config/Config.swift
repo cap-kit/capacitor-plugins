@@ -23,6 +23,7 @@ public struct Config {
         static let privacyOverlayBackgroundOpacity = "privacyOverlayBackgroundOpacity"
         static let privacyOverlayTheme = "privacyOverlayTheme"
         static let obfuscationPrefix = "obfuscationPrefix"
+        static let obfuscateKeys = "obfuscateKeys"
         static let allowDevicePasscode = "allowDevicePasscode"
         static let fallbackStrategy = "fallbackStrategy"
         static let biometricPromptText = "biometricPromptText"
@@ -57,6 +58,7 @@ public struct Config {
     public var privacyOverlayBackgroundOpacity: Double
     public var privacyOverlayTheme: String
     public var obfuscationPrefix: String
+    public var obfuscateKeys: Bool
     public var allowDevicePasscode: Bool
     public var fallbackStrategy: String
     public var biometricPromptText: String
@@ -85,6 +87,7 @@ public struct Config {
     private static let defaultPrivacyOverlayBackgroundOpacity: Double = -1
     private static let defaultPrivacyOverlayTheme: String = "system"
     private static let defaultObfuscationPrefix: String = "ftrss_"
+    private static let defaultObfuscateKeys: Bool = false
     private static let defaultAllowDevicePasscode: Bool = true
     private static let defaultFallbackStrategy: String = "systemDefault"
     private static let defaultBiometricPromptText: String = "Cancel"
@@ -126,6 +129,7 @@ public struct Config {
         self.privacyOverlayBackgroundOpacity = Double(opacityRaw) ?? Self.defaultPrivacyOverlayBackgroundOpacity
         self.privacyOverlayTheme = string(Keys.privacyOverlayTheme, Self.defaultPrivacyOverlayTheme)
         self.obfuscationPrefix = string(Keys.obfuscationPrefix, Self.defaultObfuscationPrefix)
+        self.obfuscateKeys = bool(Keys.obfuscateKeys, Self.defaultObfuscateKeys)
         self.allowDevicePasscode = bool(Keys.allowDevicePasscode, Self.defaultAllowDevicePasscode)
         self.fallbackStrategy = string(Keys.fallbackStrategy, Self.defaultFallbackStrategy)
         self.biometricPromptText = string(Keys.biometricPromptText, Self.defaultBiometricPromptText)

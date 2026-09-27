@@ -22,6 +22,11 @@ import {
   GenerateChallengePayloadResult,
   HasKeyOptions,
   HasKeyResult,
+  GetManyOptions,
+  GetManyResult,
+  KeychainAccess,
+  KeysOptions,
+  KeysResult,
   HasDeviceCredentialResult,
   IsAvailableResult,
   IsEnrolledResult,
@@ -42,6 +47,20 @@ import {
 import { PLUGIN_VERSION } from './version';
 
 type VaultState = 'LOCKED' | 'UNLOCKING' | 'UNLOCKED' | 'EXPIRED';
+
+/**
+ * Minimal async key/value backend behind the web persistence layer.
+ *
+ * The primary implementation is Ionic Storage (IndexedDB first,
+ * LocalStorage fallback); the fallback is a plain in-memory map used
+ * only when no persistent engine exists at all.
+ */
+interface WebKvBackend {
+  getItem(key: string): Promise<string | null>;
+  setItem(key: string, value: string): Promise<void>;
+  removeItem(key: string): Promise<void>;
+  keys(): Promise<string[]>;
+}
 
 /**
  * Web implementation of the Fortress plugin.
@@ -123,6 +142,294 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
     void this.handleVisibilityChange();
   };
 
+  // ---------------------------------------------------------------------------
+  // Persistent web store (localforage engine chain + memory fallback)
+  // ---------------------------------------------------------------------------
+
+  private storeBackend: Promise<WebKvBackend> | null = null;
+  private storeWrites: Promise<void> = Promise.resolve();
+  private sessionWrittenKeys = new Set<string>();
+
+  private backend(): Promise<WebKvBackend> {
+    if (this.storeBackend === null) {
+      this.storeBackend = this.initBackend();
+    }
+    return this.storeBackend;
+  }
+
+  private initPersistentStore(): void {
+    void this.backend();
+  }
+
+  private async initBackend(): Promise<WebKvBackend> {
+    try {
+      const backend = await this.indexedDbBackend('fortress');
+      await this.importLegacyKeys(backend);
+      return backend;
+    } catch {
+      // IndexedDB unavailable or failed its probe: try LocalStorage.
+    }
+    try {
+      const backend = this.localStorageBackend();
+      await this.importLegacyKeys(backend);
+      return backend;
+    } catch {
+      // No persistent engine at all (e.g. storage fully blocked).
+    }
+    this.logDebug('No persistent web engine available; using in-memory store');
+    const memory = new Map<string, string>();
+    return {
+      getItem: (key) => Promise.resolve(memory.get(key) ?? null),
+      setItem: (key, value) => {
+        memory.set(key, value);
+        return Promise.resolve();
+      },
+      removeItem: (key) => {
+        memory.delete(key);
+        return Promise.resolve();
+      },
+      keys: () => Promise.resolve([...memory.keys()]),
+    };
+  }
+
+  /**
+   * IndexedDB backend probed before adoption with a full
+   * write/read/delete round-trip. Connections are short-lived per
+   * operation: no retained handles, no version-change deadlocks.
+   */
+  private async indexedDbBackend(dbName: string): Promise<WebKvBackend> {
+    if (typeof indexedDB === 'undefined') {
+      throw new Error('IndexedDB unavailable.');
+    }
+
+    const openDb = (): Promise<IDBDatabase> =>
+      new Promise((resolve, reject) => {
+        const request = indexedDB.open(dbName, 1);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains('keyvalue')) {
+            db.createObjectStore('keyvalue');
+          }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error ?? new Error('IndexedDB open failed.'));
+      });
+
+    const withStore = <T>(mode: IDBTransactionMode, task: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> =>
+      openDb().then(
+        (db) =>
+          new Promise<T>((resolve, reject) => {
+            let failed: unknown = null;
+            let result: T | undefined;
+            try {
+              const tx = db.transaction('keyvalue', mode);
+              const request = task(tx.objectStore('keyvalue'));
+              request.onsuccess = () => {
+                result = request.result as T;
+              };
+              request.onerror = () => {
+                failed = request.error;
+              };
+              tx.oncomplete = () => {
+                db.close();
+                if (failed !== null && failed !== undefined) {
+                  reject(failed instanceof Error ? failed : new Error('IndexedDB request failed.'));
+                } else {
+                  resolve(result as T);
+                }
+              };
+              tx.onerror = () => {
+                db.close();
+                reject(tx.error ?? new Error('IndexedDB transaction failed.'));
+              };
+              tx.onabort = () => {
+                db.close();
+                reject(tx.error ?? new Error('IndexedDB transaction aborted.'));
+              };
+            } catch (error) {
+              db.close();
+              reject(error instanceof Error ? error : new Error('IndexedDB request failed.'));
+            }
+          }),
+      );
+
+    const backend: WebKvBackend = {
+      getItem: (key) =>
+        withStore('readonly', (store) => store.get(key)).then((value) =>
+          value === undefined || value === null ? null : String(value),
+        ),
+      setItem: (key, value) => withStore('readwrite', (store) => store.put(value, key)).then(() => undefined),
+      removeItem: (key) => withStore('readwrite', (store) => store.delete(key)).then(() => undefined),
+      keys: () => withStore('readonly', (store) => store.getAllKeys()).then((keys) => keys.map(String)),
+    };
+
+    const probeKey = `__probe__${Date.now()}`;
+    try {
+      await backend.setItem(probeKey, '1');
+      if ((await backend.getItem(probeKey)) !== '1') {
+        throw new Error('IndexedDB probe mismatch.');
+      }
+    } finally {
+      await backend.removeItem(probeKey).catch(() => undefined);
+    }
+    return backend;
+  }
+
+  /**
+   * LocalStorage backend. The probe catches Safari-private-mode-style
+   * zero-quota stores at selection time instead of mid-session.
+   */
+  private localStorageBackend(): WebKvBackend {
+    if (typeof localStorage === 'undefined') {
+      throw new Error('LocalStorage unavailable.');
+    }
+    const probeKey = `__probe__${Date.now()}`;
+    try {
+      localStorage.setItem(probeKey, '1');
+      if (localStorage.getItem(probeKey) !== '1') {
+        throw new Error('LocalStorage probe mismatch.');
+      }
+    } finally {
+      try {
+        localStorage.removeItem(probeKey);
+      } catch {
+        // Best effort.
+      }
+    }
+    return {
+      getItem: (key) => Promise.resolve(this.legacyGet(key)),
+      setItem: (key, value) => {
+        try {
+          localStorage.setItem(key, value);
+        } catch {
+          throw new Error('LocalStorage write failed.');
+        }
+        return Promise.resolve();
+      },
+      removeItem: (key) => {
+        try {
+          localStorage.removeItem(key);
+        } catch {
+          // Best effort.
+        }
+        return Promise.resolve();
+      },
+      keys: () => {
+        const found: string[] = [];
+        try {
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key !== null) {
+              found.push(key);
+            }
+          }
+        } catch {
+          // Best effort.
+        }
+        return Promise.resolve(found);
+      },
+    };
+  }
+
+  /**
+   * One-time migration of legacy raw-localStorage entries into the
+   * engine store. Copies only Fortress-owned keys missing from the new
+   * store (and never keys written this session, so fresh writes win).
+   * Legacy copies stay in place as a downgrade backup.
+   */
+  private async importLegacyKeys(backend: WebKvBackend): Promise<void> {
+    let existing: Set<string>;
+    try {
+      existing = new Set(await backend.keys());
+    } catch {
+      return;
+    }
+
+    const fixedKeys = [FortressWeb.SESSION_KEY, FortressWeb.RUNTIME_CONFIG_KEY, FortressWeb.WEBAUTHN_STATE_KEY];
+    const prefixes = [FortressWeb.SECURE_STORAGE_PREFIX, this.insecurePrefix(), 'ftrss_', 'fortress_'];
+
+    const legacyKeys: string[] = [];
+    try {
+      if (typeof localStorage === 'undefined') {
+        return;
+      }
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key !== null && (fixedKeys.includes(key) || prefixes.some((prefix) => key.startsWith(prefix)))) {
+          legacyKeys.push(key);
+        }
+      }
+    } catch {
+      return;
+    }
+
+    for (const key of legacyKeys) {
+      if (existing.has(key) || this.sessionWrittenKeys.has(key)) {
+        continue;
+      }
+      const legacy = this.legacyGet(key);
+      if (legacy !== null) {
+        try {
+          await backend.setItem(key, legacy);
+        } catch {
+          // Best effort; the downgrade read path still serves legacy data.
+        }
+      }
+    }
+  }
+
+  private async storeGet(key: string): Promise<string | null> {
+    try {
+      await this.storeWrites;
+      const value = await (await this.backend()).getItem(key);
+      if (value !== null) {
+        return value;
+      }
+    } catch {
+      // Fall through to legacy below, then to a mapped failure.
+    }
+    // Downgrade path: serve legacy copies (e.g. pre-migration data).
+    const legacy = this.legacyGet(key);
+    if (legacy !== null) {
+      this.storeSet(key, legacy);
+      return legacy;
+    }
+    return null;
+  }
+
+  private storeSet(key: string, value: string): void {
+    this.sessionWrittenKeys.add(key);
+    this.storeWrites = this.storeWrites
+      .then(() => this.backend())
+      .then((backend) => backend.setItem(key, value))
+      .catch(() => undefined);
+  }
+
+  private storeRemove(key: string): void {
+    this.sessionWrittenKeys.add(key);
+    this.storeWrites = this.storeWrites
+      .then(() => this.backend())
+      .then((backend) => backend.removeItem(key))
+      .catch(() => undefined);
+  }
+
+  private async storeKeys(): Promise<string[]> {
+    try {
+      await this.storeWrites;
+      return await (await this.backend()).keys();
+    } catch {
+      return [];
+    }
+  }
+
+  private legacyGet(key: string): string | null {
+    try {
+      return typeof localStorage === 'undefined' ? null : localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  }
+
   // -----------------------------------------------------------------------------
   // Constructor
   // -----------------------------------------------------------------------------
@@ -133,6 +440,7 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
     this.currentLogLevel = this.resolveLogLevel(this.config.logLevel, this.config.verboseLogging);
     this.loadSession();
     this.privacyScreenEnabled = this.config.enablePrivacyScreen ?? true;
+    this.initPersistentStore();
 
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', this.visibilityChangeHandler);
@@ -159,6 +467,7 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
       privacyOverlayBackgroundOpacity: this.config.privacyOverlayBackgroundOpacity ?? -1,
       privacyOverlayTheme: this.config.privacyOverlayTheme ?? 'system',
       privacyScreenEnabled: this.privacyScreenEnabled,
+      obfuscateKeys: this.config.obfuscateKeys ?? false,
       fallbackStrategy: this.config.fallbackStrategy ?? 'systemDefault',
       allowCachedAuthentication: this.config.allowCachedAuthentication ?? false,
       cachedAuthenticationTimeoutMs: this.config.cachedAuthenticationTimeoutMs ?? 30000,
@@ -179,6 +488,7 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
 
     const wasPersisting = this.config.persistSessionState === true;
     this.config = nextConfig;
+    this.noteInsecurePrefix();
     this.saveRuntimeConfigOverrides(nextConfig);
     this.currentLogLevel = this.resolveLogLevel(nextConfig.logLevel, nextConfig.verboseLogging);
     if (sanitizedOverrides.enablePrivacyScreen !== undefined) {
@@ -191,7 +501,7 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
     if (isPersisting && !wasPersisting) {
       this.restorePersistedSession();
     } else if (!isPersisting && wasPersisting) {
-      localStorage.removeItem(FortressWeb.SESSION_KEY);
+      this.storeRemove(FortressWeb.SESSION_KEY);
     }
 
     if (nextConfig.lockAfterMs !== undefined && nextConfig.lockAfterMs > 0) {
@@ -202,14 +512,14 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
   async resetRuntimeConfig(): Promise<void> {
     const wasPersisting = this.config.persistSessionState === true;
 
-    localStorage.removeItem(FortressWeb.RUNTIME_CONFIG_KEY);
+    this.storeRemove(FortressWeb.RUNTIME_CONFIG_KEY);
     this.config = {};
     this.privacyScreenEnabled = true;
     this.currentLogLevel = this.resolveLogLevel(this.config.logLevel, this.config.verboseLogging);
 
     const isPersisting = this.config.persistSessionState === true;
     if (!isPersisting && wasPersisting) {
-      localStorage.removeItem(FortressWeb.SESSION_KEY);
+      this.storeRemove(FortressWeb.SESSION_KEY);
     }
   }
 
@@ -221,26 +531,18 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
     await this.assertSecureVaultAccess();
     const encodedKey = this.encodeKey(value.key);
     const encryptedPayload = await this.encryptValue(value.value);
-    localStorage.setItem(encodedKey, encryptedPayload);
+    this.storeSet(encodedKey, encryptedPayload);
     await this.touchSession();
   }
 
   async getValue(key: { key: string }): Promise<ValueResult> {
     await this.assertSecureVaultAccess();
-    const encodedKey = this.encodeKey(key.key);
-    const stored = localStorage.getItem(encodedKey);
-
-    if (stored === null) {
+    const decoded = await this.readSecureValue(key.key);
+    if (decoded === null) {
       return { value: null };
     }
-
-    try {
-      const decoded = await this.decryptValue(stored);
-      await this.touchSession();
-      return { value: decoded };
-    } catch {
-      this.throwWebError(FortressErrorCode.SECURITY_VIOLATION);
-    }
+    await this.touchSession();
+    return { value: decoded };
   }
 
   async setMany(options: { values: SecureValue[] }): Promise<void> {
@@ -256,9 +558,13 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
 
     const snapshot = new Map<string, string | null>();
     for (const operation of operations) {
-      const storageKey = operation.secure ? this.encodeKey(operation.key) : this.obfuscateKey(operation.key);
-      if (!snapshot.has(storageKey)) {
-        snapshot.set(storageKey, localStorage.getItem(storageKey));
+      const names = operation.secure
+        ? this.secureNameCandidates(operation.key)
+        : this.insecureNameCandidates(operation.key);
+      for (const storageKey of names) {
+        if (!snapshot.has(storageKey)) {
+          snapshot.set(storageKey, await this.storeGet(storageKey));
+        }
       }
     }
 
@@ -267,18 +573,18 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
         if (operation.secure) {
           const storageKey = this.encodeKey(operation.key);
           const encryptedPayload = await this.encryptValue(operation.value);
-          localStorage.setItem(storageKey, encryptedPayload);
+          this.storeSet(storageKey, encryptedPayload);
         } else {
-          localStorage.setItem(this.obfuscateKey(operation.key), operation.value);
+          this.storeSet(this.obfuscateKey(operation.key), operation.value);
         }
       }
       await this.touchSession();
     } catch (error) {
       for (const [storageKey, previousValue] of snapshot) {
         if (previousValue === null) {
-          localStorage.removeItem(storageKey);
+          this.storeRemove(storageKey);
         } else {
-          localStorage.setItem(storageKey, previousValue);
+          this.storeSet(storageKey, previousValue);
         }
       }
       throw error;
@@ -286,24 +592,24 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
   }
 
   async removeValue(key: { key: string }): Promise<void> {
-    const encodedKey = this.encodeKey(key.key);
-    localStorage.removeItem(encodedKey);
+    for (const name of this.secureNameCandidates(key.key)) {
+      this.storeRemove(name);
+    }
     this.touchSession();
   }
 
   async clearAll(): Promise<void> {
     const keysToRemove: string[] = [];
 
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key?.startsWith(FortressWeb.SECURE_STORAGE_PREFIX)) {
+    for (const key of await this.storeKeys()) {
+      if (key.startsWith(FortressWeb.SECURE_STORAGE_PREFIX)) {
         keysToRemove.push(key);
       }
     }
 
-    keysToRemove.forEach((key) => localStorage.removeItem(key));
+    keysToRemove.forEach((key) => this.storeRemove(key));
     // Logic: Also clear WebAuthn enrollment state during a full wipe
-    localStorage.removeItem(FortressWeb.WEBAUTHN_STATE_KEY);
+    this.storeRemove(FortressWeb.WEBAUTHN_STATE_KEY);
     this.touchSession();
   }
 
@@ -313,21 +619,27 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
 
   async setInsecureValue(value: SecureValue): Promise<void> {
     const obfuscatedKey = this.obfuscateKey(value.key);
-    localStorage.setItem(obfuscatedKey, value.value);
+    this.storeSet(obfuscatedKey, value.value);
     this.touchSession();
   }
 
   async getInsecureValue(key: { key: string }): Promise<ValueResult> {
-    const obfuscatedKey = this.obfuscateKey(key.key);
-    const value = localStorage.getItem(obfuscatedKey);
+    let value: string | null = null;
+    for (const name of this.insecureNameCandidates(key.key)) {
+      value = await this.storeGet(name);
+      if (value !== null) {
+        break;
+      }
+    }
 
     this.touchSession();
     return { value };
   }
 
   async removeInsecureValue(key: { key: string }): Promise<void> {
-    const obfuscatedKey = this.obfuscateKey(key.key);
-    localStorage.removeItem(obfuscatedKey);
+    for (const name of this.insecureNameCandidates(key.key)) {
+      this.storeRemove(name);
+    }
     this.touchSession();
   }
 
@@ -341,10 +653,79 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
   }
 
   async hasKey(options: HasKeyOptions): Promise<HasKeyResult> {
-    const storageKey = options.secure ? this.encodeKey(options.key) : this.obfuscateKey(options.key);
+    if (options.secure !== false) {
+      for (const name of this.secureNameCandidates(options.key)) {
+        if ((await this.storeGet(name)) !== null) {
+          return { exists: true };
+        }
+      }
+      return { exists: false };
+    }
+    for (const name of this.insecureNameCandidates(options.key)) {
+      if ((await this.storeGet(name)) !== null) {
+        return { exists: true };
+      }
+    }
+    return { exists: false };
+  }
 
-    const exists = localStorage.getItem(storageKey) !== null;
-    return { exists };
+  async keys(options?: KeysOptions): Promise<KeysResult> {
+    const secure = options?.secure !== false;
+    const found: string[] = [];
+
+    if (secure) {
+      for (const stored of await this.storeKeys()) {
+        if (stored.startsWith(FortressWeb.SECURE_STORAGE_PREFIX)) {
+          found.push(this.decodeKey(stored.slice(FortressWeb.SECURE_STORAGE_PREFIX.length)));
+        }
+      }
+    } else {
+      const prefixes = this.insecurePrefixVariants();
+      for (const stored of await this.storeKeys()) {
+        if (
+          stored === FortressWeb.SESSION_KEY ||
+          stored === FortressWeb.RUNTIME_CONFIG_KEY ||
+          stored === FortressWeb.WEBAUTHN_STATE_KEY
+        ) {
+          continue;
+        }
+        const prefix = prefixes.find((candidate) => stored.startsWith(candidate));
+        if (prefix !== undefined) {
+          found.push(this.decodeKey(stored.slice(prefix.length)));
+        }
+      }
+    }
+
+    return { keys: [...new Set(found)] };
+  }
+
+  async getMany(options: GetManyOptions): Promise<GetManyResult> {
+    const secure = options.secure !== false;
+    const values: Record<string, string | null> = {};
+
+    for (const key of options.keys) {
+      if (secure) {
+        values[key] = (await this.getValue({ key })).value;
+      } else {
+        values[key] = (await this.getInsecureValue({ key })).value;
+      }
+    }
+
+    return { values };
+  }
+
+  async setSynchronize(options: { synchronize: boolean }): Promise<void> {
+    void options;
+    // iCloud Keychain does not exist on Web; no-op for API parity.
+  }
+
+  async getSynchronize(): Promise<{ synchronize: boolean }> {
+    return { synchronize: false };
+  }
+
+  async setDefaultKeychainAccess(options: { access: KeychainAccess }): Promise<void> {
+    void options;
+    // iOS Keychain accessibility has no Web equivalent; no-op for API parity.
   }
 
   // -----------------------------------------------------------------------------
@@ -530,7 +911,7 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
   async deleteKeys(options?: KeyAliasOptions): Promise<void> {
     void options;
     const hadKeys = this.readWebAuthnState().credentialIds.length > 0;
-    localStorage.removeItem(FortressWeb.WEBAUTHN_STATE_KEY);
+    this.storeRemove(FortressWeb.WEBAUTHN_STATE_KEY);
 
     if (hadKeys) {
       this.notifyListeners('onVaultInvalidated', {
@@ -665,13 +1046,14 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
   }
 
   async checkStatus(): Promise<DeviceSecurityStatus> {
+    const webAuthnApi = typeof window !== 'undefined' ? (window as any).PublicKeyCredential : undefined;
     const hasWebAuthnApi =
-      typeof window.PublicKeyCredential !== 'undefined' &&
-      typeof window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function';
+      typeof webAuthnApi !== 'undefined' &&
+      typeof webAuthnApi.isUserVerifyingPlatformAuthenticatorAvailable === 'function';
 
     let isBiometricsAvailable = false;
     if (hasWebAuthnApi) {
-      isBiometricsAvailable = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+      isBiometricsAvailable = await webAuthnApi.isUserVerifyingPlatformAuthenticatorAvailable();
     }
 
     const state = this.readWebAuthnState();
@@ -907,7 +1289,40 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
    * Uses base64 encoding with prefix.
    */
   private encodeKey(key: string): string {
-    return `${FortressWeb.SECURE_STORAGE_PREFIX}${btoa(key)}`;
+    const body = (this.config.obfuscateKeys ?? false) ? btoa(key) : key;
+    return `${FortressWeb.SECURE_STORAGE_PREFIX}${body}`;
+  }
+
+  private secureNameCandidates(key: string): string[] {
+    const plain = `${FortressWeb.SECURE_STORAGE_PREFIX}${key}`;
+    const encoded = `${FortressWeb.SECURE_STORAGE_PREFIX}${btoa(key)}`;
+    return (this.config.obfuscateKeys ?? false) ? [encoded, plain] : [plain, encoded];
+  }
+
+  private insecureNameCandidates(key: string): string[] {
+    const bodies = (this.config.obfuscateKeys ?? false) ? [btoa(key), key] : [key, btoa(key)];
+    const names: string[] = [];
+    for (const prefix of this.insecurePrefixVariants()) {
+      for (const body of bodies) {
+        names.push(`${prefix}${body}`);
+      }
+    }
+    return names;
+  }
+
+  private async readSecureValue(key: string): Promise<string | null> {
+    for (const name of this.secureNameCandidates(key)) {
+      const stored = await this.storeGet(name);
+      if (stored === null) {
+        continue;
+      }
+      try {
+        return await this.decryptValue(stored);
+      } catch {
+        this.throwWebError(FortressErrorCode.SECURITY_VIOLATION);
+      }
+    }
+    return null;
   }
 
   private async encryptValue(value: string): Promise<string> {
@@ -961,13 +1376,48 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
    * Obfuscates a key for insecure storage.
    * Simple XOR-like transformation with prefix.
    */
-  private obfuscateKey(key: string): string {
+  private insecurePrefix(): string {
     // Force a fallback prefix if the one in config is empty or invalid
-    const prefix =
-      this.config.obfuscationPrefix && this.config.obfuscationPrefix.trim().length > 0
-        ? this.config.obfuscationPrefix
-        : 'ftrss_';
-    return `${prefix}${btoa(key)}`;
+    const prefix = this.config.obfuscationPrefix;
+    return prefix !== undefined && prefix.trim().length > 0 ? prefix : 'ftrss_';
+  }
+
+  private knownInsecurePrefixes = new Set<string>(['ftrss_', 'fortress_']);
+
+  private insecurePrefixVariants(): string[] {
+    const ordered = [this.insecurePrefix()];
+    for (const seen of this.knownInsecurePrefixes) {
+      if (seen !== this.insecurePrefix()) {
+        ordered.push(seen);
+      }
+    }
+    return ordered;
+  }
+
+  private noteInsecurePrefix(): void {
+    const prefix = this.insecurePrefix();
+    if (prefix.length > 0) {
+      this.knownInsecurePrefixes.add(prefix);
+    }
+  }
+
+  private obfuscateKey(key: string): string {
+    const body = (this.config.obfuscateKeys ?? false) ? btoa(key) : key;
+    return `${this.insecurePrefix()}${body}`;
+  }
+
+  private decodeKey(encoded: string): string {
+    try {
+      const binary = atob(encoded);
+      const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+      const decoded = new TextDecoder().decode(bytes);
+      const roundTrip = btoa(
+        Array.from(new TextEncoder().encode(decoded), (byte) => String.fromCharCode(byte)).join(''),
+      );
+      return roundTrip === encoded ? decoded : encoded;
+    } catch {
+      return encoded;
+    }
   }
 
   private parseEncryptedPayload(payloadJson: string): EncryptedWebPayload {
@@ -997,6 +1447,14 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
     return payload as EncryptedWebPayload;
   }
 
+  private webCryptoScope(): { origin: string; hostname: string } {
+    const location = (globalThis as { location?: { origin?: string; hostname?: string } }).location;
+    return {
+      origin: location?.origin ?? 'capacitor-local',
+      hostname: location?.hostname ?? 'localhost',
+    };
+  }
+
   private async getOrCreateWebCryptoKey(): Promise<CryptoKey> {
     const now = Date.now();
     if (this.webCryptoKeyCache !== null && this.webCryptoKeyCache.expiresAt > now) {
@@ -1004,8 +1462,9 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
     }
 
     const encryptionAlgorithm = this.getEncryptionAlgorithm();
-    const passphrase = `${globalThis.location.origin}|${this.config.obfuscationPrefix ?? ''}|fortress-web-key`;
-    const saltSource = `${globalThis.location.hostname}|fortress-salt-v1`;
+    const scope = this.webCryptoScope();
+    const passphrase = `${scope.origin}|${this.config.obfuscationPrefix ?? ''}|fortress-web-key`;
+    const saltSource = `${scope.hostname}|fortress-salt-v1`;
     const baseKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(passphrase), 'PBKDF2', false, [
       'deriveKey',
     ]);
@@ -1226,11 +1685,16 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
       overrides,
     };
 
-    localStorage.setItem(FortressWeb.RUNTIME_CONFIG_KEY, JSON.stringify(payload));
+    this.storeSet(FortressWeb.RUNTIME_CONFIG_KEY, JSON.stringify(payload));
   }
 
   private loadPersistedRuntimeConfig(): FortressConfig {
-    const rawPayload = localStorage.getItem(FortressWeb.RUNTIME_CONFIG_KEY);
+    let rawPayload: string | null;
+    try {
+      rawPayload = typeof localStorage === 'undefined' ? null : localStorage.getItem(FortressWeb.RUNTIME_CONFIG_KEY);
+    } catch {
+      rawPayload = null;
+    }
     if (rawPayload === null) {
       return {};
     }
@@ -1271,6 +1735,12 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
     }
     if (typeof overrides.enablePrivacyScreen === 'boolean')
       sanitized.enablePrivacyScreen = overrides.enablePrivacyScreen;
+    if (typeof overrides.obfuscateKeys === 'boolean') {
+      sanitized.obfuscateKeys = overrides.obfuscateKeys;
+    }
+    if (typeof overrides.obfuscationPrefix === 'string' && overrides.obfuscationPrefix.length > 0) {
+      sanitized.obfuscationPrefix = overrides.obfuscationPrefix;
+    }
     if (typeof overrides.privacyOverlayText === 'string') sanitized.privacyOverlayText = overrides.privacyOverlayText;
     if (typeof overrides.privacyOverlayImageName === 'string') {
       sanitized.privacyOverlayImageName = overrides.privacyOverlayImageName;
@@ -1347,7 +1817,7 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
    */
   private saveSession(): void {
     if (this.config.persistSessionState !== true) {
-      localStorage.removeItem(FortressWeb.SESSION_KEY);
+      this.storeRemove(FortressWeb.SESSION_KEY);
       return;
     }
 
@@ -1359,7 +1829,7 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
       vaultState: this.vaultState,
     };
 
-    localStorage.setItem(FortressWeb.SESSION_KEY, JSON.stringify(persistedState));
+    this.storeSet(FortressWeb.SESSION_KEY, JSON.stringify(persistedState));
   }
 
   /**
@@ -1368,7 +1838,12 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
    * Returns `true` only when a valid, opt-in payload is restored.
    */
   private restorePersistedSession(): boolean {
-    const stored = localStorage.getItem(FortressWeb.SESSION_KEY);
+    let stored: string | null;
+    try {
+      stored = typeof localStorage === 'undefined' ? null : localStorage.getItem(FortressWeb.SESSION_KEY);
+    } catch {
+      stored = null;
+    }
     if (stored === null) {
       return false;
     }
@@ -1427,7 +1902,10 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
       this.throwWebError(FortressErrorCode.UNAVAILABLE);
     }
 
-    if (typeof PublicKeyCredential === 'undefined' || typeof navigator.credentials === 'undefined') {
+    if (
+      typeof PublicKeyCredential === 'undefined' ||
+      typeof (globalThis as { navigator?: { credentials?: unknown } }).navigator?.credentials === 'undefined'
+    ) {
       this.throwWebError(FortressErrorCode.UNAVAILABLE);
     }
 
@@ -1448,7 +1926,7 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
   }
 
   private async getWebDeviceIdentifierHash(): Promise<string> {
-    const baseIdentifier = `${globalThis.location.origin}|${navigator.userAgent}`;
+    const baseIdentifier = `${this.webCryptoScope().origin}|${navigator.userAgent}`;
     return this.sha256Hex(baseIdentifier);
   }
 
@@ -1559,7 +2037,12 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
 
   private readWebAuthnState(): WebAuthnState {
     const fallback = this.createInitialWebAuthnState();
-    const rawState = localStorage.getItem(FortressWeb.WEBAUTHN_STATE_KEY);
+    let rawState: string | null;
+    try {
+      rawState = typeof localStorage === 'undefined' ? null : localStorage.getItem(FortressWeb.WEBAUTHN_STATE_KEY);
+    } catch {
+      rawState = null;
+    }
 
     if (rawState === null) {
       return fallback;
@@ -1580,14 +2063,14 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
   }
 
   private writeWebAuthnState(state: WebAuthnState): void {
-    localStorage.setItem(FortressWeb.WEBAUTHN_STATE_KEY, JSON.stringify(state));
+    this.storeSet(FortressWeb.WEBAUTHN_STATE_KEY, JSON.stringify(state));
   }
 
   private createInitialWebAuthnState(): WebAuthnState {
     return {
       credentialIds: [],
       userId: this.arrayBufferToBase64Url(this.createRandomChallenge()),
-      rpId: globalThis.location.hostname,
+      rpId: this.webCryptoScope().hostname,
     };
   }
 

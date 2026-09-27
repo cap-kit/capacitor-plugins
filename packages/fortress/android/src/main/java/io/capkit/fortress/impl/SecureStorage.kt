@@ -39,7 +39,7 @@ class SecureStorage(
       val encryptedData = KeystoreHelper.encryptString(context, key, value, requireStrongBox)
       val encodedData = Base64.encodeToString(encryptedData, Base64.NO_WRAP)
       val prefs = getSecurePrefs()
-      prefs.edit().putString(key, encodedData).apply()
+      prefs.edit().putString(key, encodedData).commit()
     } catch (e: KeystoreHelper.KeystoreError) {
       throw mapKeystoreError(e)
     } catch (e: Exception) {
@@ -80,10 +80,10 @@ class SecureStorage(
   fun remove(key: String) {
     try {
       KeystoreHelper.deleteKey(key)
-      getSecurePrefs().edit().remove(key).apply()
+      getSecurePrefs().edit().remove(key).commit()
     } catch (e: KeystoreHelper.KeystoreError) {
       if (e is KeystoreHelper.KeystoreError.KeyNotFound) {
-        getSecurePrefs().edit().remove(key).apply()
+        getSecurePrefs().edit().remove(key).commit()
       } else {
         throw mapKeystoreError(e)
       }
@@ -100,7 +100,7 @@ class SecureStorage(
   fun clearAll() {
     try {
       val prefs = getSecurePrefs()
-      prefs.edit().clear().apply()
+      prefs.edit().clear().commit()
       KeystoreHelper.clearAll()
     } catch (e: KeystoreHelper.KeystoreError) {
       throw mapKeystoreError(e)
@@ -122,6 +122,18 @@ class SecureStorage(
       KeystoreHelper.hasAlias(key) && getSecurePrefs().contains(key)
     } catch (e: Exception) {
       false
+    }
+
+  /**
+   * Lists every key in the secure preferences file.
+   *
+   * Keys are stored unprefixed; returned as-is.
+   */
+  fun listKeys(): List<String> =
+    try {
+      getSecurePrefs().all.keys.toList()
+    } catch (e: Exception) {
+      throw NativeError.InitFailed(ErrorMessages.INIT_FAILED)
     }
 
   // -----------------------------------------------------------------------------

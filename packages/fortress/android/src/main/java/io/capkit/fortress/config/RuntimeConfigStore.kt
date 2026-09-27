@@ -33,6 +33,8 @@ class RuntimeConfigStore(
         "requireFreshAuthenticationMs",
         "encryptionAlgorithm",
         "persistSessionState",
+        "obfuscateKeys",
+        "obfuscationPrefix",
       )
   }
 
@@ -58,11 +60,11 @@ class RuntimeConfigStore(
         .put("updatedAt", System.currentTimeMillis())
         .put("overrides", sanitized)
 
-    prefs.edit().putString(KEY_PAYLOAD, payload.toString()).apply()
+    prefs.edit().putString(KEY_PAYLOAD, payload.toString()).commit()
   }
 
   fun clearOverrides() {
-    prefs.edit().remove(KEY_PAYLOAD).apply()
+    prefs.edit().remove(KEY_PAYLOAD).commit()
   }
 
   private fun sanitize(source: JSONObject): JSObject {

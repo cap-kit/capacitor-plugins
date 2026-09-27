@@ -84,11 +84,27 @@ pnpm run build:android  # build web + cap sync android + open Android Studio
 > **Information:** All plugins are optimized for **Capacitor v8+** and tested for native parity.
 
 <p align="center">
-  📦 <strong>Total Plugins:</strong> 8 &nbsp;&bull;&nbsp; ⚡ <strong>Core:</strong> <img src="https://img.shields.io/badge/Capacitor-v8+-05f.svg?style=flat-square&logo=capacitor&logoColor=white" alt="Capacitor v8+" valign="middle" />
+  📦 <strong>Total Plugins:</strong> 9 &nbsp;&bull;&nbsp; ⚡ <strong>Core:</strong> <img src="https://img.shields.io/badge/Capacitor-v8+-05f.svg?style=flat-square&logo=capacitor&logoColor=white" alt="Capacitor v8+" valign="middle" />
 </p>
 
 <table width="100%">
 <tr>
+
+<td align="center" width="33%" valign="top">
+
+### <a href="./packages/biometrics">🔌 Biometrics</a>
+
+<a href="https://www.npmjs.com/package/@cap-kit/biometrics"><code>@cap-kit/biometrics</code></a>
+
+<a href="https://www.npmjs.com/package/@cap-kit/biometrics"><img src="https://img.shields.io/npm/v/@cap-kit/biometrics?style=flat-square&label=npm&logo=npm" alt="npm version" /></a>
+<a href="https://www.npmjs.com/package/@cap-kit/biometrics"><img src="https://img.shields.io/npm/dm/@cap-kit/biometrics?style=flat-square&label=downloads&logo=npm&color=orange" alt="downloads" /></a>
+
+Capacitor v8 plugin for biometric authentication: Face ID, Touch ID, fingerprint, face and iris recognition with device-credential fallback.
+
+<a href="./packages/biometrics"><strong>Docs</strong></a> • 
+<a href="https://www.npmjs.com/package/@cap-kit/biometrics"><strong>NPM</strong></a>
+
+</td>
 
 <td align="center" width="33%" valign="top">
 
@@ -103,22 +119,6 @@ Unified Capacitor v8 plugin for native device information: battery, screen, OS a
 
 <a href="./packages/device"><strong>Docs</strong></a> • 
 <a href="https://www.npmjs.com/package/@cap-kit/device"><strong>NPM</strong></a>
-
-</td>
-
-<td align="center" width="33%" valign="top">
-
-### <a href="./packages/privacy-screen">🔌 Empty</a>
-
-<a href="https://www.npmjs.com/package/@cap-kit/empty"><code>@cap-kit/empty</code></a>
-
-<a href="https://www.npmjs.com/package/@cap-kit/empty"><img src="https://img.shields.io/npm/v/@cap-kit/empty?style=flat-square&label=npm&logo=npm" alt="npm version" /></a>
-<a href="https://www.npmjs.com/package/@cap-kit/empty"><img src="https://img.shields.io/npm/dm/@cap-kit/empty?style=flat-square&label=downloads&logo=npm&color=orange" alt="downloads" /></a>
-
-Unified Capacitor v8 plugin for native In-App Reviews and cross-platform Store navigation.
-
-<a href="./packages/privacy-screen"><strong>Docs</strong></a> • 
-<a href="https://www.npmjs.com/package/@cap-kit/empty"><strong>NPM</strong></a>
 
 </td>
 
@@ -192,6 +192,22 @@ Redsys InApp SDK bridge for Capacitor v8. Supports native Direct Payment and sec
 
 <td align="center" width="33%" valign="top">
 
+### <a href="./packages/secure-storage">🔌 Secure Storage</a>
+
+<a href="https://www.npmjs.com/package/@cap-kit/secure-storage"><code>@cap-kit/secure-storage</code></a>
+
+<a href="https://www.npmjs.com/package/@cap-kit/secure-storage"><img src="https://img.shields.io/npm/v/@cap-kit/secure-storage?style=flat-square&label=npm&logo=npm" alt="npm version" /></a>
+<a href="https://www.npmjs.com/package/@cap-kit/secure-storage"><img src="https://img.shields.io/npm/dm/@cap-kit/secure-storage?style=flat-square&label=downloads&logo=npm&color=orange" alt="downloads" /></a>
+
+Capacitor v8 plugin for encrypted key-value storage: hardware-backed secure storage on Android and iOS with iCloud sync and Keychain access levels.
+
+<a href="./packages/secure-storage"><strong>Docs</strong></a> • 
+<a href="https://www.npmjs.com/package/@cap-kit/secure-storage"><strong>NPM</strong></a>
+
+</td>
+
+<td align="center" width="33%" valign="top">
+
 ### <a href="./packages/settings">⚙️ Settings</a>
 
 <a href="https://www.npmjs.com/package/@cap-kit/settings"><code>@cap-kit/settings</code></a>
@@ -221,13 +237,24 @@ Runtime TLS leaf certificate SHA-256 fingerprint validation plugin for Capacitor
 <a href="https://www.npmjs.com/package/@cap-kit/tls-fingerprint"><strong>NPM</strong></a>
 
 </td>
-<td width="33%"></td>
 </tr>
 </table>
 
 <details>
 <summary><strong>📱 Compact View (Mobile Friendly)</strong></summary>
 
+
+### 🔌 Biometrics
+
+`@cap-kit/biometrics`
+
+![npm](https://img.shields.io/npm/v/@cap-kit/biometrics?style=flat-square&label=npm&logo=npm) ![downloads](https://img.shields.io/npm/dm/@cap-kit/biometrics?style=flat-square&label=downloads&logo=npm&color=orange)
+
+Capacitor v8 plugin for biometric authentication: Face ID, Touch ID, fingerprint, face and iris recognition with device-credential fallback.
+
+[Docs](./packages/biometrics) • [NPM](https://www.npmjs.com/package/@cap-kit/biometrics)
+
+---
 
 ### 📱 Device
 
@@ -238,18 +265,6 @@ Runtime TLS leaf certificate SHA-256 fingerprint validation plugin for Capacitor
 Unified Capacitor v8 plugin for native device information: battery, screen, OS and hardware identifiers.
 
 [Docs](./packages/device) • [NPM](https://www.npmjs.com/package/@cap-kit/device)
-
----
-
-### 🔌 Empty
-
-`@cap-kit/empty`
-
-![npm](https://img.shields.io/npm/v/@cap-kit/empty?style=flat-square&label=npm&logo=npm) ![downloads](https://img.shields.io/npm/dm/@cap-kit/empty?style=flat-square&label=downloads&logo=npm&color=orange)
-
-Unified Capacitor v8 plugin for native In-App Reviews and cross-platform Store navigation.
-
-[Docs](./packages/privacy-screen) • [NPM](https://www.npmjs.com/package/@cap-kit/empty)
 
 ---
 
@@ -298,6 +313,18 @@ Unified Capacitor v8 plugin for native In-App Reviews and cross-platform Store n
 Redsys InApp SDK bridge for Capacitor v8. Supports native Direct Payment and secure 3D Secure (3DS) WebView flows with unified cross-platform API and HMAC signature utilities.
 
 [Docs](./packages/redsys) • [NPM](https://www.npmjs.com/package/@cap-kit/redsys)
+
+---
+
+### 🔌 Secure Storage
+
+`@cap-kit/secure-storage`
+
+![npm](https://img.shields.io/npm/v/@cap-kit/secure-storage?style=flat-square&label=npm&logo=npm) ![downloads](https://img.shields.io/npm/dm/@cap-kit/secure-storage?style=flat-square&label=downloads&logo=npm&color=orange)
+
+Capacitor v8 plugin for encrypted key-value storage: hardware-backed secure storage on Android and iOS with iCloud sync and Keychain access levels.
+
+[Docs](./packages/secure-storage) • [NPM](https://www.npmjs.com/package/@cap-kit/secure-storage)
 
 ---
 

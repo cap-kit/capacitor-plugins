@@ -24,9 +24,9 @@ struct SecureStorage {
      - value: The string value to store securely.
      - Throws: NativeError if storage fails.
      */
-    func set(key: String, value: String) throws {
+    func set(key: String, value: String, accessible: CFString? = nil) throws {
         do {
-            try KeychainHelper.saveString(value, for: key)
+            try KeychainHelper.saveString(value, for: key, accessible: accessible)
         } catch let error as KeychainHelper.KeychainError {
             throw mapKeychainError(error)
         }
@@ -84,6 +84,20 @@ struct SecureStorage {
     func hasKey(key: String) throws -> Bool {
         do {
             return try KeychainHelper.hasValue(for: key)
+        } catch let error as KeychainHelper.KeychainError {
+            throw mapKeychainError(error)
+        }
+    }
+
+    /**
+     Lists every key stored by this plugin in the Keychain.
+
+     - Returns: Account (key) names, unsorted.
+     - Throws: NativeError if the query fails unexpectedly.
+     */
+    func keys() throws -> [String] {
+        do {
+            return try KeychainHelper.listAccounts()
         } catch let error as KeychainHelper.KeychainError {
             throw mapKeychainError(error)
         }

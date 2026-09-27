@@ -188,7 +188,7 @@ class Fortress(
   ) {
     ensureSecureVaultAccessible()
     // Correctly passing the hardware-backed security requirement from config
-    secureStorage.set(key, value, requireStrongBox = config.requireStrongBox)
+    secureStorage.set(secureName(key), value, requireStrongBox = config.requireStrongBox)
   }
 
   fun setMany(values: List<JSObject>) {
@@ -215,7 +215,7 @@ class Fortress(
     try {
       operations.forEach { operation ->
         if (operation.secure) {
-          secureStorage.set(operation.key, operation.value, requireStrongBox = config.requireStrongBox)
+          secureStorage.set(secureName(operation.key), operation.value, requireStrongBox = config.requireStrongBox)
         } else {
           setInsecureValue(operation.key, operation.value)
         }
@@ -228,11 +228,16 @@ class Fortress(
 
   fun getValue(key: String): String? {
     ensureSecureVaultAccessible()
-    return secureStorage.get(key)
+    for (name in secureNameCandidates(key)) {
+      secureStorage.get(name)?.let { return it }
+    }
+    return null
   }
 
   fun removeValue(key: String) {
-    secureStorage.remove(key)
+    for (name in secureNameCandidates(key)) {
+      secureStorage.remove(name)
+    }
   }
 
   fun clearAll() {
@@ -609,25 +614,130 @@ class Fortress(
     key: String,
     value: String,
   ) {
-    standardStorage.set(key = KeyUtils.obfuscate(key, config.obfuscationPrefix), value = value)
+    standardStorage.set(key = insecureName(key), value = value)
   }
 
-  fun getInsecureValue(key: String): String? = standardStorage.get(KeyUtils.obfuscate(key, config.obfuscationPrefix))
+  fun getInsecureValue(key: String): String? {
+    for (name in insecureNameCandidates(key)) {
+      standardStorage.get(name)?.let { return it }
+    }
+    return null
+  }
+
+  /**
+   * Lists keys in secure or insecure storage, returned in original
+   * (de-obfuscated) form.
+   */
+  fun keys(secure: Boolean): List<String> {
+    if (secure) {
+      // Mirror getValue gating: enumeration requires an unlocked vault.
+      ensureSecureVaultAccessible()
+      return secureStorage.listKeys().mapNotNull { KeyUtils.decodeB64(it) ?: it }.distinct()
+    }
+    val prefixes = insecurePrefixes()
+    return standardStorage.listKeys(prefixes).map { deobfuscatedKey(it, prefixes) }.distinct()
+  }
+
+  /**
+   * Reads several keys in one call. Missing keys map to null; a locked
+   * vault rejects the whole secure call instead of partial data.
+   */
+  fun getMany(
+    keys: List<String>,
+    secure: Boolean,
+  ): Map<String, String?> {
+    if (secure) {
+      ensureSecureVaultAccessible()
+      return keys.associateWith { secureStorage.get(it) }
+    }
+    return keys.associateWith { getInsecureValue(it) }
+  }
+
+  /** iCloud Keychain does not exist on Android; no-op for API parity. */
+  fun setSynchronize(enabled: Boolean) {
+  }
+
+  /** Always false on Android; iCloud Keychain does not exist here. */
+  fun isSynchronized(): Boolean = false
+
+  /** iOS Keychain accessibility has no Android equivalent; no-op. */
+  fun setDefaultKeychainAccess(access: String) {
+  }
+
+  private fun insecurePrefixes(): List<String> {
+    val configured = config.obfuscationPrefix.takeIf { it.isNotEmpty() } ?: "ftrss_"
+    noteObfuscationPrefix(configured)
+    return (
+      listOf(configured) +
+        seenObfuscationPrefixes.filter { it != configured } +
+        listOf("ftrss_", "fortress_")
+    ).distinct()
+  }
+
+  private val seenObfuscationPrefixes = mutableSetOf<String>()
+
+  private fun noteObfuscationPrefix(prefix: String) {
+    if (prefix.isNotEmpty()) {
+      seenObfuscationPrefixes.add(prefix)
+    }
+  }
+
+  private fun encodeNameBody(key: String): String = if (config.obfuscateKeys) KeyUtils.encodeB64(key) else key
+
+  private fun secureName(key: String): String = encodeNameBody(key)
+
+  private fun secureNameCandidates(key: String): List<String> {
+    val plain = key
+    val encoded = KeyUtils.encodeB64(key)
+    return if (config.obfuscateKeys) listOf(encoded, plain) else listOf(plain, encoded)
+  }
+
+  private fun insecureName(key: String): String = KeyUtils.obfuscate(encodeNameBody(key), config.obfuscationPrefix)
+
+  private fun insecureNameCandidates(key: String): List<String> {
+    val prefix = config.obfuscationPrefix
+    noteObfuscationPrefix(prefix)
+    val prefixes = listOf(prefix) + seenObfuscationPrefixes.filter { it != prefix }
+    val names = mutableListOf<String>()
+    for (candidate in prefixes) {
+      val plain = KeyUtils.obfuscate(key, candidate)
+      val encoded = KeyUtils.obfuscate(KeyUtils.encodeB64(key), candidate)
+      if (config.obfuscateKeys) {
+        names.add(encoded)
+        names.add(plain)
+      } else {
+        names.add(plain)
+        names.add(encoded)
+      }
+    }
+    return names
+  }
+
+  private fun deobfuscatedKey(
+    stored: String,
+    prefixes: List<String>,
+  ): String {
+    val prefix = prefixes.firstOrNull { stored.startsWith(it) }
+    val remainder = if (prefix != null) stored.removePrefix(prefix) else stored
+    return KeyUtils.decodeB64(remainder) ?: remainder
+  }
 
   fun removeInsecureValue(key: String) {
-    standardStorage.remove(KeyUtils.obfuscate(key, config.obfuscationPrefix))
+    for (name in insecureNameCandidates(key)) {
+      standardStorage.remove(name)
+    }
   }
 
-  fun getObfuscatedKey(key: String): String = KeyUtils.obfuscate(key, config.obfuscationPrefix)
+  fun getObfuscatedKey(key: String): String = insecureName(key)
 
   fun hasKey(
     key: String,
     secure: Boolean,
   ): Boolean =
     if (secure) {
-      secureStorage.hasKey(key)
+      secureNameCandidates(key).any { secureStorage.hasKey(it) }
     } else {
-      standardStorage.hasKey(KeyUtils.obfuscate(key, config.obfuscationPrefix))
+      insecureNameCandidates(key).any { standardStorage.hasKey(it) }
     }
 
   fun setSessionLockCallback(callback: (Boolean) -> Unit) {
@@ -832,10 +942,10 @@ class Fortress(
           if (previousValue == null) {
             secureStorage.remove(key)
           } else {
-            secureStorage.set(key, previousValue, requireStrongBox = config.requireStrongBox)
+            secureStorage.set(secureName(key), previousValue, requireStrongBox = config.requireStrongBox)
           }
         } else {
-          val storageKey = KeyUtils.obfuscate(key, config.obfuscationPrefix)
+          val storageKey = insecureName(key)
           if (previousValue == null) {
             standardStorage.remove(storageKey)
           } else {

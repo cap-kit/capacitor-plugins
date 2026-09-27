@@ -119,6 +119,7 @@ Configuration options for the Fortress plugin.
 | **`privacyOverlayBackgroundOpacity`** | <code>number</code>                                                       | Optional background opacity for the privacy overlay scrim. Allowed range: `0.0` to `1.0`.                                                                                                                                                                                                                                                              |                                   | 8.0.0 |
 | **`privacyOverlayTheme`**             | <code>'system' \| 'light' \| 'dark'</code>                                | Controls the privacy overlay visual theme. - `system`: follow device appearance (light/dark) - `light`: force light overlay appearance - `dark`: force dark overlay appearance                                                                                                                                                                         | <code>'system'</code>             | 8.0.0 |
 | **`obfuscationPrefix`**               | <code>string</code>                                                       | Prefix used by key obfuscation utilities.                                                                                                                                                                                                                                                                                                              | <code>'ftrss\_'</code>            | 8.0.0 |
+| **`obfuscateKeys`**                   | <code>boolean</code>                                                      | Base64-encodes stored key names (secure vault and insecure storage, all platforms) on top of the obfuscation prefix. Obfuscation hides key names from casual inspection; it is not encryption. Reads transparently accept both encoded and plain forms, so toggling never orphans existing entries.                                                    | <code>false</code>                | 8.0.0 |
 | **`webAuthn`**                        | <code><a href="#webauthnconfig">WebAuthnConfig</a></code>                 | WebAuthn configuration for Web platform unlock behavior. - `local` mode stores credential metadata only in browser storage. - `server` mode uses backend challenge and assertion verification endpoints.                                                                                                                                               |                                   | 8.0.0 |
 | **`allowCachedAuthentication`**       | <code>boolean</code>                                                      | Enables in-memory cached authentication for unlock operations. When enabled, repeated `unlock()` calls within `cachedAuthenticationTimeoutMs` can skip the interactive biometric prompt.                                                                                                                                                               | <code>false</code>                | 8.0.0 |
 | **`cachedAuthenticationTimeoutMs`**   | <code>number</code>                                                       | Cached authentication validity window in milliseconds. This value is only used when `allowCachedAuthentication` is enabled.                                                                                                                                                                                                                            | <code>30000</code>                | 8.0.0 |
@@ -149,6 +150,7 @@ In `capacitor.config.json`:
       "privacyOverlayShowImage": true,
       "privacyOverlayTheme": "system",
       "obfuscationPrefix": "ftrss_",
+      "obfuscateKeys": false,
       "webAuthn": {
         "mode": "local"
       },
@@ -186,6 +188,7 @@ const config: CapacitorConfig = {
       privacyOverlayShowImage: true,
       privacyOverlayTheme: 'system',
       obfuscationPrefix: 'ftrss_',
+      obfuscateKeys: false,
       webAuthn: {
         mode: 'local',
       },
@@ -253,7 +256,12 @@ export default config;
 - [`getInsecureValue(...)`](#getinsecurevalue)
 - [`removeInsecureValue(...)`](#removeinsecurevalue)
 - [`getObfuscatedKey(...)`](#getobfuscatedkey)
+- [`setSynchronize(...)`](#setsynchronize)
+- [`getSynchronize()`](#getsynchronize)
+- [`setDefaultKeychainAccess(...)`](#setdefaultkeychainaccess)
 - [`hasKey(...)`](#haskey)
+- [`keys(...)`](#keys)
+- [`getMany(...)`](#getmany)
 - [`addListener('sessionLocked' | 'sessionUnlocked', ...)`](#addlistenersessionlocked--sessionunlocked-)
 - [`addListener('onSecurityStateChanged', ...)`](#addlisteneronsecuritystatechanged-)
 - [`addListener('onLockStatusChanged', ...)`](#addlisteneronlockstatuschanged-)
@@ -1054,6 +1062,62 @@ const { obfuscated } = await Fortress.getObfuscatedKey({ key: 'session_token' })
 
 ---
 
+### setSynchronize(...)
+
+```typescript
+setSynchronize(options: { synchronize: boolean; }) => Promise<void>
+```
+
+Enables or disables iCloud Keychain synchronization at runtime.
+
+iOS only; a no-op on Android and Web. This overrides the static
+`enableICloudKeychainSync` value for the running session.
+
+| Param         | Type                                   | Description                      |
+| ------------- | -------------------------------------- | -------------------------------- |
+| **`options`** | <code>{ synchronize: boolean; }</code> | - Desired synchronization state. |
+
+**Since:** 8.0.0
+
+---
+
+### getSynchronize()
+
+```typescript
+getSynchronize() => Promise<{ synchronize: boolean; }>
+```
+
+Reports whether iCloud Keychain synchronization is active.
+
+iOS only; always `false` elsewhere.
+
+**Returns:** <code>Promise&lt;{ synchronize: boolean; }&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### setDefaultKeychainAccess(...)
+
+```typescript
+setDefaultKeychainAccess(options: { access: KeychainAccess; }) => Promise<void>
+```
+
+Sets the default iOS Keychain accessibility for subsequently
+stored secure items.
+
+iOS only; a no-op on Android and Web. Per-item `access` in
+`setValue()` overrides this default. Session-scoped: resets on
+restart unless also set via static configuration.
+
+| Param         | Type                                                                   | Description                    |
+| ------------- | ---------------------------------------------------------------------- | ------------------------------ |
+| **`options`** | <code>{ access: <a href="#keychainaccess">KeychainAccess</a>; }</code> | - Default accessibility level. |
+
+**Since:** 8.0.0
+
+---
+
 ### hasKey(...)
 
 ```typescript
@@ -1078,6 +1142,60 @@ triggering decryption.
 
 ```ts
 const { exists } = await Fortress.hasKey({ key: 'auth_token', secure: true });
+```
+
+---
+
+### keys(...)
+
+```typescript
+keys(options?: KeysOptions) => Promise<KeysResult>
+```
+
+Lists keys in secure or insecure storage.
+
+Returns original key names (insecure keys are de-obfuscated).
+Secure enumeration requires an unlocked vault.
+
+| Param         | Type                                                | Description                                     |
+| ------------- | --------------------------------------------------- | ----------------------------------------------- |
+| **`options`** | <code><a href="#keysoptions">KeysOptions</a></code> | - Tier selection, defaulting to secure storage. |
+
+**Returns:** <code>Promise&lt;<a href="#keysresult">KeysResult</a>&gt;</code>
+
+**Since:** 8.0.0
+
+#### Example
+
+```ts
+const { keys } = await Fortress.keys({ secure: true });
+```
+
+---
+
+### getMany(...)
+
+```typescript
+getMany(options: GetManyOptions) => Promise<GetManyResult>
+```
+
+Reads several keys in one call.
+
+Missing keys map to `null` in the result record. Secure reads
+require an unlocked vault and reject with `VAULT_LOCKED` otherwise.
+
+| Param         | Type                                                      | Description                 |
+| ------------- | --------------------------------------------------------- | --------------------------- |
+| **`options`** | <code><a href="#getmanyoptions">GetManyOptions</a></code> | - Keys plus tier selection. |
+
+**Returns:** <code>Promise&lt;<a href="#getmanyresult">GetManyResult</a>&gt;</code>
+
+**Since:** 8.0.0
+
+#### Example
+
+```ts
+const { values } = await Fortress.getMany({ keys: ['a', 'b'] });
 ```
 
 ---
@@ -1344,6 +1462,7 @@ runtime overrides applied via `configure(...)`.
 | **`privacyOverlayBackgroundOpacity`** | <code>number</code>                                              |
 | **`privacyOverlayTheme`**             | <code>'system' \| 'light' \| 'dark'</code>                       |
 | **`privacyScreenEnabled`**            | <code>boolean</code>                                             |
+| **`obfuscateKeys`**                   | <code>boolean</code>                                             |
 | **`fallbackStrategy`**                | <code>'none' \| 'deviceCredential' \| 'systemDefault'</code>     |
 | **`allowCachedAuthentication`**       | <code>boolean</code>                                             |
 | **`cachedAuthenticationTimeoutMs`**   | <code>number</code>                                              |
@@ -1381,6 +1500,7 @@ Configuration values:
 | **`privacyOverlayBackgroundOpacity`** | <code>number</code>                                                       | Optional background opacity for the privacy overlay scrim. Allowed range: `0.0` to `1.0`.                                                                                                                                                                                                                                                              |                                   | 8.0.0 |
 | **`privacyOverlayTheme`**             | <code>'system' \| 'light' \| 'dark'</code>                                | Controls the privacy overlay visual theme. - `system`: follow device appearance (light/dark) - `light`: force light overlay appearance - `dark`: force dark overlay appearance                                                                                                                                                                         | <code>'system'</code>             | 8.0.0 |
 | **`obfuscationPrefix`**               | <code>string</code>                                                       | Prefix used by key obfuscation utilities.                                                                                                                                                                                                                                                                                                              | <code>'ftrss\_'</code>            | 8.0.0 |
+| **`obfuscateKeys`**                   | <code>boolean</code>                                                      | Base64-encodes stored key names (secure vault and insecure storage, all platforms) on top of the obfuscation prefix. Obfuscation hides key names from casual inspection; it is not encryption. Reads transparently accept both encoded and plain forms, so toggling never orphans existing entries.                                                    | <code>false</code>                | 8.0.0 |
 | **`webAuthn`**                        | <code><a href="#webauthnconfig">WebAuthnConfig</a></code>                 | WebAuthn configuration for Web platform unlock behavior. - `local` mode stores credential metadata only in browser storage. - `server` mode uses backend challenge and assertion verification endpoints.                                                                                                                                               |                                   | 8.0.0 |
 | **`allowCachedAuthentication`**       | <code>boolean</code>                                                      | Enables in-memory cached authentication for unlock operations. When enabled, repeated `unlock()` calls within `cachedAuthenticationTimeoutMs` can skip the interactive biometric prompt.                                                                                                                                                               | <code>false</code>                | 8.0.0 |
 | **`cachedAuthenticationTimeoutMs`**   | <code>number</code>                                                       | Cached authentication validity window in milliseconds. This value is only used when `allowCachedAuthentication` is enabled.                                                                                                                                                                                                                            | <code>30000</code>                | 8.0.0 |
@@ -1411,11 +1531,12 @@ WebAuthn behavior and backend integration options (Web platform only).
 
 Generic key/value payload for storage methods.
 
-| Prop         | Type                 |
-| ------------ | -------------------- |
-| **`key`**    | <code>string</code>  |
-| **`value`**  | <code>string</code>  |
-| **`secure`** | <code>boolean</code> |
+| Prop         | Type                                                      | Description                                                                                                                        | Since |
+| ------------ | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| **`key`**    | <code>string</code>                                       |                                                                                                                                    |       |
+| **`value`**  | <code>string</code>                                       |                                                                                                                                    |       |
+| **`secure`** | <code>boolean</code>                                      |                                                                                                                                    |       |
+| **`access`** | <code><a href="#keychainaccess">KeychainAccess</a></code> | iOS Keychain accessibility for this item, overriding the default set via `setDefaultKeychainAccess()`. Ignored on Android and Web. | 8.0.0 |
 
 #### ValueResult
 
@@ -1687,6 +1808,44 @@ Input payload for key existence checks.
 | **`key`**    | <code>string</code>  |
 | **`secure`** | <code>boolean</code> |
 
+#### KeysResult
+
+Result of key enumeration.
+
+Keys are returned in their original (de-obfuscated) form.
+
+| Prop       | Type                  |
+| ---------- | --------------------- |
+| **`keys`** | <code>string[]</code> |
+
+#### KeysOptions
+
+Input payload for key enumeration.
+
+| Prop         | Type                 | Description                                       | Default           |
+| ------------ | -------------------- | ------------------------------------------------- | ----------------- |
+| **`secure`** | <code>boolean</code> | Which tier to list. Defaults to the secure vault. | <code>true</code> |
+
+#### GetManyResult
+
+Result of batch reads.
+
+Missing keys map to `null`. A locked vault (secure tier) rejects
+the whole call with `VAULT_LOCKED` instead of returning partial data.
+
+| Prop         | Type                                              |
+| ------------ | ------------------------------------------------- |
+| **`values`** | <code>Record&lt;string, string \| null&gt;</code> |
+
+#### GetManyOptions
+
+Input payload for batch reads.
+
+| Prop         | Type                  | Description                                            | Default           |
+| ------------ | --------------------- | ------------------------------------------------------ | ----------------- |
+| **`keys`**   | <code>string[]</code> |                                                        |                   |
+| **`secure`** | <code>boolean</code>  | Which tier to read from. Defaults to the secure vault. | <code>true</code> |
+
 #### PluginListenerHandle
 
 | Prop         | Type                                      |
@@ -1750,6 +1909,24 @@ Mirrors the official `@capacitor/privacy-screen` API.
 Native biometric access control options.
 
 <code>'biometryAny' | 'biometryCurrentSet' | 'passcodeAny' | 'devicePasscode'</code>
+
+#### KeychainAccess
+
+iOS Keychain accessibility level for secure storage items.
+
+Mirrors the platform `kSecAttrAccessible` constants. Applies to iOS
+only; ignored on Android and Web.
+
+- `whenUnlocked`: foreground-only, migrates with encrypted backups.
+- `whenUnlockedThisDeviceOnly`: foreground-only, never migrates.
+- `afterFirstUnlock`: background-capable after first unlock, migrates.
+- `afterFirstUnlockThisDeviceOnly`: background-capable, never migrates.
+- `whenPasscodeSetThisDeviceOnly`: requires device passcode, never migrates.
+
+<code>
+  'whenUnlocked' | 'whenUnlockedThisDeviceOnly' | 'afterFirstUnlock' | 'afterFirstUnlockThisDeviceOnly' |
+  'whenPasscodeSetThisDeviceOnly'
+</code>
 
 </docgen-api>
 

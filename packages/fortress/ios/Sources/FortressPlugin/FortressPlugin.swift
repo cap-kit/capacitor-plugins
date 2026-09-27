@@ -69,7 +69,12 @@ public final class FortressPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "hasDeviceCredential", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getBiometricStrengthLevel", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getAuthenticationType", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "enroll", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "enroll", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "keys", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getMany", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setSynchronize", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getSynchronize", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setDefaultKeychainAccess", returnType: CAPPluginReturnPromise)
     ]
 
     // MARK: - Properties

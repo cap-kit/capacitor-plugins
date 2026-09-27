@@ -31,6 +31,8 @@ private data class RawConfigData(
   val privacyOverlayTheme: String? = null,
   @SerialName("obfuscationPrefix")
   val obfuscationPrefix: String? = null,
+  @SerialName("obfuscateKeys")
+  val obfuscateKeys: Boolean? = null,
   @SerialName("requireStrongBox")
   val requireStrongBox: Boolean? = null,
   @SerialName("allowDevicePasscode")
@@ -98,6 +100,7 @@ class Config(
   var privacyOverlayBackgroundOpacity: Double
   var privacyOverlayTheme: String
   var obfuscationPrefix: String
+  var obfuscateKeys: Boolean
   var requireStrongBox: Boolean
   var allowDevicePasscode: Boolean
   var fallbackStrategy: String
@@ -146,6 +149,7 @@ class Config(
     privacyOverlayTheme = parsedConfig.privacyOverlayTheme ?: "system"
 
     obfuscationPrefix = parsedConfig.obfuscationPrefix?.takeIf { it.isNotBlank() } ?: "ftrss_"
+    obfuscateKeys = parsedConfig.obfuscateKeys ?: false
 
     requireStrongBox = parsedConfig.requireStrongBox ?: false
 
@@ -236,6 +240,12 @@ class Config(
       }
     }
     getBooleanOverride(overrides, "persistSessionState")?.let { persistSessionState = it }
+    getBooleanOverride(overrides, "obfuscateKeys")?.let { obfuscateKeys = it }
+    getStringOverride(overrides, "obfuscationPrefix")?.let {
+      if (it.isNotBlank()) {
+        obfuscationPrefix = it
+      }
+    }
   }
 
   fun toRuntimeOverrides(): com.getcapacitor.JSObject {
@@ -259,6 +269,8 @@ class Config(
     overrides.put("requireFreshAuthenticationMs", requireFreshAuthenticationMs)
     overrides.put("encryptionAlgorithm", encryptionAlgorithm)
     overrides.put("persistSessionState", persistSessionState)
+    overrides.put("obfuscateKeys", obfuscateKeys)
+    overrides.put("obfuscationPrefix", obfuscationPrefix)
     return overrides
   }
 

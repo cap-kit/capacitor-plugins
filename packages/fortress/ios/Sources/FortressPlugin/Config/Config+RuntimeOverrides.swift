@@ -24,6 +24,7 @@ extension Config {
         if let value = overrides["privacyOverlayShowImage"] as? Bool { privacyOverlayShowImage = value }
         if let value = overrides["allowCachedAuthentication"] as? Bool { allowCachedAuthentication = value }
         if let value = overrides["persistSessionState"] as? Bool { persistSessionState = value }
+        if let value = overrides["obfuscateKeys"] as? Bool { obfuscateKeys = value }
     }
 
     private mutating func applyIntOverrides(_ overrides: [String: Any]) {
@@ -56,6 +57,9 @@ extension Config {
         if let value = overrides["encryptionAlgorithm"] as? String,
            Self.allowedEncryptionAlgorithms.contains(value) {
             encryptionAlgorithm = value
+        }
+        if let value = overrides["obfuscationPrefix"] as? String, !value.isEmpty {
+            obfuscationPrefix = value
         }
     }
 }

@@ -17,8 +17,13 @@ extension FortressPlugin {
             return
         }
 
+        if let access = call.getString("access"), !FortressPlugin.keychainAccessNames.contains(access) {
+            call.reject(ErrorMessages.invalidInput, NativeError.invalidInput(ErrorMessages.invalidInput).errorCode)
+            return
+        }
+
         do {
-            try implementation.setValue(key: key, value: value)
+            try implementation.setValue(key: key, value: value, access: call.getString("access"))
             call.resolve()
         } catch {
             handleError(call, error)

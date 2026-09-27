@@ -92,9 +92,14 @@ On Web, the unlock flow uses WebAuthn:
 `persistSessionState` restores web session lock/auth state across page
 reloads. If you disable it, every reload starts with a fresh locked session.
 
-Web storage (`localStorage`) is not encrypted at rest by the platform; the
+Web storage is not encrypted at rest by the platform; the
 plugin's Web secure layer applies `encryptionAlgorithm` on top. Never store
 long-lived secrets on Web that you would not store on a native device.
+
+Persistence runs on an engine chain — IndexedDB first, LocalStorage
+fallback, in-memory last resort — with one-time migration of legacy
+entries and copy-if-absent semantics, so neither private-mode quota
+failures nor engine upgrades lose data silently.
 
 ## iCloud Keychain sync
 

@@ -87,4 +87,17 @@ struct StandardStorage {
         let defaults = UserDefaults.standard
         return defaults.object(forKey: key) != nil
     }
+
+    /**
+     Lists stored keys starting with any of the given prefixes.
+
+     UserDefaults is shared with the host app, so enumeration is always
+     prefix-scoped — never the whole suite.
+     */
+    func keys(matchingPrefixes prefixes: [String]) -> [String] {
+        let defaults = UserDefaults.standard
+        return defaults.dictionaryRepresentation().keys.filter { key in
+            prefixes.contains { key.hasPrefix($0) }
+        }
+    }
 }

@@ -171,6 +171,49 @@ verification format deterministic.
 - `hasKey()` checks whether a key exists in secure or insecure storage without
   retrieving the value, making it useful for checking session tokens without
   triggering decryption.
+- `keys()` enumerates keys in either tier, returned de-obfuscated.
+  Secure enumeration requires an unlocked vault.
+- `getMany()` reads several keys in one call; missing keys map to `null`,
+  and a locked vault rejects the whole secure call.
+
+```ts
+const { keys } = await Fortress.keys({ secure: true });
+const { values } = await Fortress.getMany({ keys: ['a', 'b'] });
+```
+
+## iCloud sync and Keychain access (iOS)
+
+```ts
+// Session-scoped iCloud Keychain toggle (no-op elsewhere).
+await Fortress.setSynchronize({ synchronize: true });
+const { synchronize } = await Fortress.getSynchronize();
+
+// Default accessibility for subsequently stored items.
+await Fortress.setDefaultKeychainAccess({ access: 'afterFirstUnlock' });
+
+// ...or per item. Unknown names reject with INVALID_INPUT.
+await Fortress.setValue({ key: 'token', value: 'abc', access: 'whenUnlocked' });
+```
+
+## Key-name obfuscation
+
+`obfuscateKeys` (default `false`) base64-encodes stored key names on top
+of `obfuscationPrefix`, on every platform and in both tiers — the same
+atob/btoa practice teams used to apply by hand, now systematic:
+
+```ts
+await Fortress.configure({ obfuscateKeys: true });
+```
+
+Obfuscation hides names from casual inspection; it is **not encryption**.
+Reads transparently accept both encoded and plain forms and `keys()`
+decodes tolerantly, so toggling never orphans existing entries.
+
+Accessibility levels mirror the platform constants (`whenUnlocked`,
+`whenUnlockedThisDeviceOnly`, `afterFirstUnlock`,
+`afterFirstUnlockThisDeviceOnly`, `whenPasscodeSetThisDeviceOnly`) and are
+iOS-only. Android `clearAll()` already wipes values and rotates Keystore
+keys, matching the community key-reset behavior.
 
 ## Native requirements
 

@@ -27,8 +27,10 @@ import io.capkit.fortress.model.DeviceSecurityStatusResult
 import io.capkit.fortress.model.FortressRuntimeConfig
 import io.capkit.fortress.model.FortressSessionResult
 import io.capkit.fortress.model.GenerateChallengePayloadResult
+import io.capkit.fortress.model.GetManyResult
 import io.capkit.fortress.model.HasKeyResult
 import io.capkit.fortress.model.IsLockedResult
+import io.capkit.fortress.model.KeysResult
 import io.capkit.fortress.model.ObfuscatedKeyResult
 import io.capkit.fortress.model.PluginVersionResult
 import io.capkit.fortress.model.PrivacyScreenActionResult
@@ -455,6 +457,7 @@ class FortressPlugin :
           privacyOverlayTextColor = config.privacyOverlayTextColor,
           privacyOverlayBackgroundOpacity = config.privacyOverlayBackgroundOpacity,
           privacyOverlayTheme = config.privacyOverlayTheme,
+          obfuscateKeys = config.obfuscateKeys,
           privacyScreenEnabled = implementation.isPrivacyScreenActive(),
           fallbackStrategy = config.fallbackStrategy,
           allowCachedAuthentication = config.allowCachedAuthentication,
@@ -1190,6 +1193,77 @@ class FortressPlugin :
       // Best effort only; malformed payloads yield an empty list.
     }
     return values
+  }
+
+  /**
+   * Lists keys in secure or insecure storage.
+   */
+  @PluginMethod
+  fun keys(call: PluginCall) {
+    try {
+      val secure = call.data.optBoolean("secure", true)
+      call.resolve(toJSObject(KeysResult(keys = implementation.keys(secure))))
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  /**
+   * Reads several keys in one call. Missing keys map to null.
+   */
+  @PluginMethod
+  fun getMany(call: PluginCall) {
+    val keys =
+      call.getArray("keys")?.toList<String>() ?: run {
+        call.reject(ErrorMessages.INVALID_INPUT)
+        return
+      }
+    try {
+      val secure = call.data.optBoolean("secure", true)
+      call.resolve(toJSObject(GetManyResult(values = implementation.getMany(keys, secure))))
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  /**
+   * iCloud Keychain does not exist on Android; no-op for API parity.
+   */
+  @PluginMethod
+  fun setSynchronize(call: PluginCall) {
+    try {
+      implementation.setSynchronize(call.data.optBoolean("synchronize", false))
+      call.resolve()
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  /**
+   * Always false on Android; iCloud Keychain does not exist here.
+   */
+  @PluginMethod
+  fun getSynchronize(call: PluginCall) {
+    try {
+      val result = JSObject()
+      result.put("synchronize", implementation.isSynchronized())
+      call.resolve(result)
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  /**
+   * iOS Keychain accessibility has no Android equivalent; no-op.
+   */
+  @PluginMethod
+  fun setDefaultKeychainAccess(call: PluginCall) {
+    try {
+      implementation.setDefaultKeychainAccess(call.getString("access") ?: "")
+      call.resolve()
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
   }
 
   /**

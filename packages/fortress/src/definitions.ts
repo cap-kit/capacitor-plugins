@@ -179,6 +179,19 @@ export interface FortressConfig {
   obfuscationPrefix?: string;
 
   /**
+   * Base64-encodes stored key names (secure vault and insecure storage,
+   * all platforms) on top of the obfuscation prefix.
+   *
+   * Obfuscation hides key names from casual inspection; it is not
+   * encryption. Reads transparently accept both encoded and plain forms,
+   * so toggling never orphans existing entries.
+   *
+   * @default false
+   * @since 8.0.0
+   */
+  obfuscateKeys?: boolean;
+
+  /**
    * WebAuthn configuration for Web platform unlock behavior.
    *
    * - `local` mode stores credential metadata only in browser storage.
@@ -323,6 +336,7 @@ export interface FortressRuntimeConfig {
   privacyOverlayBackgroundOpacity: number;
   privacyOverlayTheme: 'system' | 'light' | 'dark';
   privacyScreenEnabled: boolean;
+  obfuscateKeys: boolean;
   fallbackStrategy: 'none' | 'deviceCredential' | 'systemDefault';
   allowCachedAuthentication: boolean;
   cachedAuthenticationTimeoutMs: number;
@@ -619,12 +633,40 @@ export interface SetDeviceIsSecureOptions {
 }
 
 /**
+ * iOS Keychain accessibility level for secure storage items.
+ *
+ * Mirrors the platform `kSecAttrAccessible` constants. Applies to iOS
+ * only; ignored on Android and Web.
+ *
+ * - `whenUnlocked`: foreground-only, migrates with encrypted backups.
+ * - `whenUnlockedThisDeviceOnly`: foreground-only, never migrates.
+ * - `afterFirstUnlock`: background-capable after first unlock, migrates.
+ * - `afterFirstUnlockThisDeviceOnly`: background-capable, never migrates.
+ * - `whenPasscodeSetThisDeviceOnly`: requires device passcode, never migrates.
+ *
+ * @since 8.0.0
+ */
+export type KeychainAccess =
+  | 'whenUnlocked'
+  | 'whenUnlockedThisDeviceOnly'
+  | 'afterFirstUnlock'
+  | 'afterFirstUnlockThisDeviceOnly'
+  | 'whenPasscodeSetThisDeviceOnly';
+
+/**
  * Generic key/value payload for storage methods.
  */
 export interface SecureValue {
   key: string;
   value: string;
   secure?: boolean;
+  /**
+   * iOS Keychain accessibility for this item, overriding the default set
+   * via `setDefaultKeychainAccess()`. Ignored on Android and Web.
+   *
+   * @since 8.0.0
+   */
+  access?: KeychainAccess;
 }
 
 /**
@@ -655,6 +697,58 @@ export interface HasKeyResult {
 export interface HasKeyOptions {
   key: string;
   secure?: boolean;
+}
+
+/**
+ * Input payload for key enumeration.
+ *
+ * @since 8.0.0
+ */
+export interface KeysOptions {
+  /**
+   * Which tier to list. Defaults to the secure vault.
+   *
+   * @default true
+   */
+  secure?: boolean;
+}
+
+/**
+ * Result of key enumeration.
+ *
+ * Keys are returned in their original (de-obfuscated) form.
+ *
+ * @since 8.0.0
+ */
+export interface KeysResult {
+  keys: string[];
+}
+
+/**
+ * Input payload for batch reads.
+ *
+ * @since 8.0.0
+ */
+export interface GetManyOptions {
+  keys: string[];
+  /**
+   * Which tier to read from. Defaults to the secure vault.
+   *
+   * @default true
+   */
+  secure?: boolean;
+}
+
+/**
+ * Result of batch reads.
+ *
+ * Missing keys map to `null`. A locked vault (secure tier) rejects
+ * the whole call with `VAULT_LOCKED` instead of returning partial data.
+ *
+ * @since 8.0.0
+ */
+export interface GetManyResult {
+  values: Record<string, string | null>;
 }
 
 /**
@@ -1338,6 +1432,41 @@ export interface FortressPlugin {
   getObfuscatedKey(key: { key: string }): Promise<ObfuscatedKeyResult>;
 
   /**
+   * Enables or disables iCloud Keychain synchronization at runtime.
+   *
+   * iOS only; a no-op on Android and Web. This overrides the static
+   * `enableICloudKeychainSync` value for the running session.
+   *
+   * @param options - Desired synchronization state.
+   *
+   * @since 8.0.0
+   */
+  setSynchronize(options: { synchronize: boolean }): Promise<void>;
+
+  /**
+   * Reports whether iCloud Keychain synchronization is active.
+   *
+   * iOS only; always `false` elsewhere.
+   *
+   * @since 8.0.0
+   */
+  getSynchronize(): Promise<{ synchronize: boolean }>;
+
+  /**
+   * Sets the default iOS Keychain accessibility for subsequently
+   * stored secure items.
+   *
+   * iOS only; a no-op on Android and Web. Per-item `access` in
+   * `setValue()` overrides this default. Session-scoped: resets on
+   * restart unless also set via static configuration.
+   *
+   * @param options - Default accessibility level.
+   *
+   * @since 8.0.0
+   */
+  setDefaultKeychainAccess(options: { access: KeychainAccess }): Promise<void>;
+
+  /**
    * Checks whether a key exists in secure or insecure storage.
    *
    * This is an optimized check that does not retrieve the value,
@@ -1355,6 +1484,42 @@ export interface FortressPlugin {
    * @since 8.0.0
    */
   hasKey(options: HasKeyOptions): Promise<HasKeyResult>;
+
+  /**
+   * Lists keys in secure or insecure storage.
+   *
+   * Returns original key names (insecure keys are de-obfuscated).
+   * Secure enumeration requires an unlocked vault.
+   *
+   * @param options - Tier selection, defaulting to secure storage.
+   * @returns A promise resolving to the key list.
+   *
+   * @example
+   * ```ts
+   * const { keys } = await Fortress.keys({ secure: true });
+   * ```
+   *
+   * @since 8.0.0
+   */
+  keys(options?: KeysOptions): Promise<KeysResult>;
+
+  /**
+   * Reads several keys in one call.
+   *
+   * Missing keys map to `null` in the result record. Secure reads
+   * require an unlocked vault and reject with `VAULT_LOCKED` otherwise.
+   *
+   * @param options - Keys plus tier selection.
+   * @returns A promise resolving to the key/value record.
+   *
+   * @example
+   * ```ts
+   * const { values } = await Fortress.getMany({ keys: ['a', 'b'] });
+   * ```
+   *
+   * @since 8.0.0
+   */
+  getMany(options: GetManyOptions): Promise<GetManyResult>;
 
   /**
    * Adds listeners for lock state change events.

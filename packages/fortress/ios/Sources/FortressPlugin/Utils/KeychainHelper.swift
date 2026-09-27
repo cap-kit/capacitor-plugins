@@ -70,6 +70,26 @@ enum KeychainHelper {
     }
 
     /**
+     Resolves the synchronizable flag and accessibility class for a write.
+
+     - Explicit per-item access wins; synchronization survives only for
+       the one class that supports it (`AfterFirstUnlock`) and only while
+       the global sync policy is on. Every other explicit access implies
+       a device-only item.
+     - A nil access preserves the legacy policy: sync flag decides both.
+     */
+    private static func resolvedProtection(accessible: CFString?) -> (synchronizable: Bool, accessible: CFString) {
+        guard let accessible else {
+            return isSynchronizableEnabled
+                ? (true, kSecAttrAccessibleAfterFirstUnlock)
+                : (false, kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly)
+        }
+
+        let supportsSync = (accessible as String) == (kSecAttrAccessibleAfterFirstUnlock as String)
+        return (supportsSync && isSynchronizableEnabled, accessible)
+    }
+
+    /**
      Saves data to the Keychain.
 
      - Parameters:
@@ -77,17 +97,15 @@ enum KeychainHelper {
      - account: The unique key identifier.
      - Throws: KeychainError if the operation fails.
      */
-    static func save(_ data: Data, for account: String) throws {
+    static func save(_ data: Data, for account: String, accessible: CFString? = nil) throws {
         var query = genericPasswordQuery(account: account)
         query[kSecValueData as String] = data
 
-        if isSynchronizableEnabled {
+        let protection = resolvedProtection(accessible: accessible)
+        if protection.synchronizable {
             query[kSecAttrSynchronizable as String] = kCFBooleanTrue
-            query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-        } else {
-            // Ensure hardware-backed security is enforced
-            query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         }
+        query[kSecAttrAccessible as String] = protection.accessible
 
         let status = SecItemAdd(query as CFDictionary, nil)
 
@@ -95,7 +113,7 @@ enum KeychainHelper {
         case errSecSuccess:
             return
         case errSecDuplicateItem:
-            try update(data, for: account)
+            try update(data, for: account, accessible: accessible)
         default:
             throw KeychainError.unableToSave(status)
         }
@@ -109,21 +127,17 @@ enum KeychainHelper {
      - account: The unique key identifier.
      - Throws: KeychainError if the operation fails.
      */
-    private static func update(_ data: Data, for account: String) throws {
+    private static func update(_ data: Data, for account: String, accessible: CFString? = nil) throws {
         var query = genericPasswordQuery(account: account, includeSynchronizableAny: true)
-        if isSynchronizableEnabled {
+        let protection = resolvedProtection(accessible: accessible)
+        if protection.synchronizable {
             query[kSecAttrSynchronizable as String] = kCFBooleanTrue
         }
 
-        var attributes: [String: Any] = [
-            kSecValueData as String: data
+        let attributes: [String: Any] = [
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: protection.accessible
         ]
-
-        if isSynchronizableEnabled {
-            attributes[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-        } else {
-            attributes[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-        }
 
         let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
 
@@ -240,6 +254,49 @@ enum KeychainHelper {
     // MARK: - String Convenience Methods
 
     /**
+     Lists every account stored by this plugin in the Keychain.
+
+     Scoped to the Fortress service across local and synchronizable
+     stores. Used by key enumeration.
+
+     - Returns: Account (key) names, unsorted.
+     - Throws: KeychainError if the query fails unexpectedly.
+     */
+    static func listAccounts() throws -> [String] {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrSynchronizable as String: kSecAttrSynchronizableAny,
+            kSecReturnAttributes as String: true,
+            kSecMatchLimit as String: kSecMatchLimitAll
+        ]
+
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+
+        switch status {
+        case errSecSuccess:
+            guard let items = result as? [[String: Any]] else {
+                return []
+            }
+            return items.compactMap { $0[kSecAttrAccount as String] as? String }
+        case errSecItemNotFound:
+            return []
+        default:
+            throw KeychainError.unexpectedError(status)
+        }
+    }
+
+    /**
+     Reports whether iCloud Keychain synchronization is currently on.
+     */
+    static func isSynchronizable() -> Bool {
+        syncLock.lock()
+        defer { syncLock.unlock() }
+        return synchronizableEnabled
+    }
+
+    /**
      Saves a string to the Keychain.
 
      - Parameters:
@@ -247,11 +304,11 @@ enum KeychainHelper {
      - account: The unique key identifier.
      - Throws: KeychainError if the operation fails.
      */
-    static func saveString(_ value: String, for account: String) throws {
+    static func saveString(_ value: String, for account: String, accessible: CFString? = nil) throws {
         guard let data = value.data(using: .utf8) else {
             throw KeychainError.dataConversionFailed
         }
-        try save(data, for: account)
+        try save(data, for: account, accessible: accessible)
     }
 
     /**

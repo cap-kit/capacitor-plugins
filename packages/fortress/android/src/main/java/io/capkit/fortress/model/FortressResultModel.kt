@@ -47,6 +47,8 @@ data class FortressRuntimeConfig(
   val privacyOverlayBackgroundOpacity: Double,
   @SerialName("privacyOverlayTheme")
   val privacyOverlayTheme: String,
+  @SerialName("obfuscateKeys")
+  val obfuscateKeys: Boolean,
   @SerialName("privacyScreenEnabled")
   val privacyScreenEnabled: Boolean,
   @SerialName("fallbackStrategy")
@@ -77,6 +79,18 @@ data class ValueResult(
 data class HasKeyResult(
   @SerialName("exists")
   val exists: Boolean,
+)
+
+@Serializable
+data class KeysResult(
+  @SerialName("keys")
+  val keys: List<String>,
+)
+
+@Serializable
+data class GetManyResult(
+  @SerialName("values")
+  val values: Map<String, String?>,
 )
 
 @Serializable

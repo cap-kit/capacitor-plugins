@@ -4,11 +4,11 @@ extension Fortress {
 
     // MARK: - Internal
 
-    func setValue(key: String, value: String) throws {
+    func setValue(key: String, value: String, access: String? = nil) throws {
         try ensureSecureVaultAccessible()
         let globalPrefix = config?.prefix ?? ""
         let secureKey = KeyUtils.formatSecureKey(key, globalPrefix: globalPrefix)
-        try secureStorage.set(key: secureKey, value: value)
+        try secureStorage.set(key: secureKey, value: value, accessible: resolveAccessible(access))
     }
 
     // MARK: - Atomic Multi-Set
@@ -88,15 +88,18 @@ extension Fortress {
 
     func getValue(key: String) throws -> String? {
         try ensureSecureVaultAccessible()
-        let globalPrefix = config?.prefix ?? ""
-        let secureKey = KeyUtils.formatSecureKey(key, globalPrefix: globalPrefix)
-        return try secureStorage.get(key: secureKey)
+        for name in secureNameCandidates(for: key) {
+            if let value = try secureStorage.get(key: name) {
+                return value
+            }
+        }
+        return nil
     }
 
     func removeValue(key: String) throws {
-        let globalPrefix = config?.prefix ?? ""
-        let secureKey = KeyUtils.formatSecureKey(key, globalPrefix: globalPrefix)
-        try secureStorage.remove(key: secureKey)
+        for name in secureNameCandidates(for: key) {
+            try secureStorage.remove(key: name)
+        }
     }
 
     func clearAll() throws {
@@ -321,7 +324,8 @@ private extension Fortress {
 
     func secureStorageKey(for key: String) -> String {
         let globalPrefix = config?.prefix ?? ""
-        return KeyUtils.formatSecureKey(key, globalPrefix: globalPrefix)
+        let body = (config?.obfuscateKeys ?? false) ? KeyUtils.encodeB64(key) : key
+        return KeyUtils.formatSecureKey(body, globalPrefix: globalPrefix)
     }
 
     func operationMarker(for operation: SetManyOperation) -> String {
