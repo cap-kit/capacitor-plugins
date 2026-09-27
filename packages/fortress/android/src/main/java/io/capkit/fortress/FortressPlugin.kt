@@ -1,6 +1,9 @@
 package io.capkit.fortress
 
+import android.content.Intent
 import android.os.Build
+import android.provider.Settings
+import androidx.biometric.BiometricManager
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -627,6 +630,189 @@ class FortressPlugin :
   }
 
   /**
+   * Verifies identity without touching vault or session state.
+   *
+   * Unlike `unlock()`, a success here does NOT unlock the vault, update
+   * the session, or hide the privacy overlay. `allowDeviceCredential`,
+   * when present, overrides the configured fallback strategy for this
+   * call only; `reason` (or legacy `promptMessage`) feeds the prompt
+   * description.
+   */
+  @PluginMethod
+  fun authenticate(call: PluginCall) {
+    val hostActivity = activity as? FragmentActivity
+    if (hostActivity == null) {
+      reject(call, NativeError.Unavailable(ErrorMessages.UNAVAILABLE))
+      return
+    }
+
+    val baseOptions = parsePromptOptions(call)
+    val reason = call.getString("reason") ?: call.getString("promptMessage")
+    val promptOptions =
+      if (reason != null && baseOptions?.description == null) {
+        (
+          baseOptions ?: BiometricAuth.PromptOptions(null, null, null, null, null)
+        ).copy(description = reason)
+      } else {
+        baseOptions
+      }
+    val allowPasscode =
+      call.data.optBoolean("allowDeviceCredential", implementation.resolveAllowPasscode())
+
+    implementation.authenticateIdentity(hostActivity, promptOptions, allowPasscode) { result ->
+      result
+        .onSuccess {
+          call.resolve()
+        }.onFailure { error ->
+          handleError(call, error)
+        }
+    }
+  }
+
+  /**
+   * Cancels an ongoing interactive authentication prompt, if any.
+   */
+  @PluginMethod
+  fun cancelAuthentication(call: PluginCall) {
+    try {
+      implementation.cancelActiveAuthentication()
+      call.resolve()
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  /**
+   * Reports whether biometric authentication can currently be used.
+   */
+  @PluginMethod
+  fun isAvailable(call: PluginCall) {
+    try {
+      val status = implementation.checkBiometricStatus(context)
+      call.resolve(JSObject().put("isAvailable", status.getBool("isBiometricsAvailable") ?: false))
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  /**
+   * Reports whether the user enrolled biometrics.
+   */
+  @PluginMethod
+  fun isEnrolled(call: PluginCall) {
+    try {
+      val status = implementation.checkBiometricStatus(context)
+      call.resolve(JSObject().put("isEnrolled", status.getBool("isBiometricsEnabled") ?: false))
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  /**
+   * Returns the primary biometry modality of the device.
+   */
+  @PluginMethod
+  fun getBiometricType(call: PluginCall) {
+    try {
+      val status = implementation.checkBiometricStatus(context)
+      call.resolve(JSObject().put("biometryType", status.getString("biometryType") ?: "none"))
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  /**
+   * Returns every biometry modality known to the device hardware.
+   */
+  @PluginMethod
+  fun getBiometricTypes(call: PluginCall) {
+    try {
+      val status = implementation.checkBiometricStatus(context)
+      call.resolve(JSObject().put("biometryTypes", toStringList(status, "biometryTypes")))
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  /**
+   * Reports whether the user set a device credential usable as fallback.
+   */
+  @PluginMethod
+  fun hasDeviceCredential(call: PluginCall) {
+    try {
+      val status = implementation.checkBiometricStatus(context)
+      call.resolve(
+        JSObject().put("hasDeviceCredential", status.getBool("isDeviceSecure") ?: false),
+      )
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  /**
+   * Reports the strength class of the available biometry.
+   */
+  @PluginMethod
+  fun getBiometricStrengthLevel(call: PluginCall) {
+    try {
+      val status = implementation.checkBiometricStatus(context)
+      val strong = status.getBool("strongBiometryIsAvailable") ?: false
+      val available = status.getBool("isBiometricsAvailable") ?: false
+      val level =
+        if (strong) {
+          "strong"
+        } else if (available) {
+          "weak"
+        } else {
+          "none"
+        }
+      call.resolve(JSObject().put("strengthLevel", level))
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  /**
+   * Reports which credential satisfied the last successful native ceremony.
+   */
+  @PluginMethod
+  fun getAuthenticationType(call: PluginCall) {
+    try {
+      call.resolve(JSObject().put("authenticationType", implementation.getAuthenticationType()))
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  /**
+   * Opens the system biometric enrollment screen (Android API 30+).
+   */
+  @PluginMethod
+  fun enroll(call: PluginCall) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+      reject(call, NativeError.Unavailable(ErrorMessages.UNAVAILABLE))
+      return
+    }
+    try {
+      val intent =
+        Intent(Settings.ACTION_BIOMETRIC_ENROLL).apply {
+          putExtra(
+            Settings.EXTRA_BIOMETRIC_AUTHENTICATORS_ALLOWED,
+            BiometricManager.Authenticators.BIOMETRIC_STRONG or
+              BiometricManager.Authenticators.BIOMETRIC_WEAK,
+          )
+        }
+      currentActivityOrNull()?.startActivity(intent) ?: run {
+        reject(call, NativeError.Unavailable(ErrorMessages.UNAVAILABLE))
+        return
+      }
+      call.resolve()
+    } catch (error: Throwable) {
+      handleError(call, error)
+    }
+  }
+
+  /**
    * Returns whether the vault is currently locked.
    */
   @PluginMethod
@@ -986,7 +1172,25 @@ class FortressPlugin :
       isBiometricsEnabled = status.getBool("isBiometricsEnabled") ?: false,
       isDeviceSecure = status.getBool("isDeviceSecure") ?: false,
       biometryType = status.getString("biometryType") ?: "none",
+      biometryTypes = toStringList(status, "biometryTypes"),
+      strongBiometryIsAvailable = status.getBool("strongBiometryIsAvailable") ?: false,
     )
+
+  private fun toStringList(
+    status: JSObject,
+    key: String,
+  ): List<String> {
+    val values = mutableListOf<String>()
+    try {
+      val array = status.optJSONArray(key) ?: return values
+      for (index in 0 until array.length()) {
+        array.optString(index, null)?.let { values.add(it) }
+      }
+    } catch (_: Exception) {
+      // Best effort only; malformed payloads yield an empty list.
+    }
+    return values
+  }
 
   /**
    * Overrides the detected biometry type for development/testing flows.

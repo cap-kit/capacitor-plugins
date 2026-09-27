@@ -14,6 +14,35 @@ import LocalAuthentication
  */
 struct BiometricAuth {
 
+    /**
+     Reference box for the in-flight authentication context.
+
+     `LAContext.evaluatePolicy` has no external cancel handle: the only way
+     to dismiss an ongoing system prompt programmatically is
+     `invalidate()` on the same context. The box is a reference type so it
+     stays shared across the value-type copies captured by completions.
+     */
+    private final class ActiveContextBox: @unchecked Sendable {
+        private let lock = NSLock()
+        private var context: LAContext?
+
+        func set(_ context: LAContext?) {
+            lock.lock()
+            defer { lock.unlock() }
+            self.context = context
+        }
+
+        func invalidate() {
+            lock.lock()
+            let current = context
+            context = nil
+            lock.unlock()
+            current?.invalidate()
+        }
+    }
+
+    private let activeContext = ActiveContextBox()
+
     private final class CompletionRelay: @unchecked Sendable {
         private let completion: (Result<Void, Error>) -> Void
 
@@ -131,8 +160,10 @@ struct BiometricAuth {
         }
 
         let relay = CompletionRelay(completion: completion)
+        activeContext.set(context)
 
         context.evaluatePolicy(policy, localizedReason: reason) { success, authError in
+            self.activeContext.set(nil)
             if success {
                 relay.call(.success(()))
                 return
@@ -158,6 +189,16 @@ struct BiometricAuth {
         completion: @escaping (Result<Void, Error>) -> Void
     ) {
         authenticate(reason: reason, allowPasscode: false, completion: completion)
+    }
+
+    /**
+     Cancels the ongoing authentication prompt, if any.
+
+     Invalidating the context dismisses the system dialog; the in-flight
+     completion then fires with a cancellation error. No-op when idle.
+     */
+    func cancelActiveAuthentication() {
+        activeContext.invalidate()
     }
 
     func checkStatus() -> [String: Any] {
@@ -204,7 +245,9 @@ struct BiometricAuth {
             "isBiometricsAvailable": isBiometricsAvailable,
             "isBiometricsEnabled": isBiometricsEnabled,
             "isDeviceSecure": isDeviceSecure,
-            "biometryType": biometryType
+            "biometryType": biometryType,
+            "biometryTypes": biometryType == "none" ? [] : [biometryType],
+            "strongBiometryIsAvailable": isBiometricsAvailable
         ]
     }
 

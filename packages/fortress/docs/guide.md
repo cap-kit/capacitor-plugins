@@ -83,6 +83,48 @@ document.addEventListener('click', () => {
 });
 ```
 
+## Standalone biometric authentication
+
+`unlock()` both verifies identity and opens the vault. When you only need
+to prove the user is present — confirming a payment, gating a sensitive
+action — use the standalone ceremony, which never touches vault or
+session state:
+
+```ts
+// Check first, like the official-style contract recommends.
+const { isAvailable } = await Fortress.isAvailable();
+const { isEnrolled } = await Fortress.isEnrolled();
+if (!isAvailable || !isEnrolled) {
+  return; // Guide the user to device settings instead.
+}
+
+try {
+  await Fortress.authenticate({
+    reason: 'Confirm payment',
+    allowDeviceCredential: true, // per-call override of fallbackStrategy
+  });
+  // Identity proven. Vault still locked, session untouched.
+} catch (e) {
+  // CANCELLED (user dismissed) or UNAVAILABLE (no usable authenticator).
+}
+
+// Dismiss an in-flight prompt, e.g. on navigation away.
+await Fortress.cancelAuthentication();
+```
+
+Capability discovery without prompting:
+
+```ts
+const { biometryType } = await Fortress.getBiometricType(); // display only
+const { biometryTypes } = await Fortress.getBiometricTypes(); // hardware set
+const { hasDeviceCredential } = await Fortress.hasDeviceCredential();
+const { strengthLevel } = await Fortress.getBiometricStrengthLevel(); // strong | weak | none
+const { authenticationType } = await Fortress.getAuthenticationType(); // last native ceremony
+
+// Android only: open the system enrollment screen.
+await Fortress.enroll();
+```
+
 ## Biometric keys and signatures
 
 Fortress can generate biometric-bound key pairs in native secure hardware:

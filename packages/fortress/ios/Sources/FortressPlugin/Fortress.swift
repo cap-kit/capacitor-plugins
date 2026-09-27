@@ -41,6 +41,11 @@ public final class Fortress: NSObject {
     /// Manual runtime override from `enable()` / `disable()`. Non-nil detaches
     /// privacy from the follow-lock policy until cleared by configure/reset.
     var privacyScreenManualOverride: Bool?
+    /// Credential class of the last successful native authentication in this
+    /// session (`biometric`, `deviceCredential`, `unknown`). iOS cannot tell
+    /// which one satisfied a passcode-allowing policy, so those report
+    /// `unknown`; biometric-only ceremonies report `biometric`.
+    var lastAuthenticationType = "unknown"
     var lastSuccessfulAuthAtMs: Int64 = 0
     var failedBiometricAttempts: Int = 0
     var lockoutUntilMs: Int64 = 0
@@ -157,6 +162,17 @@ public final class Fortress: NSObject {
 
     func markAuthenticationSuccess() {
         lastSuccessfulAuthAtMs = Int64(Date().timeIntervalSince1970 * 1000)
+        failedBiometricAttempts = 0
+        lockoutUntilMs = 0
+    }
+
+    /**
+     Clears failure counters without touching session timestamps.
+
+     Used by side-effect-free ceremonies (`authenticate()`) so a successful
+     identity proof resets lockout pressure without unlocking anything.
+     */
+    func clearBiometricFailureState() {
         failedBiometricAttempts = 0
         lockoutUntilMs = 0
     }

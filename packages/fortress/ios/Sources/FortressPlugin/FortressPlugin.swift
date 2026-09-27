@@ -59,7 +59,17 @@ public final class FortressPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "setDeviceIsSecure", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "enable", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "disable", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "isEnabled", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "isEnabled", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "authenticate", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "cancelAuthentication", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "isAvailable", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "isEnrolled", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getBiometricType", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getBiometricTypes", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "hasDeviceCredential", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getBiometricStrengthLevel", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getAuthenticationType", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "enroll", returnType: CAPPluginReturnPromise)
     ]
 
     // MARK: - Properties
@@ -96,6 +106,35 @@ public final class FortressPlugin: CAPPlugin, CAPBridgedPlugin {
         implementation.applyConfig(cfg)
 
         // We use classic selectors to avoid the Sendability limitations of closures in Swift 6.
+        registerNotificationObservers()
+
+        implementation.setSessionLockCallback { [weak self] isLocked in
+            if isLocked {
+                self?.notifyListeners("sessionLocked", data: nil)
+            } else {
+                self?.notifyListeners("sessionUnlocked", data: nil)
+            }
+
+            self?.notifyListeners("onLockStatusChanged", data: [
+                "isLocked": isLocked
+            ])
+        }
+
+        // Set up callback for when user taps on privacy screen
+        implementation.setPrivacyScreenTapCallback { [privacyTapNotification] in
+            NotificationCenter.default.post(name: privacyTapNotification, object: nil)
+        }
+
+        lastSecurityStatus = implementation.checkBiometricStatus()
+
+        // Log if verbose logging is enabled
+        Logger.info("Plugin loaded. Version: ", PluginVersion.number)
+    }
+
+    /**
+     Registers lifecycle, privacy, and screenshot observers.
+     */
+    private func registerNotificationObservers() {
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleDidEnterBackground),
@@ -132,28 +171,6 @@ public final class FortressPlugin: CAPPlugin, CAPBridgedPlugin {
             name: UIApplication.userDidTakeScreenshotNotification,
             object: nil
         )
-
-        implementation.setSessionLockCallback { [weak self] isLocked in
-            if isLocked {
-                self?.notifyListeners("sessionLocked", data: nil)
-            } else {
-                self?.notifyListeners("sessionUnlocked", data: nil)
-            }
-
-            self?.notifyListeners("onLockStatusChanged", data: [
-                "isLocked": isLocked
-            ])
-        }
-
-        // Set up callback for when user taps on privacy screen
-        implementation.setPrivacyScreenTapCallback { [privacyTapNotification] in
-            NotificationCenter.default.post(name: privacyTapNotification, object: nil)
-        }
-
-        lastSecurityStatus = implementation.checkBiometricStatus()
-
-        // Log if verbose logging is enabled
-        Logger.info("Plugin loaded. Version: ", PluginVersion.number)
     }
 
     @objc private func handleDidEnterBackground() {

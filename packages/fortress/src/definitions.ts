@@ -403,6 +403,102 @@ export interface PrivacyScreenStatus {
 }
 
 /**
+ * Input payload for standalone identity verification.
+ *
+ * Unlike `unlock()`, `authenticate()` never changes vault or session state:
+ * it only proves the user is present with biometrics or device credentials.
+ *
+ * @since 8.0.0
+ */
+export interface AuthenticateOptions {
+  /**
+   * Reason shown in the system prompt.
+   */
+  reason?: string;
+  promptMessage?: string;
+  promptOptions?: BiometricPromptOptions;
+  /**
+   * Allows device credential (PIN/pattern/password/passcode) fallback.
+   *
+   * When omitted, the configured `fallbackStrategy` applies.
+   *
+   * @since 8.0.0
+   */
+  allowDeviceCredential?: boolean;
+}
+
+/**
+ * Result of `isAvailable()`.
+ *
+ * @since 8.0.0
+ */
+export interface IsAvailableResult {
+  isAvailable: boolean;
+}
+
+/**
+ * Result of `isEnrolled()`.
+ *
+ * @since 8.0.0
+ */
+export interface IsEnrolledResult {
+  isEnrolled: boolean;
+}
+
+/**
+ * Result of `getBiometricType()`.
+ *
+ * @since 8.0.0
+ */
+export interface BiometricTypeResult {
+  biometryType: DeviceSecurityStatus['biometryType'];
+}
+
+/**
+ * Result of `getBiometricTypes()`.
+ *
+ * @since 8.0.0
+ */
+export interface BiometricTypesResult {
+  biometryTypes: DeviceSecurityStatus['biometryType'][];
+}
+
+/**
+ * Result of `hasDeviceCredential()`.
+ *
+ * @since 8.0.0
+ */
+export interface HasDeviceCredentialResult {
+  hasDeviceCredential: boolean;
+}
+
+/**
+ * Result of `getBiometricStrengthLevel()`.
+ *
+ * - `strong`: Face ID / Touch ID / strong-class Android biometrics.
+ * - `weak`: only weak modalities (e.g. some Android face unlocks).
+ * - `none`: no usable biometry.
+ *
+ * @since 8.0.0
+ */
+export interface BiometricStrengthResult {
+  strengthLevel: 'strong' | 'weak' | 'none';
+}
+
+/**
+ * Result of `getAuthenticationType()`.
+ *
+ * Reports which credential satisfied the last successful `authenticate()`
+ * (or `unlock()`) on native platforms. `'unknown'` when nothing has
+ * authenticated yet in this session or the platform does not report it.
+ *
+ * @since 8.0.0
+ */
+export interface AuthenticationTypeResult {
+  authenticationType: 'biometric' | 'deviceCredential' | 'unknown';
+}
+
+/**
  * Prompt customization options for interactive authentication.
  *
  * Platform note:
@@ -485,6 +581,20 @@ export interface DeviceSecurityStatus {
   isBiometricsEnabled: boolean;
   isDeviceSecure: boolean;
   biometryType: 'none' | 'touchId' | 'faceId' | 'fingerprint' | 'iris';
+  /**
+   * All enrolled biometry modalities known to the device.
+   *
+   * @since 8.0.0
+   */
+  biometryTypes: DeviceSecurityStatus['biometryType'][];
+  /**
+   * Whether strong biometry specifically is available (all iOS biometry
+   * is strong; on Android weak modalities such as some face unlocks
+   * may make this false while `isBiometricsAvailable` is true).
+   *
+   * @since 8.0.0
+   */
+  strongBiometryIsAvailable: boolean;
 }
 
 /**
@@ -799,6 +909,97 @@ export interface FortressPlugin {
   checkStatus(): Promise<DeviceSecurityStatus>;
 
   /**
+   * Reports whether biometric authentication can currently be used.
+   *
+   * This is the `isAvailable` half of the official-style availability
+   * contract: hardware present and usable, regardless of enrollment.
+   *
+   * @returns A promise resolving to `{ isAvailable }`.
+   *
+   * @since 8.0.0
+   */
+  isAvailable(): Promise<IsAvailableResult>;
+
+  /**
+   * Reports whether the user enrolled biometrics.
+   *
+   * This is the `isEnrolled` half of the official-style availability
+   * contract. Check both `isAvailable()` and `isEnrolled()` before
+   * calling `authenticate()`.
+   *
+   * @returns A promise resolving to `{ isEnrolled }`.
+   *
+   * @since 8.0.0
+   */
+  isEnrolled(): Promise<IsEnrolledResult>;
+
+  /**
+   * Returns the primary biometry modality of the device.
+   *
+   * Display helper — always decide with `isAvailable()` instead.
+   *
+   * @returns A promise resolving to `{ biometryType }`.
+   *
+   * @since 8.0.0
+   */
+  getBiometricType(): Promise<BiometricTypeResult>;
+
+  /**
+   * Returns every biometry modality known to the device hardware.
+   *
+   * Only Android devices report more than one entry; empty when none
+   * is supported.
+   *
+   * @returns A promise resolving to `{ biometryTypes }`.
+   *
+   * @since 8.0.0
+   */
+  getBiometricTypes(): Promise<BiometricTypesResult>;
+
+  /**
+   * Reports whether the user set a device credential (PIN, pattern,
+   * password, passcode) usable as authentication fallback.
+   *
+   * @returns A promise resolving to `{ hasDeviceCredential }`.
+   *
+   * @since 8.0.0
+   */
+  hasDeviceCredential(): Promise<HasDeviceCredentialResult>;
+
+  /**
+   * Reports the strength class of the available biometry.
+   *
+   * iOS biometry is always `strong` when available; on Android weak
+   * modalities (e.g. some face unlocks) yield `weak`.
+   *
+   * @returns A promise resolving to `{ strengthLevel }`.
+   *
+   * @since 8.0.0
+   */
+  getBiometricStrengthLevel(): Promise<BiometricStrengthResult>;
+
+  /**
+   * Reports which credential satisfied the last successful native
+   * `authenticate()` (or `unlock()`).
+   *
+   * @returns A promise resolving to `{ authenticationType }`.
+   *
+   * @since 8.0.0
+   */
+  getAuthenticationType(): Promise<AuthenticationTypeResult>;
+
+  /**
+   * Opens the system biometric enrollment screen.
+   *
+   * Only available on Android (API 30+ launches the system enroll flow).
+   * iOS offers no public enrollment API and rejects with `UNAVAILABLE`,
+   * as does Web.
+   *
+   * @since 8.0.0
+   */
+  enroll(): Promise<void>;
+
+  /**
    * Overrides detected biometry type for development/testing scenarios.
    *
    * This method is intended for QA and simulator/device mocking flows.
@@ -872,6 +1073,40 @@ export interface FortressPlugin {
    * @since 8.0.0
    */
   unlock(options?: UnlockOptions): Promise<void>;
+
+  /**
+   * Verifies the user identity without touching vault or session state.
+   *
+   * This is the standalone biometric check from the official-style
+   * biometrics contract (`authenticate` / `verifyIdentity`): the promise
+   * resolves when the user authenticates and rejects with `CANCELLED`
+   * (user dismissed) or `UNAVAILABLE` (no usable authenticator).
+   *
+   * Unlike `unlock()`, a success here does NOT unlock the vault, does NOT
+   * update the session timestamp, and does NOT hide the privacy overlay.
+   *
+   * @param options - Prompt customization and credential fallback.
+   * @returns A promise that resolves when authentication succeeds.
+   *
+   * @example
+   * ```ts
+   * await Fortress.authenticate({ reason: 'Confirm payment' });
+   * ```
+   *
+   * @since 8.0.0
+   */
+  authenticate(options?: AuthenticateOptions): Promise<void>;
+
+  /**
+   * Cancels an ongoing interactive authentication prompt, if any.
+   *
+   * Resolves immediately when no prompt is active. On iOS the in-flight
+   * system dialog is invalidated; on Android (SDK 29+) the
+   * `BiometricPrompt` is cancelled; on Web it is a no-op.
+   *
+   * @since 8.0.0
+   */
+  cancelAuthentication(): Promise<void>;
 
   /**
    * Locks the secure vault immediately.

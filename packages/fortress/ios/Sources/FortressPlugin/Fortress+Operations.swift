@@ -142,6 +142,7 @@ extension Fortress {
             switch result {
             case .success:
                 self.markAuthenticationSuccess()
+                self.lastAuthenticationType = allowPasscode ? "unknown" : "biometric"
                 if self.isPrivacyScreenEnabled() {
                     self.privacyScreen.unlock()
                 }
@@ -160,6 +161,51 @@ extension Fortress {
         }
         sessionManager.lock()
         clearAuthenticationCache()
+    }
+
+    /**
+     Verifies identity without touching vault or session state.
+
+     Runs the biometric ceremony only: no `sessionManager` transition, no
+     privacy overlay change, no activity timestamp. Failure counters still
+     apply (brute-force protection); a success clears them without
+     unlocking anything.
+     */
+    func authenticateIdentity(
+        reason: String,
+        cancelTitle: String,
+        allowPasscode: Bool,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
+        do {
+            try assertNotLockedOut()
+        } catch {
+            completion(.failure(error))
+            return
+        }
+
+        biometricAuth.authenticate(
+            reason: reason,
+            cancelTitle: cancelTitle,
+            allowPasscode: allowPasscode
+        ) { [weak self] result in
+            guard let self else { return }
+
+            switch result {
+            case .success:
+                self.clearBiometricFailureState()
+                self.lastAuthenticationType = allowPasscode ? "unknown" : "biometric"
+                completion(.success(()))
+            case .failure(let error):
+                self.recordBiometricFailure(error)
+                completion(.failure(error))
+            }
+        }
+    }
+
+    /// Dismisses an ongoing authentication prompt, if any.
+    func cancelActiveAuthentication() {
+        biometricAuth.cancelActiveAuthentication()
     }
 
     func isLocked() throws -> Bool {

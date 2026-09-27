@@ -221,12 +221,22 @@ export default config;
 - [`getValue(...)`](#getvalue)
 - [`setMany(...)`](#setmany)
 - [`checkStatus()`](#checkstatus)
+- [`isAvailable()`](#isavailable)
+- [`isEnrolled()`](#isenrolled)
+- [`getBiometricType()`](#getbiometrictype)
+- [`getBiometricTypes()`](#getbiometrictypes)
+- [`hasDeviceCredential()`](#hasdevicecredential)
+- [`getBiometricStrengthLevel()`](#getbiometricstrengthlevel)
+- [`getAuthenticationType()`](#getauthenticationtype)
+- [`enroll()`](#enroll)
 - [`setBiometryType(...)`](#setbiometrytype)
 - [`setBiometryIsEnrolled(...)`](#setbiometryisenrolled)
 - [`setDeviceIsSecure(...)`](#setdeviceissecure)
 - [`removeValue(...)`](#removevalue)
 - [`clearAll()`](#clearall)
 - [`unlock(...)`](#unlock)
+- [`authenticate(...)`](#authenticate)
+- [`cancelAuthentication()`](#cancelauthentication)
 - [`lock()`](#lock)
 - [`isLocked()`](#islocked)
 - [`getSession()`](#getsession)
@@ -407,6 +417,137 @@ checkStatus() => Promise<DeviceSecurityStatus>
 
 ---
 
+### isAvailable()
+
+```typescript
+isAvailable() => Promise<IsAvailableResult>
+```
+
+Reports whether biometric authentication can currently be used.
+
+This is the `isAvailable` half of the official-style availability
+contract: hardware present and usable, regardless of enrollment.
+
+**Returns:** <code>Promise&lt;<a href="#isavailableresult">IsAvailableResult</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### isEnrolled()
+
+```typescript
+isEnrolled() => Promise<IsEnrolledResult>
+```
+
+Reports whether the user enrolled biometrics.
+
+This is the `isEnrolled` half of the official-style availability
+contract. Check both `isAvailable()` and `isEnrolled()` before
+calling `authenticate()`.
+
+**Returns:** <code>Promise&lt;<a href="#isenrolledresult">IsEnrolledResult</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### getBiometricType()
+
+```typescript
+getBiometricType() => Promise<BiometricTypeResult>
+```
+
+Returns the primary biometry modality of the device.
+
+Display helper — always decide with `isAvailable()` instead.
+
+**Returns:** <code>Promise&lt;<a href="#biometrictyperesult">BiometricTypeResult</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### getBiometricTypes()
+
+```typescript
+getBiometricTypes() => Promise<BiometricTypesResult>
+```
+
+Returns every biometry modality known to the device hardware.
+
+Only Android devices report more than one entry; empty when none
+is supported.
+
+**Returns:** <code>Promise&lt;<a href="#biometrictypesresult">BiometricTypesResult</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### hasDeviceCredential()
+
+```typescript
+hasDeviceCredential() => Promise<HasDeviceCredentialResult>
+```
+
+Reports whether the user set a device credential (PIN, pattern,
+password, passcode) usable as authentication fallback.
+
+**Returns:** <code>Promise&lt;<a href="#hasdevicecredentialresult">HasDeviceCredentialResult</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### getBiometricStrengthLevel()
+
+```typescript
+getBiometricStrengthLevel() => Promise<BiometricStrengthResult>
+```
+
+Reports the strength class of the available biometry.
+
+iOS biometry is always `strong` when available; on Android weak
+modalities (e.g. some face unlocks) yield `weak`.
+
+**Returns:** <code>Promise&lt;<a href="#biometricstrengthresult">BiometricStrengthResult</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### getAuthenticationType()
+
+```typescript
+getAuthenticationType() => Promise<AuthenticationTypeResult>
+```
+
+Reports which credential satisfied the last successful native
+`authenticate()` (or `unlock()`).
+
+**Returns:** <code>Promise&lt;<a href="#authenticationtyperesult">AuthenticationTypeResult</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### enroll()
+
+```typescript
+enroll() => Promise<void>
+```
+
+Opens the system biometric enrollment screen.
+
+Only available on Android (API 30+ launches the system enroll flow).
+iOS offers no public enrollment API and rejects with `UNAVAILABLE`,
+as does Web.
+
+**Since:** 8.0.0
+
+---
+
 ### setBiometryType(...)
 
 ```typescript
@@ -524,6 +665,52 @@ try {
   console.error('Authentication failed:', e.message);
 }
 ```
+
+---
+
+### authenticate(...)
+
+```typescript
+authenticate(options?: AuthenticateOptions) => Promise<void>
+```
+
+Verifies the user identity without touching vault or session state.
+
+This is the standalone biometric check from the official-style
+biometrics contract (`authenticate` / `verifyIdentity`): the promise
+resolves when the user authenticates and rejects with `CANCELLED`
+(user dismissed) or `UNAVAILABLE` (no usable authenticator).
+
+Unlike `unlock()`, a success here does NOT unlock the vault, does NOT
+update the session timestamp, and does NOT hide the privacy overlay.
+
+| Param         | Type                                                                | Description                                     |
+| ------------- | ------------------------------------------------------------------- | ----------------------------------------------- |
+| **`options`** | <code><a href="#authenticateoptions">AuthenticateOptions</a></code> | - Prompt customization and credential fallback. |
+
+**Since:** 8.0.0
+
+#### Example
+
+```ts
+await Fortress.authenticate({ reason: 'Confirm payment' });
+```
+
+---
+
+### cancelAuthentication()
+
+```typescript
+cancelAuthentication() => Promise<void>
+```
+
+Cancels an ongoing interactive authentication prompt, if any.
+
+Resolves immediately when no prompt is active. On iOS the in-flight
+system dialog is invalidated; on Android (SDK 29+) the
+`BiometricPrompt` is cancelled; on Web it is a no-op.
+
+**Since:** 8.0.0
 
 ---
 
@@ -1240,12 +1427,78 @@ Result returned by secure and insecure read operations.
 
 #### DeviceSecurityStatus
 
-| Prop                        | Type                                                                    |
-| --------------------------- | ----------------------------------------------------------------------- |
-| **`isBiometricsAvailable`** | <code>boolean</code>                                                    |
-| **`isBiometricsEnabled`**   | <code>boolean</code>                                                    |
-| **`isDeviceSecure`**        | <code>boolean</code>                                                    |
-| **`biometryType`**          | <code>'none' \| 'touchId' \| 'faceId' \| 'fingerprint' \| 'iris'</code> |
+| Prop                            | Type                                                                        | Description                                                                                                                                                                                     | Since |
+| ------------------------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| **`isBiometricsAvailable`**     | <code>boolean</code>                                                        |                                                                                                                                                                                                 |       |
+| **`isBiometricsEnabled`**       | <code>boolean</code>                                                        |                                                                                                                                                                                                 |       |
+| **`isDeviceSecure`**            | <code>boolean</code>                                                        |                                                                                                                                                                                                 |       |
+| **`biometryType`**              | <code>'none' \| 'touchId' \| 'faceId' \| 'fingerprint' \| 'iris'</code>     |                                                                                                                                                                                                 |       |
+| **`biometryTypes`**             | <code>('none' \| 'touchId' \| 'faceId' \| 'fingerprint' \| 'iris')[]</code> | All enrolled biometry modalities known to the device.                                                                                                                                           | 8.0.0 |
+| **`strongBiometryIsAvailable`** | <code>boolean</code>                                                        | Whether strong biometry specifically is available (all iOS biometry is strong; on Android weak modalities such as some face unlocks may make this false while `isBiometricsAvailable` is true). | 8.0.0 |
+
+#### IsAvailableResult
+
+Result of `isAvailable()`.
+
+| Prop              | Type                 |
+| ----------------- | -------------------- |
+| **`isAvailable`** | <code>boolean</code> |
+
+#### IsEnrolledResult
+
+Result of `isEnrolled()`.
+
+| Prop             | Type                 |
+| ---------------- | -------------------- |
+| **`isEnrolled`** | <code>boolean</code> |
+
+#### BiometricTypeResult
+
+Result of `getBiometricType()`.
+
+| Prop               | Type                                                                    |
+| ------------------ | ----------------------------------------------------------------------- |
+| **`biometryType`** | <code>'none' \| 'touchId' \| 'faceId' \| 'fingerprint' \| 'iris'</code> |
+
+#### BiometricTypesResult
+
+Result of `getBiometricTypes()`.
+
+| Prop                | Type                                                                        |
+| ------------------- | --------------------------------------------------------------------------- |
+| **`biometryTypes`** | <code>('none' \| 'touchId' \| 'faceId' \| 'fingerprint' \| 'iris')[]</code> |
+
+#### HasDeviceCredentialResult
+
+Result of `hasDeviceCredential()`.
+
+| Prop                      | Type                 |
+| ------------------------- | -------------------- |
+| **`hasDeviceCredential`** | <code>boolean</code> |
+
+#### BiometricStrengthResult
+
+Result of `getBiometricStrengthLevel()`.
+
+- `strong`: Face ID / Touch ID / strong-class Android biometrics.
+- `weak`: only weak modalities (e.g. some Android face unlocks).
+- `none`: no usable biometry.
+
+| Prop                | Type                                      |
+| ------------------- | ----------------------------------------- |
+| **`strengthLevel`** | <code>'none' \| 'strong' \| 'weak'</code> |
+
+#### AuthenticationTypeResult
+
+Result of `getAuthenticationType()`.
+
+Reports which credential satisfied the last successful `authenticate()`
+(or `unlock()`) on native platforms. `'unknown'` when nothing has
+authenticated yet in this session or the platform does not report it.
+
+| Prop                     | Type                                                        |
+| ------------------------ | ----------------------------------------------------------- |
+| **`authenticationType`** | <code>'deviceCredential' \| 'biometric' \| 'unknown'</code> |
 
 #### SetBiometryTypeOptions
 
@@ -1298,6 +1551,20 @@ Platform note:
 | **`description`**          | <code>string</code>  |
 | **`negativeButtonText`**   | <code>string</code>  |
 | **`confirmationRequired`** | <code>boolean</code> |
+
+#### AuthenticateOptions
+
+Input payload for standalone identity verification.
+
+Unlike `unlock()`, `authenticate()` never changes vault or session state:
+it only proves the user is present with biometrics or device credentials.
+
+| Prop                        | Type                                                                      | Description                                                                                                                 | Since |
+| --------------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ----- |
+| **`reason`**                | <code>string</code>                                                       | Reason shown in the system prompt.                                                                                          |       |
+| **`promptMessage`**         | <code>string</code>                                                       |                                                                                                                             |       |
+| **`promptOptions`**         | <code><a href="#biometricpromptoptions">BiometricPromptOptions</a></code> |                                                                                                                             |       |
+| **`allowDeviceCredential`** | <code>boolean</code>                                                      | Allows device credential (PIN/pattern/password/passcode) fallback. When omitted, the configured `fallbackStrategy` applies. | 8.0.0 |
 
 #### FortressSession
 

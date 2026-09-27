@@ -1,8 +1,13 @@
 import { WebPlugin } from '@capacitor/core';
 
 import {
+  AuthenticationTypeResult,
+  AuthenticateOptions,
   AuthenticateWithChallengeResult,
   BiometricKeysExistResult,
+  BiometricStrengthResult,
+  BiometricTypeResult,
+  BiometricTypesResult,
   ChallengeAuthOptions,
   CreateKeysResult,
   CreateSignatureOptions,
@@ -17,6 +22,9 @@ import {
   GenerateChallengePayloadResult,
   HasKeyOptions,
   HasKeyResult,
+  HasDeviceCredentialResult,
+  IsAvailableResult,
+  IsEnrolledResult,
   KeyAliasOptions,
   ObfuscatedKeyResult,
   PluginVersionResult,
@@ -676,9 +684,102 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
       isBiometricsEnabled,
       isDeviceSecure,
       biometryType: isBiometricsAvailable ? 'fingerprint' : 'none',
+      biometryTypes: isBiometricsAvailable ? ['fingerprint'] : [],
+      strongBiometryIsAvailable: isBiometricsAvailable,
     };
 
     return this.applySecurityOverrides(status);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Standalone Biometrics (no vault or session side effects)
+  // ---------------------------------------------------------------------------
+
+  async authenticate(options?: AuthenticateOptions): Promise<void> {
+    void options;
+    this.assertNotBiometricLockedOut();
+    this.assertWebAuthnAvailable();
+
+    try {
+      const state = await this.ensureWebAuthnCredential();
+      const allowCredentials = state.credentialIds.map((credentialId) => this.toAllowCredential(credentialId));
+
+      const credential = await navigator.credentials.get({
+        publicKey: {
+          challenge: this.createRandomChallenge(),
+          timeout: FortressWeb.WEBAUTHN_TIMEOUT_MS,
+          userVerification: 'preferred',
+          ...(allowCredentials.length > 0 ? { allowCredentials } : {}),
+        },
+      });
+
+      if (credential === null) {
+        this.throwWebError(FortressErrorCode.CANCELLED);
+      }
+
+      if (!(credential instanceof PublicKeyCredential)) {
+        this.throwWebError(FortressErrorCode.INIT_FAILED);
+      }
+
+      // Pure identity proof: vault and session state are intentionally untouched.
+      this.clearBiometricFailureState();
+    } catch (error) {
+      this.recordBiometricFailure(error);
+      this.logWarn('Authenticate failed', error);
+
+      if (error instanceof FortressWebError) {
+        throw error;
+      }
+
+      if (error instanceof DOMException) {
+        throw this.mapWebAuthnError(error);
+      }
+
+      this.throwWebError(FortressErrorCode.INIT_FAILED);
+    }
+  }
+
+  async cancelAuthentication(): Promise<void> {
+    // Web has no cancellable system prompt; nothing to do.
+  }
+
+  async isAvailable(): Promise<IsAvailableResult> {
+    const status = await this.checkStatus();
+    return { isAvailable: status.isBiometricsAvailable };
+  }
+
+  async isEnrolled(): Promise<IsEnrolledResult> {
+    const status = await this.checkStatus();
+    return { isEnrolled: status.isBiometricsEnabled };
+  }
+
+  async getBiometricType(): Promise<BiometricTypeResult> {
+    const status = await this.checkStatus();
+    return { biometryType: status.biometryType };
+  }
+
+  async getBiometricTypes(): Promise<BiometricTypesResult> {
+    const status = await this.checkStatus();
+    return { biometryTypes: status.biometryTypes };
+  }
+
+  async hasDeviceCredential(): Promise<HasDeviceCredentialResult> {
+    const status = await this.checkStatus();
+    return { hasDeviceCredential: status.isDeviceSecure };
+  }
+
+  async getBiometricStrengthLevel(): Promise<BiometricStrengthResult> {
+    const status = await this.checkStatus();
+    return { strengthLevel: status.strongBiometryIsAvailable ? 'strong' : 'none' };
+  }
+
+  async getAuthenticationType(): Promise<AuthenticationTypeResult> {
+    // Web never reports which credential satisfied the ceremony.
+    return { authenticationType: 'unknown' };
+  }
+
+  async enroll(): Promise<void> {
+    this.throwWebError(FortressErrorCode.UNAVAILABLE);
   }
 
   /**
@@ -690,8 +791,12 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
     if (options.biometryType === 'none') {
       this.securityOverrides.isBiometricsAvailable = false;
       this.securityOverrides.isBiometricsEnabled = false;
+      this.securityOverrides.biometryTypes = [];
+      this.securityOverrides.strongBiometryIsAvailable = false;
     } else {
       this.securityOverrides.isBiometricsAvailable = true;
+      this.securityOverrides.biometryTypes = [options.biometryType];
+      this.securityOverrides.strongBiometryIsAvailable = true;
     }
 
     await this.refreshSecuritySignals(true);
@@ -788,6 +893,8 @@ export class FortressWeb extends WebPlugin implements FortressPlugin {
       isBiometricsEnabled: this.securityOverrides.isBiometricsEnabled ?? status.isBiometricsEnabled,
       isDeviceSecure: this.securityOverrides.isDeviceSecure ?? status.isDeviceSecure,
       biometryType: this.securityOverrides.biometryType ?? status.biometryType,
+      biometryTypes: this.securityOverrides.biometryTypes ?? status.biometryTypes,
+      strongBiometryIsAvailable: this.securityOverrides.strongBiometryIsAvailable ?? status.strongBiometryIsAvailable,
     };
   }
 

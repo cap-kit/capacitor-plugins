@@ -146,6 +146,18 @@ class Fortress(
     lockoutUntilMs = 0
   }
 
+  /**
+   * Clears failure counters without touching session timestamps.
+   *
+   * Used by side-effect-free ceremonies ([authenticateIdentity]) so a
+   * successful identity proof resets lockout pressure without unlocking
+   * anything.
+   */
+  private fun clearBiometricFailureState() {
+    failedBiometricAttempts = 0
+    lockoutUntilMs = 0
+  }
+
   private fun assertNotLockedOut() {
     if (System.currentTimeMillis() < lockoutUntilMs) {
       throw NativeError.SecurityViolation(ErrorMessages.SECURITY_VIOLATION)
@@ -268,6 +280,52 @@ class Fortress(
         }
     }
   }
+
+  /**
+   * Verifies identity without touching vault or session state.
+   *
+   * Runs the biometric ceremony only: no session transition, no privacy
+   * overlay change, no activity timestamp. Failure counters still apply
+   * (brute-force protection); a success clears them without unlocking
+   * anything.
+   */
+  fun authenticateIdentity(
+    activity: FragmentActivity,
+    promptOptions: BiometricAuth.PromptOptions?,
+    allowPasscode: Boolean,
+    completion: (Result<Unit>) -> Unit,
+  ) {
+    try {
+      assertNotLockedOut()
+    } catch (error: Throwable) {
+      completion(Result.failure(error))
+      return
+    }
+
+    biometricAuth.unlock(
+      activity = activity,
+      allowPasscode = allowPasscode,
+      promptText = config.biometricPromptText,
+      promptOptions = promptOptions,
+    ) { result ->
+      result
+        .onSuccess {
+          clearBiometricFailureState()
+          completion(Result.success(Unit))
+        }.onFailure { error ->
+          recordBiometricFailure(error)
+          completion(Result.failure(error))
+        }
+    }
+  }
+
+  /** Dismisses an ongoing authentication prompt, if any. */
+  fun cancelActiveAuthentication() {
+    biometricAuth.cancelActiveAuthentication()
+  }
+
+  /** Credential class of the last successful native ceremony in this session. */
+  fun getAuthenticationType(): String = biometricAuth.lastAuthenticationType
 
   fun lock(activity: android.app.Activity?) {
     if (isPrivacyScreenEnabled()) {
@@ -703,7 +761,7 @@ class Fortress(
    * Resolves whether passcode/device credential fallback is allowed
    * according to fallback strategy semantics.
    */
-  private fun resolveAllowPasscode(): Boolean =
+  fun resolveAllowPasscode(): Boolean =
     when (config.fallbackStrategy) {
       "deviceCredential" -> true
       "none" -> false
@@ -728,6 +786,25 @@ class Fortress(
       "biometryType",
       overrideBiometryType ?: status.getString("biometryType") ?: "none",
     )
+    val typeOverride = overrideBiometryType
+    if (typeOverride != null) {
+      merged.put(
+        "biometryTypes",
+        if (typeOverride == "none") emptyList<String>() else listOf(typeOverride),
+      )
+      merged.put("strongBiometryIsAvailable", typeOverride != "none")
+    } else {
+      val types = status.optJSONArray("biometryTypes")
+      if (types != null) {
+        merged.put("biometryTypes", types)
+      } else {
+        merged.put("biometryTypes", emptyList<String>())
+      }
+      merged.put(
+        "strongBiometryIsAvailable",
+        status.getBool("strongBiometryIsAvailable") ?: false,
+      )
+    }
     return merged
   }
 

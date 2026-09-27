@@ -13,11 +13,21 @@ import androidx.fragment.app.FragmentActivity
 import com.getcapacitor.JSObject
 import io.capkit.fortress.error.ErrorMessages
 import io.capkit.fortress.error.NativeError
+import org.json.JSONArray
 import java.util.concurrent.atomic.AtomicBoolean
 
 class BiometricAuth(
   private val context: Context,
 ) {
+  @Volatile private var activePrompt: BiometricPrompt? = null
+
+  /**
+   * Credential class of the last successful ceremony in this process
+   * (`biometric`, `deviceCredential`, `unknown`).
+   */
+  @Volatile var lastAuthenticationType: String = "unknown"
+    private set
+
   data class PromptOptions(
     val title: String?,
     val subtitle: String?,
@@ -59,6 +69,8 @@ class BiometricAuth(
         executor,
         object : BiometricPrompt.AuthenticationCallback() {
           override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+            activePrompt = null
+            lastAuthenticationType = mapAuthenticationType(result)
             if (completed.compareAndSet(false, true)) {
               completion(Result.success(Unit))
             }
@@ -68,12 +80,14 @@ class BiometricAuth(
             errorCode: Int,
             errString: CharSequence,
           ) {
+            activePrompt = null
             if (completed.compareAndSet(false, true)) {
               completion(Result.failure(mapPromptError(errorCode, errString.toString())))
             }
           }
         },
       )
+    activePrompt = biometricPrompt
 
     val promptBuilder =
       BiometricPrompt
@@ -126,8 +140,61 @@ class BiometricAuth(
     status.put("isBiometricsAvailable", isBiometricsAvailable)
     status.put("isBiometricsEnabled", isBiometricsEnabled)
     status.put("biometryType", biometryType)
+    status.put("biometryTypes", JSONArray(getBiometryTypes(context)))
+    status.put("strongBiometryIsAvailable", isStrongBiometryAvailable())
     return status
   }
+
+  /**
+   * Dismisses the in-flight prompt, if any.
+   *
+   * The pending completion fires with a cancellation error; safe to call
+   * when idle.
+   */
+  fun cancelActiveAuthentication() {
+    activePrompt?.cancelAuthentication()
+    activePrompt = null
+  }
+
+  /**
+   * Every biometry modality advertised by the device hardware.
+   * Display helper — always decide with availability checks instead.
+   */
+  fun getBiometryTypes(context: Context): List<String> {
+    val packageManager = context.packageManager
+    val types = mutableListOf<String>()
+    if (packageManager.hasSystemFeature(PackageManager.FEATURE_FINGERPRINT)) {
+      types.add("fingerprint")
+    }
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+      packageManager.hasSystemFeature(PackageManager.FEATURE_FACE)
+    ) {
+      types.add("faceId")
+    }
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+      packageManager.hasSystemFeature(PackageManager.FEATURE_IRIS)
+    ) {
+      types.add("iris")
+    }
+    return types
+  }
+
+  /** Whether strong-class biometrics are usable right now. */
+  fun isStrongBiometryAvailable(): Boolean =
+    BiometricManager.from(context).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) ==
+      BiometricManager.BIOMETRIC_SUCCESS
+
+  private fun mapAuthenticationType(result: BiometricPrompt.AuthenticationResult): String =
+    try {
+      when (result.authenticationType) {
+        BiometricPrompt.AUTHENTICATION_RESULT_TYPE_DEVICE_CREDENTIAL -> "deviceCredential"
+        BiometricPrompt.AUTHENTICATION_RESULT_TYPE_BIOMETRIC -> "biometric"
+        else -> "unknown"
+      }
+    } catch (_: Exception) {
+      // Older runtimes may not report the credential class.
+      "unknown"
+    }
 
   private fun resolveBiometryType(context: Context): String {
     val packageManager = context.packageManager

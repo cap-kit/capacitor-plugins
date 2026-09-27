@@ -135,6 +135,10 @@ data class DeviceSecurityStatusResult(
   val isDeviceSecure: Boolean,
   @SerialName("biometryType")
   val biometryType: String,
+  @SerialName("biometryTypes")
+  val biometryTypes: List<String>,
+  @SerialName("strongBiometryIsAvailable")
+  val strongBiometryIsAvailable: Boolean,
 )
 
 @Serializable
