@@ -101,7 +101,7 @@ pnpm run build:android  # build web + cap sync android + open Android Studio
 
 Unified Capacitor v8 plugin for native device information: battery, screen, OS and hardware identifiers.
 
-<a href="./packages/device"><strong>Docs</strong></a> •
+<a href="./packages/device"><strong>Docs</strong></a> • 
 <a href="https://www.npmjs.com/package/@cap-kit/device"><strong>NPM</strong></a>
 
 </td>
@@ -117,7 +117,7 @@ Unified Capacitor v8 plugin for native device information: battery, screen, OS a
 
 Runtime integrity and environment signal detection for Capacitor v8 applications.
 
-<a href="./packages/integrity"><strong>Docs</strong></a> •
+<a href="./packages/integrity"><strong>Docs</strong></a> • 
 <a href="https://www.npmjs.com/package/@cap-kit/integrity"><strong>NPM</strong></a>
 
 </td>
@@ -133,7 +133,7 @@ Runtime integrity and environment signal detection for Capacitor v8 applications
 
 Unified, high-performance contact management for Capacitor with zero-permission picking and capability-based access.
 
-<a href="./packages/people"><strong>Docs</strong></a> •
+<a href="./packages/people"><strong>Docs</strong></a> • 
 <a href="https://www.npmjs.com/package/@cap-kit/people"><strong>NPM</strong></a>
 
 </td>
@@ -151,7 +151,7 @@ Unified, high-performance contact management for Capacitor with zero-permission 
 
 Unified Capacitor v8 plugin for native In-App Reviews and cross-platform Store navigation.
 
-<a href="./packages/rank"><strong>Docs</strong></a> •
+<a href="./packages/rank"><strong>Docs</strong></a> • 
 <a href="https://www.npmjs.com/package/@cap-kit/rank"><strong>NPM</strong></a>
 
 </td>
@@ -167,7 +167,7 @@ Unified Capacitor v8 plugin for native In-App Reviews and cross-platform Store n
 
 Redsys InApp SDK bridge for Capacitor v8. Supports native Direct Payment and secure 3D Secure (3DS) WebView flows with unified cross-platform API and HMAC signature utilities.
 
-<a href="./packages/redsys"><strong>Docs</strong></a> •
+<a href="./packages/redsys"><strong>Docs</strong></a> • 
 <a href="https://www.npmjs.com/package/@cap-kit/redsys"><strong>NPM</strong></a>
 
 </td>
@@ -183,7 +183,7 @@ Redsys InApp SDK bridge for Capacitor v8. Supports native Direct Payment and sec
 
 Capacitor plugin to open app and system settings on iOS and Android.
 
-<a href="./packages/settings"><strong>Docs</strong></a> •
+<a href="./packages/settings"><strong>Docs</strong></a> • 
 <a href="https://www.npmjs.com/package/@cap-kit/settings"><strong>NPM</strong></a>
 
 </td>
@@ -201,7 +201,7 @@ Capacitor plugin to open app and system settings on iOS and Android.
 
 Runtime TLS leaf certificate SHA-256 fingerprint validation plugin for Capacitor (iOS & Android)
 
-<a href="./packages/tls-fingerprint"><strong>Docs</strong></a> •
+<a href="./packages/tls-fingerprint"><strong>Docs</strong></a> • 
 <a href="https://www.npmjs.com/package/@cap-kit/tls-fingerprint"><strong>NPM</strong></a>
 
 </td>
@@ -212,6 +212,7 @@ Runtime TLS leaf certificate SHA-256 fingerprint validation plugin for Capacitor
 
 <details>
 <summary><strong>📱 Compact View (Mobile Friendly)</strong></summary>
+
 
 ### 📱 Device
 
