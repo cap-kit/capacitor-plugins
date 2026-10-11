@@ -296,8 +296,8 @@ class RedsysPlugin : Plugin() {
    * into the bridge DTO, so the hand-rolled Map-to-JSObject conversion
    * in [RedsysUtils.resultToJSObject] is no longer needed.
    */
-  private fun mapPaymentResult(res: ResultResponse): RedsysPaymentResponseOK {
-    return RedsysPaymentResponseOK(
+  private fun mapPaymentResult(res: ResultResponse): RedsysPaymentResponseOK =
+    RedsysPaymentResponseOK(
       code = res.responseCode?.toIntOrNull() ?: 0,
       desc = res.desc ?: "",
       amount = res.amount ?: "",
@@ -322,7 +322,6 @@ class RedsysPlugin : Plugin() {
       merchantData = res.merchantData,
       extraParams = parseExtraParams(res.extraParams),
     )
-  }
 
   /**
    * Parses the SDK's extraParams JSON string into a typed map.
