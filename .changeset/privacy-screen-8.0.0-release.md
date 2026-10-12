@@ -1,4 +1,5 @@
----."@cap-kit/privacy-screen": minor
+---
+"@cap-kit/privacy-screen": minor
 ---
 
 First stable release of @cap-kit/privacy-screen plugin.
