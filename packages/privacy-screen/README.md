@@ -1,274 +1,415 @@
-<div align="center">
-  <img src="./assets/logo.png" alt="CapKit Logo" width="160" />
-
-# CapKit Monorepo
-
-**Enterprise-grade Capacitor 8 plugins focused on performance, security and architectural determinism.**
-
-<br />
-
-<a href="https://github.com/cap-kit/capacitor-plugins/actions">
-  <img
-    src="https://img.shields.io/github/actions/workflow/status/cap-kit/capacitor-plugins/ci.yml?branch=main&label=CI&logo=github&style=flat-square"
-    alt="CI Status"
-  />
-</a>
-<a href="https://pnpm.io/">
-  <img
-    src="https://img.shields.io/badge/maintained%20with-pnpm-cc00ff.svg?style=flat-square&logo=pnpm&logoColor=white"
-    alt="pnpm"
-  />
-</a>
-<a href="https://github.com/changesets/changesets">
-  <img
-    src="https://img.shields.io/badge/maintained%20with-changesets-176de3.svg?style=flat-square&logo=git&logoColor=white"
-    alt="changesets"
-  />
-</a>
-<a href="./LICENSE">
-  <img
-    src="https://img.shields.io/github/license/cap-kit/capacitor-plugins?style=flat-square&logo=open-source-initiative&logoColor=white&color=green"
-    alt="License"
-  />
-</a>
-<a href="https://github.com/cap-kit/capacitor-plugins/commits/main">
-  <img
-    src="https://img.shields.io/github/last-commit/cap-kit/capacitor-plugins?style=flat-square&logo=git&logoColor=white&label=last%20commit&color=blue"
-    alt="Last Commit"
-  />
-</a>
-<a href="https://turbo.build/">
-  <img
-    src="https://img.shields.io/badge/maintained%20with-turborepo-EF4444?style=flat-square&logo=turborepo&logoColor=white"
-    alt="Turborepo"
-  />
-</a>
-<a href="https://github.com/renovatebot/renovate">
-  <img
-    src="https://img.shields.io/badge/renovate-enabled-brightgreen.svg?style=flat-square&logo=renovatebot&logoColor=white"
-    alt="Renovate"
-  />
-</a>
-
-<br />
-
-[Plugins](#-plugins-collection) •
-[Demo App](#-demo-app) •
-[Architecture](#-architecture--standards) •
-[Getting Started](#-getting-started) •
-[Contributing](#-contributing)
-
-</div>
-
----
-
-## ✨ Why CapKit
-
-|                                    |                                                        |
-| ---------------------------------- | ------------------------------------------------------ |
-| ⚡ **Capacitor 8 Native-First**    | Built specifically for the latest Capacitor runtime    |
-| 🏗 **Strict Monorepo Architecture** | Deterministic pnpm workspace + Turborepo orchestration |
-| 🔒 **Security-Oriented**           | Integrity signals, SSL pinning, runtime hardening      |
-| 🚀 **Automated Releases**          | Changesets + CI-driven publishing                      |
-| 🤖 **Dependency Safety**           | Renovate with controlled production updates            |
-
----
-
-## 📦 Plugins Collection
-
-Each plugin is fully cross-platform:
-
-- Web (TypeScript)
-- iOS (Swift)
-- Android (Kotlin)
-
-Every plugin also ships a **runnable demo app** — see [Demo App](#-demo-app).
-
----
-
-## 🧪 Demo App
-
-Every plugin includes a **ready-to-run demo app** built from a shared **Angular + Ionic + Capacitor 8** template.
-
-| Component       | Path                             | Description                                          |
-| --------------- | -------------------------------- | ---------------------------------------------------- |
-| Shared template | [`demo/`](./demo)                | Reference app used as the base for every plugin demo |
-| Per-plugin app  | `packages/<plugin>/example-app/` | Generated demo wiring the local plugin via `file:..` |
-
-The per-plugin `example-app/` is **generated**, never edited by hand. [`scripts/prepare-demo.ts`](./scripts/prepare-demo.ts) copies the shared `demo/` app, applies plugin-specific patches (Capacitor config, routes, native bootstrapping) and copies static pages from each plugin's `example-app/static/`.
-
-### Regenerate a demo
-
-```bash
-pnpm install
-tsx scripts/prepare-demo.ts <plugin-name>
-```
-
-### Run a demo
-
-```bash
-# From packages/<plugin>/example-app/
-pnpm install
-pnpm run build:ios      # build web + cap sync ios + open Xcode
-pnpm run build:android  # build web + cap sync android + open Android Studio
-```
-
----
-
-<!-- PLUGINS_TABLE_START -->
-
-> **Information:** All plugins are optimized for **Capacitor v8+** and tested for native parity.
-
 <p align="center">
-  📦 <strong>Total Plugins:</strong> 7 &nbsp;&bull;&nbsp; ⚡ <strong>Core:</strong>{' '}
   <img
-    src="https://img.shields.io/badge/Capacitor-v8+-05f.svg?style=flat-square&logo=capacitor&logoColor=white"
-    alt="Capacitor v8+"
-    valign="middle"
+    src="https://raw.githubusercontent.com/cap-kit/capacitor-plugins/main/assets/logo.png"
+    alt="CapKit Logo"
+    width="128"
   />
 </p>
 
-<table width="100%">
-<tr>
+<h3 align="center">Privacy Screen</h3>
+<p align="center">
+  <strong>
+    <code>@cap-kit/privacy-screen</code>
+  </strong>
+</p>
 
-<td align="center" width="33%" valign="top">
+<p align="center">
+  A <strong>Capacitor v8 plugin</strong> for privacy-screen protection on <strong>iOS and Android</strong>, with a Web
+  implementation for API parity.<br>
+  Hides app content in the app switcher and recents view, blocks screenshots and screen recordings on Android, installs an
+  app-switcher blur overlay on iOS, and exposes screenshot and screen-recording signals for detection.<br>
+  Built following the <strong>Cap-Kit architectural standards</strong> with strict separation between JavaScript, bridge,
+  and native implementations (Swift / Kotlin).
+</p>
 
-### <a href="./packages/device">📱 Device</a>
+<p align="center">
+  <a href="https://www.npmjs.com/package/@cap-kit/privacy-screen">
+    <img src="https://img.shields.io/npm/v/@cap-kit/privacy-screen?color=blue&label=npm&logo=npm&style=flat-square" alt="npm version">
+  </a>
+  <a href="https://github.com/cap-kit/capacitor-plugins/actions">
+    <img src="https://img.shields.io/github/actions/workflow/status/cap-kit/capacitor-plugins/ci.yml?branch=main&label=CI&logo=github&style=flat-square" alt="CI Status" />
+  </a>
+  <a href="https://capacitorjs.com/">
+    <img src="https://img.shields.io/badge/Capacitor-Plugin-blue?logo=capacitor&style=flat-square" alt="Capacitor Plugin">
+  </a>
+  <a href="https://www.npmjs.com/package/@cap-kit/privacy-screen">
+    <img src="https://img.shields.io/npm/dm/@cap-kit/privacy-screen?style=flat-square" alt="Downloads" />
+  </a>
+  <a href="./LICENSE">
+    <img src="https://img.shields.io/npm/l/@cap-kit/privacy-screen?style=flat-square&logo=open-source-initiative&logoColor=white&color=green" alt="License" />
+  </a>
+  <img src="https://img.shields.io/maintenance/yes/2026?style=flat-square" alt="Maintained" />
+</p>
+<br>
 
-<a href="https://www.npmjs.com/package/@cap-kit/device">
-  <code>@cap-kit/device</code>
-</a>
+## Overview
 
-<a href="https://www.npmjs.com/package/@cap-kit/device">
-  <img src="https://img.shields.io/npm/v/@cap-kit/device?style=flat-square&label=npm&logo=npm" alt="npm version" />
-</a>
-<a href="https://www.npmjs.com/package/@cap-kit/device">
-  <img
-    src="https://img.shields.io/npm/dm/@cap-kit/device?style=flat-square&label=downloads&logo=npm&color=orange"
-    alt="downloads"
-  />
-</a>
+This Capacitor plugin provides a unified API for privacy-screen protection on **iOS and Android**. It hides app content in the OS app switcher and recents view, blocks screenshots and screen recordings where the platform allows it, and exposes detection signals when it cannot prevent them.
 
-Unified Capacitor v8 plugin for native device information: battery, screen, OS and hardware identifiers.
+- On Android, sets `FLAG_SECURE` while enabled to hide the app snapshot and block screenshots and screen recordings, with optional dim/scrim overlays.
+- On iOS, installs a full-screen blur overlay over the app-switcher snapshot and emits `screenshotTaken` and screen-recording events.
+- It does NOT prevent iOS screenshots — no public API can. `screenshotTaken` is a post-facto detection signal, never a barrier.
+- It is a UI-hygiene control, not DRM or authentication.
 
-<a href="./packages/device">
-  <strong>Docs</strong>
-</a>
-•
-<a href="https://www.npmjs.com/package/@cap-kit/device">
-  <strong>NPM</strong>
-</a>
+### Platform Support
 
-</td>
+| Platform | Status                                                                      |
+| -------- | --------------------------------------------------------------------------- |
+| iOS      | Supported                                                                   |
+| Android  | Supported                                                                   |
+| Web      | State tracking only — no OS-level protection; `screenshotTaken` never fires |
 
-<td align="center" width="33%" valign="top">
+## Documentation
 
-### <a href="./packages/integrity">🛡️ Integrity</a>
+- [Usage guide](docs/guide.md) — per-screen protection, screenshot detection, and the Web platform
+- [Configuration](docs/configuration.md) — static config, per-call display options, and defaults
+- [Platform behavior](docs/privacy.md) — Android `FLAG_SECURE`, iOS blur overlay, and Web behavior
+- [Security model](docs/security.md) — what the plugin protects against and what it does not
+- [API notes](docs/api-notes.md) — return shapes, idempotency, and platform availability
+- [Contributing](CONTRIBUTING.md)
 
-<a href="https://www.npmjs.com/package/@cap-kit/integrity">
-  <code>@cap-kit/integrity</code>
-</a>
+---
 
-<a href="https://www.npmjs.com/package/@cap-kit/integrity">
-  <img src="https://img.shields.io/npm/v/@cap-kit/integrity?style=flat-square&label=npm&logo=npm" alt="npm version" />
-</a>
-<a href="https://www.npmjs.com/package/@cap-kit/integrity">
-  <img
-    src="https://img.shields.io/npm/dm/@cap-kit/integrity?style=flat-square&label=downloads&logo=npm&color=orange"
-    alt="downloads"
-  />
-</a>
+## Install
 
-Runtime integrity and environment signal detection for Capacitor v8 applications.
+```bash
+pnpm add @cap-kit/privacy-screen
+npx cap sync
+```
 
-<a href="./packages/integrity">
-  <strong>Docs</strong>
-</a>
-•
-<a href="https://www.npmjs.com/package/@cap-kit/integrity">
-  <strong>NPM</strong>
-</a>
+---
 
-</td>
+## Configuration
 
-<td align="center" width="33%" valign="top">
+<docgen-config>
+<!--Update the source file JSDoc comments and rerun docgen to update the docs below-->
 
-### <a href="./packages/people">👥 People</a>
+Configuration options for the PrivacyScreen plugin.
 
-<a href="https://www.npmjs.com/package/@cap-kit/people">
-  <code>@cap-kit/people</code>
-</a>
+| Prop                 | Type                 | Description                                                                                                           | Default            | Since |
+| -------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------ | ----- |
+| **`verboseLogging`** | <code>boolean</code> | Enables verbose native logging.                                                                                       | <code>false</code> | 8.0.0 |
+| **`enabled`**        | <code>boolean</code> | Enables privacy protection automatically when the native plugin loads, without waiting for the first `enable()` call. | <code>false</code> | 8.0.0 |
 
-<a href="https://www.npmjs.com/package/@cap-kit/people">
-  <img src="https://img.shields.io/npm/v/@cap-kit/people?style=flat-square&label=npm&logo=npm" alt="npm version" />
-</a>
-<a href="https://www.npmjs.com/package/@cap-kit/people">
-  <img
-    src="https://img.shields.io/npm/dm/@cap-kit/people?style=flat-square&label=downloads&logo=npm&color=orange"
-    alt="downloads"
-  />
-</a>
+### Examples
 
-Unified, high-performance contact management for Capacitor with zero-permission picking and capability-based access.
+In `capacitor.config.json`:
 
-<a href="./packages/people">
-  <strong>Docs</strong>
-</a>
-•
-<a href="https://www.npmjs.com/package/@cap-kit/people">
-  <strong>NPM</strong>
-</a>
+```json
+{
+  "plugins": {
+    "PrivacyScreen": {
+      "verboseLogging": false,
+      "enabled": false
+    }
+  }
+}
+```
 
-</td>
-</tr>
-<tr>
+In `capacitor.config.ts`:
 
-<td align="center" width="33%" valign="top">
+```ts
+/// <reference types="@cap-kit/privacy-screen" />
 
-### <a href="./packages/rank">⭐ Rank</a>
+import { CapacitorConfig } from '@capacitor/cli';
 
-<a href="https://www.npmjs.com/package/@cap-kit/rank">
-  <code>@cap-kit/rank</code>
-</a>
+const config: CapacitorConfig = {
+  plugins: {
+    PrivacyScreen: {
+      verboseLogging: false,
+      enabled: false,
+    },
+  },
+};
 
-<a href="https://www.npmjs.com/package/@cap-kit/rank">
-  <img src="https://img.shields.io/npm/v/@cap-kit/rank?style=flat-square&label=npm&logo=npm" alt="npm version" />
-</a>
-<a href="https://www.npmjs.com/package/@cap-kit/rank">
-  <img
-    src="https://img.shields.io/npm/dm/@cap-kit/rank?style=flat-square&label=downloads&logo=npm&color=orange"
-    alt="downloads"
-  />
-</a>
+export default config;
+```
 
-Unified Capacitor v8 plugin for native In-App Reviews and cross-platform Store navigation.
+</docgen-config>
 
-<a href="./packages/rank">
-  <strong>Docs</strong>
-</a>
-•
-<a href="https://www.npmjs.com/package/@cap-kit/rank">
-  <strong>NPM</strong>
-</a>
+---
 
-</td>
+## API
 
-<td align="center" width="33%" valign="top">
+<docgen-index>
 
-### <a href="./packages/redsys">💳 Redsys</a>
+- [`enable(...)`](#enable)
+- [`disable()`](#disable)
+- [`isEnabled()`](#isenabled)
+- [`addListener('screenshotTaken', ...)`](#addlistenerscreenshottaken-)
+- [`addListener('screenRecordingStarted', ...)`](#addlistenerscreenrecordingstarted-)
+- [`addListener('screenRecordingStopped', ...)`](#addlistenerscreenrecordingstopped-)
+- [`removeAllListeners()`](#removealllisteners)
+- [`getPluginVersion()`](#getpluginversion)
+- [Interfaces](#interfaces)
 
-<a href="https://www.npmjs.com/package/@cap-kit/redsys">
-  <code>@cap-kit/redsys</code>
-</a>
+</docgen-index>
 
-<a href="https://www.npmjs.com/package/@cap-kit/redsys">
-  <img src="https://img.shields.io/npm/v/@cap-kit/redsys?style=flat-square&label=npm&logo=npm" alt="npm version" />
-</a>
-<a href="https://www.npmjs.com/package/@cap-kit/redsys">
-  <img
-    src="https://img.shields.io/npm/dm/@cap-kit/redsys?style=flat-square&label=downloads&logo=npm&color=orange"
-    alt="downloads"
-  />
-</a>
+<docgen-api>
+<!--Update the source file JSDoc comments and rerun docgen to update the docs below-->
 
-... (+223 lines) [see remaining: rtk proxy git '-C' '/Volumes/Data/IA_PROJECT/capkit-suite/capkit-capacitor-plugins/packages/privacy-screen' show 'HEAD:README.md' | tail -n +168]
+Public JavaScript API for the PrivacyScreen Capacitor plugin.
+
+This interface defines a stable, platform-agnostic API compatible with the
+official `@capacitor/privacy-screen` contract, plus screenshot
+observability. All methods behave consistently across Android, iOS and Web.
+
+### enable(...)
+
+```typescript
+enable(config?: PrivacyScreenConfig) => Promise<PrivacyScreenActionResult>
+```
+
+Enables privacy-screen protection.
+
+On Android this sets `FLAG_SECURE`, which hides app content in the app
+switcher and blocks screenshots and screen recordings.
+
+On iOS this installs an overlay that hides app content in the app
+switcher.
+
+Only available on Android and iOS.
+
+| Param        | Type                                                                | Description                                    |
+| ------------ | ------------------------------------------------------------------- | ---------------------------------------------- |
+| **`config`** | <code><a href="#privacyscreenconfig">PrivacyScreenConfig</a></code> | - Optional platform-specific display behavior. |
+
+**Returns:** <code>Promise&lt;<a href="#privacyscreenactionresult">PrivacyScreenActionResult</a>&gt;</code>
+
+**Since:** 8.0.0
+
+#### Example
+
+```ts
+await PrivacyScreen.enable({ ios: { blurEffect: 'dark' } });
+```
+
+---
+
+### disable()
+
+```typescript
+disable() => Promise<PrivacyScreenActionResult>
+```
+
+Disables privacy-screen protection.
+
+Use only when the current screen must stay visible in system previews.
+
+Only available on Android and iOS.
+
+**Returns:** <code>Promise&lt;<a href="#privacyscreenactionresult">PrivacyScreenActionResult</a>&gt;</code>
+
+**Since:** 8.0.0
+
+#### Example
+
+```ts
+await PrivacyScreen.disable();
+```
+
+---
+
+### isEnabled()
+
+```typescript
+isEnabled() => Promise<PrivacyScreenStatus>
+```
+
+Returns the current privacy-screen enabled state.
+
+Only available on Android and iOS.
+
+**Returns:** <code>Promise&lt;<a href="#privacyscreenstatus">PrivacyScreenStatus</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### addListener('screenshotTaken', ...)
+
+```typescript
+addListener(eventName: "screenshotTaken", listenerFunc: () => void) => Promise<PluginListenerHandle>
+```
+
+Listens for when the user takes a screenshot of the app.
+
+The event fires after the screenshot has been taken and therefore
+cannot prevent it. On Android it is only emitted on API 34+ while
+privacy protection is active; on older versions the listener is
+never called.
+
+On iOS, this event is emitted when the user takes a screenshot,
+regardless of whether privacy protection is active.
+
+Only available on Android and iOS.
+
+| Param              | Type                           |
+| ------------------ | ------------------------------ |
+| **`eventName`**    | <code>'screenshotTaken'</code> |
+| **`listenerFunc`** | <code>() =&gt; void</code>     |
+
+**Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### addListener('screenRecordingStarted', ...)
+
+```typescript
+addListener(eventName: "screenRecordingStarted", listenerFunc: () => void) => Promise<PluginListenerHandle>
+```
+
+Listens for when the user starts a screen recording of the app.
+
+On iOS 11+, this event fires when the user starts screen recording
+(e.g., via Control Center or screenshot UI). The event can only be
+observed after the recording has started and therefore cannot be
+prevented.
+
+Only available on iOS.
+
+| Param              | Type                                  |
+| ------------------ | ------------------------------------- |
+| **`eventName`**    | <code>'screenRecordingStarted'</code> |
+| **`listenerFunc`** | <code>() =&gt; void</code>            |
+
+**Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### addListener('screenRecordingStopped', ...)
+
+```typescript
+addListener(eventName: "screenRecordingStopped", listenerFunc: () => void) => Promise<PluginListenerHandle>
+```
+
+Listens for when the user stops a screen recording of the app.
+
+On iOS 11+, this event fires when the user stops screen recording.
+The event can only be observed after the recording has stopped and
+therefore cannot be prevented.
+
+Only available on iOS.
+
+| Param              | Type                                  |
+| ------------------ | ------------------------------------- |
+| **`eventName`**    | <code>'screenRecordingStopped'</code> |
+| **`listenerFunc`** | <code>() =&gt; void</code>            |
+
+**Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt;</code>
+
+**Since:** 8.0.0
+
+---
+
+### removeAllListeners()
+
+```typescript
+removeAllListeners() => Promise<void>
+```
+
+Removes all listeners for this plugin.
+
+**Since:** 8.0.0
+
+---
+
+### getPluginVersion()
+
+```typescript
+getPluginVersion() => Promise<PluginVersionResult>
+```
+
+Returns the native plugin version.
+
+The returned version corresponds to the native implementation
+bundled with the application.
+
+**Returns:** <code>Promise&lt;<a href="#pluginversionresult">PluginVersionResult</a>&gt;</code>
+
+**Since:** 8.0.0
+
+#### Example
+
+```ts
+const { version } = await PrivacyScreen.getPluginVersion();
+```
+
+---
+
+### Interfaces
+
+#### PrivacyScreenActionResult
+
+Result returned when privacy protection is toggled.
+
+Mirrors the official `@capacitor/privacy-screen` API.
+
+| Prop          | Type                 | Description                             | Since |
+| ------------- | -------------------- | --------------------------------------- | ----- |
+| **`success`** | <code>boolean</code> | Whether the native operation completed. | 8.0.0 |
+
+#### PrivacyScreenConfig
+
+Platform-specific display options for the privacy screen.
+
+This shape mirrors the official `@capacitor/privacy-screen` configuration
+so this plugin stays a drop-in replacement.
+
+| Prop          | Type                                                                                                                               |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **`android`** | <code>{ dimBackground?: boolean; preventScreenshots?: boolean; privacyModeOnActivityHidden?: 'none' \| 'dim' \| 'splash'; }</code> |
+| **`ios`**     | <code>{ blurEffect?: 'none' \| 'light' \| 'dark'; }</code>                                                                         |
+
+#### PrivacyScreenStatus
+
+Current privacy-screen state.
+
+Mirrors the official `@capacitor/privacy-screen` API.
+
+| Prop          | Type                 | Description                                      | Since |
+| ------------- | -------------------- | ------------------------------------------------ | ----- |
+| **`enabled`** | <code>boolean</code> | Whether privacy protection is currently enabled. | 8.0.0 |
+
+#### PluginListenerHandle
+
+| Prop         | Type                                      |
+| ------------ | ----------------------------------------- |
+| **`remove`** | <code>() =&gt; Promise&lt;void&gt;</code> |
+
+#### PluginVersionResult
+
+Result object returned by the `getPluginVersion()` method.
+
+| Prop          | Type                | Description                       |
+| ------------- | ------------------- | --------------------------------- |
+| **`version`** | <code>string</code> | The native plugin version string. |
+
+</docgen-api>
+
+---
+
+## Contributing
+
+Contributions are welcome! Please read the [contributing guide](CONTRIBUTING.md) before submitting a pull request.
+
+---
+
+## Credits
+
+This plugin mirrors the official `@capacitor/privacy-screen` contract and has been
+reimplemented for the CapKit ecosystem.
+
+Original inspiration:
+
+- [https://capacitorjs.com/docs/apis/privacy-screen](https://capacitorjs.com/docs/apis/privacy-screen)
+
+---
+
+## License
+
+MIT
