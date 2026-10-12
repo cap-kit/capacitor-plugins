@@ -1,0 +1,171 @@
+<app-page-header [title]="'Privacy Screen'" />
+
+<ion-content class="ion-padding">
+  <app-info-card
+    [title]="'Privacy Screen'"
+    [subtitle]="'@cap-kit/privacy-screen'"
+    [content]="'Hide app content in the app switcher and block screenshots and screen recordings.'"
+    (githubClick)="openOnGithub()"
+  />
+
+  @if (isSupported()) {
+  <!-- STATUS CARD --------------------------------------------------------- -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="shield-checkmark-outline" class="ion-margin-end" />
+        Protection Status
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-item lines="none">
+        <ion-label>
+          <strong>Privacy Protection</strong>
+        </ion-label>
+        @if (protectionEnabled() !== null) {
+        <ion-badge slot="end" [color]="protectionEnabled()! ? 'success' : 'medium'">
+          {{ protectionEnabled()! ? 'Enabled' : 'Disabled' }}
+        </ion-badge>
+        } @else {
+        <ion-badge slot="end" color="medium">Unknown</ion-badge>
+        }
+      </ion-item>
+      <ion-button expand="block" size="small" (click)="refreshStatus()" [disabled]="inProgress()">
+        <ion-icon name="refresh" slot="start" />
+        Refresh Status
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- PROTECTION CARD ----------------------------------------------------- -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="eye-off-outline" class="ion-margin-end" />
+        Manual Control
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-text>
+        <small>
+          Enable protection before showing sensitive content, disable it on public screens. Screenshots are blocked
+          while enabled (Android) and hidden from the app switcher.
+        </small>
+      </ion-text>
+
+      <ion-item-divider />
+
+      <ion-item lines="none">
+        <ion-label>
+          <strong>Dim Background (Android)</strong><br />
+          <ion-note>Show a dim scrim instead of the splash fallback</ion-note>
+        </ion-label>
+        <ion-toggle slot="end" [checked]="dimBackground()" (ionChange)="dimBackground.set($event.detail.checked)" />
+      </ion-item>
+
+      <ion-item>
+        <ion-label>Blur Effect (iOS)</ion-label>
+        <ion-select
+          slot="end"
+          interface="popover"
+          [value]="blurEffect()"
+          (ionChange)="blurEffect.set($event.detail.value)"
+        >
+          <ion-select-option value="none">none</ion-select-option>
+          <ion-select-option value="light">light</ion-select-option>
+          <ion-select-option value="dark">dark</ion-select-option>
+        </ion-select>
+      </ion-item>
+
+      <ion-item>
+        <ion-label>On Activity Hidden (Android)</ion-label>
+        <ion-select
+          slot="end"
+          interface="popover"
+          [value]="hiddenMode()"
+          (ionChange)="hiddenMode.set($event.detail.value)"
+        >
+          <ion-select-option value="none">none</ion-select-option>
+          <ion-select-option value="dim">dim</ion-select-option>
+          <ion-select-option value="splash">splash</ion-select-option>
+        </ion-select>
+      </ion-item>
+
+      <ion-item-divider />
+
+      <div class="ion-margin-top">
+        <ion-button size="small" color="success" (click)="onEnable()" [disabled]="inProgress()">
+          <ion-icon name="lock-closed" slot="start" />
+          Enable
+          <ion-badge [color]="badgeColor(enableState())" style="margin-left: 8px">
+            {{ badgeLabel(enableState()) }}
+          </ion-badge>
+        </ion-button>
+        <ion-button size="small" color="danger" (click)="onDisable()" [disabled]="inProgress()">
+          <ion-icon name="lock-open" slot="start" />
+          Disable
+          <ion-badge [color]="badgeColor(disableState())" style="margin-left: 8px">
+            {{ badgeLabel(disableState()) }}
+          </ion-badge>
+        </ion-button>
+      </div>
+
+      <ion-item-divider />
+
+      <ion-button expand="block" size="small" fill="outline" (click)="onGetVersion()" [disabled]="inProgress()">
+        <ion-icon name="settings-outline" slot="start" />
+        Get Plugin Version ({{ displayVersion() }})
+      </ion-button>
+
+      <ion-note class="ion-margin-top ion-padding-start ion-display-block">
+        Take a screenshot while protection is enabled: a <strong>screenshotTaken</strong> event is logged below (iOS
+        always; Android on API 34+).
+      </ion-note>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- LOGS CARD ------------------------------------------------------------ -->
+  <ion-card>
+    <ion-card-header>
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <ion-card-title>
+          <ion-icon name="terminal-outline" class="ion-margin-end" />
+          Event Log
+        </ion-card-title>
+        <ion-button size="small" fill="clear" color="medium" (click)="clearLogs()"> Clear </ion-button>
+        <ion-button size="small" fill="clear" color="warning" (click)="onRemoveAllListeners()">
+          Reset Listeners
+        </ion-button>
+      </div>
+    </ion-card-header>
+    <ion-card-content>
+      @if (logs().length === 0) {
+      <p class="ion-text-muted">
+        <small>No events logged yet. Actions will appear here.</small>
+      </p>
+      } @else {
+      <div class="log-container">
+        @for (log of logs(); track $index) {
+        <div class="log-entry">
+          <ion-note>{{ log }}</ion-note>
+        </div>
+        }
+      </div>
+      }
+    </ion-card-content>
+  </ion-card>
+
+  @if (inProgress()) {
+  <div class="ion-text-center ion-padding">
+    <ion-spinner />
+  </div>
+  } } @else {
+  <ion-card>
+    <ion-card-content>
+      <p class="ion-text-muted">This plugin is not supported on this platform.</p>
+    </ion-card-content>
+  </ion-card>
+  }
+</ion-content>
+
+<app-page-footer [version]="displayVersion()" [label]="'Plugin Version'" />

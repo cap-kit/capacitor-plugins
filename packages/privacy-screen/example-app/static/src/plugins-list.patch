@@ -1,0 +1,21 @@
+--- a/src/app/plugins-list.ts
++++ b/src/app/plugins-list.ts
+@@ -10,4 +10,17 @@
+   isVisible: boolean;
+ }
+ 
+-export const PLUGINS: PluginConfig[] = [];
++export const PLUGINS: PluginConfig[] = [
++  {
++    id: 14,
++    name: 'Privacy Screen',
++    npmName: '@cap-kit/privacy-screen',
++    iconName: 'key',
++    githubUrl:
++      'https://github.com/cap-kit/capacitor-plugins/tree/main/packages/privacy-screen',
++    pathName: '/privacy-screen',
++    description: 'Privacy screen for Capacitor apps',
++    active: true,
++    isVisible: true,
++  }
++];
