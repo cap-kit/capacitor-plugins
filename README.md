@@ -84,7 +84,7 @@ pnpm run build:android  # build web + cap sync android + open Android Studio
 > **Information:** All plugins are optimized for **Capacitor v8+** and tested for native parity.
 
 <p align="center">
-  📦 <strong>Total Plugins:</strong> 7 &nbsp;&bull;&nbsp; ⚡ <strong>Core:</strong> <img src="https://img.shields.io/badge/Capacitor-v8+-05f.svg?style=flat-square&logo=capacitor&logoColor=white" alt="Capacitor v8+" valign="middle" />
+  📦 <strong>Total Plugins:</strong> 8 &nbsp;&bull;&nbsp; ⚡ <strong>Core:</strong> <img src="https://img.shields.io/badge/Capacitor-v8+-05f.svg?style=flat-square&logo=capacitor&logoColor=white" alt="Capacitor v8+" valign="middle" />
 </p>
 
 <table width="100%">
@@ -142,6 +142,22 @@ Unified, high-performance contact management for Capacitor with zero-permission 
 
 <td align="center" width="33%" valign="top">
 
+### <a href="./packages/privacy-screen">🔌 Privacy Screen</a>
+
+<a href="https://www.npmjs.com/package/@cap-kit/privacy-screen"><code>@cap-kit/privacy-screen</code></a>
+
+<a href="https://www.npmjs.com/package/@cap-kit/privacy-screen"><img src="https://img.shields.io/npm/v/@cap-kit/privacy-screen?style=flat-square&label=npm&logo=npm" alt="npm version" /></a>
+<a href="https://www.npmjs.com/package/@cap-kit/privacy-screen"><img src="https://img.shields.io/npm/dm/@cap-kit/privacy-screen?style=flat-square&label=downloads&logo=npm&color=orange" alt="downloads" /></a>
+
+Capacitor v8 plugin for privacy-screen protection: hides app content in the app switcher and blocks screenshots and screen recordings.
+
+<a href="./packages/privacy-screen"><strong>Docs</strong></a> • 
+<a href="https://www.npmjs.com/package/@cap-kit/privacy-screen"><strong>NPM</strong></a>
+
+</td>
+
+<td align="center" width="33%" valign="top">
+
 ### <a href="./packages/rank">⭐ Rank</a>
 
 <a href="https://www.npmjs.com/package/@cap-kit/rank"><code>@cap-kit/rank</code></a>
@@ -171,6 +187,8 @@ Redsys InApp SDK bridge for Capacitor v8. Supports native Direct Payment and sec
 <a href="https://www.npmjs.com/package/@cap-kit/redsys"><strong>NPM</strong></a>
 
 </td>
+</tr>
+<tr>
 
 <td align="center" width="33%" valign="top">
 
@@ -187,8 +205,6 @@ Capacitor plugin to open app and system settings on iOS and Android.
 <a href="https://www.npmjs.com/package/@cap-kit/settings"><strong>NPM</strong></a>
 
 </td>
-</tr>
-<tr>
 
 <td align="center" width="33%" valign="top">
 
@@ -205,7 +221,6 @@ Runtime TLS leaf certificate SHA-256 fingerprint validation plugin for Capacitor
 <a href="https://www.npmjs.com/package/@cap-kit/tls-fingerprint"><strong>NPM</strong></a>
 
 </td>
-<td width="33%"></td>
 <td width="33%"></td>
 </tr>
 </table>
@@ -247,6 +262,18 @@ Runtime integrity and environment signal detection for Capacitor v8 applications
 Unified, high-performance contact management for Capacitor with zero-permission picking and capability-based access.
 
 [Docs](./packages/people) • [NPM](https://www.npmjs.com/package/@cap-kit/people)
+
+---
+
+### 🔌 Privacy Screen
+
+`@cap-kit/privacy-screen`
+
+![npm](https://img.shields.io/npm/v/@cap-kit/privacy-screen?style=flat-square&label=npm&logo=npm) ![downloads](https://img.shields.io/npm/dm/@cap-kit/privacy-screen?style=flat-square&label=downloads&logo=npm&color=orange)
+
+Capacitor v8 plugin for privacy-screen protection: hides app content in the app switcher and blocks screenshots and screen recordings.
+
+[Docs](./packages/privacy-screen) • [NPM](https://www.npmjs.com/package/@cap-kit/privacy-screen)
 
 ---
 
