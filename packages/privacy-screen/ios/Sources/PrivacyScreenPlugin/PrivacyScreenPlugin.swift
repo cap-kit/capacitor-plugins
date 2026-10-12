@@ -59,18 +59,21 @@ public final class PrivacyScreenPlugin: CAPPlugin, CAPBridgedPlugin {
             object: nil
         )
 
-        // Screen recording notifications (iOS 11+)
+// Screen recording notifications (iOS 11+)
+        // Observe screen recording start/stop events posted by iOS when user
+        // starts/stops screen recording via Control Center.
+        // Notifications are only posted on iOS 11+.
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleScreenRecordingStarted),
-            name: UIApplication.screenRecordingDidStartNotification,
+            name: NSNotification.Name(rawValue: "UIApplicationScreenRecordingDidStartNotification"),
             object: nil
         )
-
+        
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleScreenRecordingStopped),
-            name: UIApplication.screenRecordingDidEndNotification,
+            name: NSNotification.Name(rawValue: "UIApplicationScreenRecordingDidEndNotification"),
             object: nil
         )
 

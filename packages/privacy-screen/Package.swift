@@ -10,7 +10,7 @@ let package = Package(
             targets: ["PrivacyScreenPlugin"])
     ],
     dependencies: [
-        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", from: "8.5.0")
+        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", from: "8.5.3")
     ],
     targets: [
         .target(
