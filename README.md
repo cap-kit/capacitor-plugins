@@ -84,7 +84,7 @@ pnpm run build:android  # build web + cap sync android + open Android Studio
 > **Information:** All plugins are optimized for **Capacitor v8+** and tested for native parity.
 
 <p align="center">
-  📦 <strong>Total Plugins:</strong> 7 &nbsp;&bull;&nbsp; ⚡ <strong>Core:</strong> <img src="https://img.shields.io/badge/Capacitor-v8+-05f.svg?style=flat-square&logo=capacitor&logoColor=white" alt="Capacitor v8+" valign="middle" />
+  📦 <strong>Total Plugins:</strong> 8 &nbsp;&bull;&nbsp; ⚡ <strong>Core:</strong> <img src="https://img.shields.io/badge/Capacitor-v8+-05f.svg?style=flat-square&logo=capacitor&logoColor=white" alt="Capacitor v8+" valign="middle" />
 </p>
 
 <table width="100%">
@@ -101,7 +101,7 @@ pnpm run build:android  # build web + cap sync android + open Android Studio
 
 Unified Capacitor v8 plugin for native device information: battery, screen, OS and hardware identifiers.
 
-<a href="./packages/device"><strong>Docs</strong></a> •
+<a href="./packages/device"><strong>Docs</strong></a> • 
 <a href="https://www.npmjs.com/package/@cap-kit/device"><strong>NPM</strong></a>
 
 </td>
@@ -117,7 +117,7 @@ Unified Capacitor v8 plugin for native device information: battery, screen, OS a
 
 Runtime integrity and environment signal detection for Capacitor v8 applications.
 
-<a href="./packages/integrity"><strong>Docs</strong></a> •
+<a href="./packages/integrity"><strong>Docs</strong></a> • 
 <a href="https://www.npmjs.com/package/@cap-kit/integrity"><strong>NPM</strong></a>
 
 </td>
@@ -133,12 +133,28 @@ Runtime integrity and environment signal detection for Capacitor v8 applications
 
 Unified, high-performance contact management for Capacitor with zero-permission picking and capability-based access.
 
-<a href="./packages/people"><strong>Docs</strong></a> •
+<a href="./packages/people"><strong>Docs</strong></a> • 
 <a href="https://www.npmjs.com/package/@cap-kit/people"><strong>NPM</strong></a>
 
 </td>
 </tr>
 <tr>
+
+<td align="center" width="33%" valign="top">
+
+### <a href="./packages/privacy-screen">🚫 Privacy Screen</a>
+
+<a href="https://www.npmjs.com/package/@cap-kit/privacy-screen"><code>@cap-kit/privacy-screen</code></a>
+
+<a href="https://www.npmjs.com/package/@cap-kit/privacy-screen"><img src="https://img.shields.io/npm/v/@cap-kit/privacy-screen?style=flat-square&label=npm&logo=npm" alt="npm version" /></a>
+<a href="https://www.npmjs.com/package/@cap-kit/privacy-screen"><img src="https://img.shields.io/npm/dm/@cap-kit/privacy-screen?style=flat-square&label=downloads&logo=npm&color=orange" alt="downloads" /></a>
+
+Capacitor v8 plugin for privacy-screen protection: hides app content in the app switcher and blocks screenshots and screen recordings.
+
+<a href="./packages/privacy-screen"><strong>Docs</strong></a> • 
+<a href="https://www.npmjs.com/package/@cap-kit/privacy-screen"><strong>NPM</strong></a>
+
+</td>
 
 <td align="center" width="33%" valign="top">
 
@@ -151,7 +167,7 @@ Unified, high-performance contact management for Capacitor with zero-permission 
 
 Unified Capacitor v8 plugin for native In-App Reviews and cross-platform Store navigation.
 
-<a href="./packages/rank"><strong>Docs</strong></a> •
+<a href="./packages/rank"><strong>Docs</strong></a> • 
 <a href="https://www.npmjs.com/package/@cap-kit/rank"><strong>NPM</strong></a>
 
 </td>
@@ -167,10 +183,12 @@ Unified Capacitor v8 plugin for native In-App Reviews and cross-platform Store n
 
 Redsys InApp SDK bridge for Capacitor v8. Supports native Direct Payment and secure 3D Secure (3DS) WebView flows with unified cross-platform API and HMAC signature utilities.
 
-<a href="./packages/redsys"><strong>Docs</strong></a> •
+<a href="./packages/redsys"><strong>Docs</strong></a> • 
 <a href="https://www.npmjs.com/package/@cap-kit/redsys"><strong>NPM</strong></a>
 
 </td>
+</tr>
+<tr>
 
 <td align="center" width="33%" valign="top">
 
@@ -183,12 +201,10 @@ Redsys InApp SDK bridge for Capacitor v8. Supports native Direct Payment and sec
 
 Capacitor plugin to open app and system settings on iOS and Android.
 
-<a href="./packages/settings"><strong>Docs</strong></a> •
+<a href="./packages/settings"><strong>Docs</strong></a> • 
 <a href="https://www.npmjs.com/package/@cap-kit/settings"><strong>NPM</strong></a>
 
 </td>
-</tr>
-<tr>
 
 <td align="center" width="33%" valign="top">
 
@@ -201,17 +217,17 @@ Capacitor plugin to open app and system settings on iOS and Android.
 
 Runtime TLS leaf certificate SHA-256 fingerprint validation plugin for Capacitor (iOS & Android)
 
-<a href="./packages/tls-fingerprint"><strong>Docs</strong></a> •
+<a href="./packages/tls-fingerprint"><strong>Docs</strong></a> • 
 <a href="https://www.npmjs.com/package/@cap-kit/tls-fingerprint"><strong>NPM</strong></a>
 
 </td>
-<td width="33%"></td>
 <td width="33%"></td>
 </tr>
 </table>
 
 <details>
 <summary><strong>📱 Compact View (Mobile Friendly)</strong></summary>
+
 
 ### 📱 Device
 
@@ -246,6 +262,18 @@ Runtime integrity and environment signal detection for Capacitor v8 applications
 Unified, high-performance contact management for Capacitor with zero-permission picking and capability-based access.
 
 [Docs](./packages/people) • [NPM](https://www.npmjs.com/package/@cap-kit/people)
+
+---
+
+### 🚫 Privacy Screen
+
+`@cap-kit/privacy-screen`
+
+![npm](https://img.shields.io/npm/v/@cap-kit/privacy-screen?style=flat-square&label=npm&logo=npm) ![downloads](https://img.shields.io/npm/dm/@cap-kit/privacy-screen?style=flat-square&label=downloads&logo=npm&color=orange)
+
+Capacitor v8 plugin for privacy-screen protection: hides app content in the app switcher and blocks screenshots and screen recordings.
+
+[Docs](./packages/privacy-screen) • [NPM](https://www.npmjs.com/package/@cap-kit/privacy-screen)
 
 ---
 
