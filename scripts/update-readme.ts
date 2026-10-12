@@ -47,6 +47,7 @@ function formatPluginName(packageName: string): string {
     package: "📦",
     logs: "📄",
     security: "🔐",
+    "secure-storage": "🔐",
     testing: "🧪",
     camera: "📸",
     device: "📱",
@@ -61,6 +62,8 @@ function formatPluginName(packageName: string): string {
     auth: "🔑",
     analytics: "📊",
     payment: "💰",
+    biometrics: "🫆",
+    "privacy-screen": "🚫",
   };
 
   const emoji = iconMap[cleanName] || "🔌";
