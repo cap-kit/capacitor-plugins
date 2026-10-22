@@ -33,6 +33,9 @@ import MachO
     /// Previous CPU load ticks for delta-based CPU usage computation.
     private var previousCpuLoad: host_cpu_load_info?
 
+    /// Test seam for the vendor identifier source. Production code never assigns it.
+    var identifierForVendorProvider: () -> UUID? = { UIDevice.current.identifierForVendor }
+
     // MARK: - Initialization
 
     /**
@@ -69,11 +72,15 @@ import MachO
     // MARK: - Device Identity
 
     /**
-     * Returns the vendor identifier and its type.
+     * Returns the vendor identifier assigned to the app on this device.
+     *
+     * - Throws: `NativeError.unavailable` when the identifier cannot be read.
      */
-    func getId() -> [String: Any] {
-        let uid = UIDevice.current.identifierForVendor?.uuidString ?? ""
-        return ["uid": uid, "type": "vendor"]
+    func getId() throws -> [String: Any] {
+        guard let identifier = identifierForVendorProvider()?.uuidString else {
+            throw NativeError.unavailable(ErrorMessages.unavailable)
+        }
+        return ["identifier": identifier]
     }
 
     // MARK: - Device Info

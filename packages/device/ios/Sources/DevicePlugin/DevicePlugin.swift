@@ -126,7 +126,7 @@ public final class DevicePlugin: CAPPlugin, CAPBridgedPlugin {
      */
     @objc func getId(_ call: CAPPluginCall) {
         do {
-            let result = implementation.getId()
+            let result = try implementation.getId()
             call.resolve(result)
         } catch let error as NativeError {
             reject(call, error: error)
@@ -139,28 +139,14 @@ public final class DevicePlugin: CAPPlugin, CAPBridgedPlugin {
      * Returns information about the underlying device, OS, and platform.
      */
     @objc func getInfo(_ call: CAPPluginCall) {
-        do {
-            let result = implementation.getInfo()
-            call.resolve(result)
-        } catch let error as NativeError {
-            reject(call, error: error)
-        } catch {
-            handleError(call, error)
-        }
+        call.resolve(implementation.getInfo())
     }
 
     /**
      * Returns information about the device battery.
      */
     @objc func getBatteryInfo(_ call: CAPPluginCall) {
-        do {
-            let result = implementation.getBatteryInfo()
-            call.resolve(result)
-        } catch let error as NativeError {
-            reject(call, error: error)
-        } catch {
-            handleError(call, error)
-        }
+        call.resolve(implementation.getBatteryInfo())
     }
 
     /**
@@ -186,105 +172,49 @@ public final class DevicePlugin: CAPPlugin, CAPBridgedPlugin {
     // MARK: - Battery Extras
 
     @objc func getBatteryExtras(_ call: CAPPluginCall) {
-        do {
-            let result = implementation.getBatteryExtras()
-            call.resolve(result)
-        } catch let error as NativeError {
-            reject(call, error: error)
-        } catch {
-            handleError(call, error)
-        }
+        call.resolve(implementation.getBatteryExtras())
     }
 
     // MARK: - Display Info
 
     @objc func getDisplayInfo(_ call: CAPPluginCall) {
-        do {
-            let result = implementation.getDisplayInfo()
-            call.resolve(result)
-        } catch let error as NativeError {
-            reject(call, error: error)
-        } catch {
-            handleError(call, error)
-        }
+        call.resolve(implementation.getDisplayInfo())
     }
 
     // MARK: - Configuration
 
     @objc func getConfiguration(_ call: CAPPluginCall) {
-        do {
-            let result = implementation.getConfiguration()
-            call.resolve(result)
-        } catch let error as NativeError {
-            reject(call, error: error)
-        } catch {
-            handleError(call, error)
-        }
+        call.resolve(implementation.getConfiguration())
     }
 
     // MARK: - Power State
 
     @objc func getPowerState(_ call: CAPPluginCall) {
-        do {
-            let result = implementation.getPowerState()
-            call.resolve(result)
-        } catch let error as NativeError {
-            reject(call, error: error)
-        } catch {
-            handleError(call, error)
-        }
+        call.resolve(implementation.getPowerState())
     }
 
     // MARK: - Memory Info
 
     @objc func getMemoryInfo(_ call: CAPPluginCall) {
-        do {
-            let result = implementation.getMemoryInfo()
-            call.resolve(result)
-        } catch let error as NativeError {
-            reject(call, error: error)
-        } catch {
-            handleError(call, error)
-        }
+        call.resolve(implementation.getMemoryInfo())
     }
 
     // MARK: - System Uptime
 
     @objc func getSystemUptime(_ call: CAPPluginCall) {
-        do {
-            let result = implementation.getSystemUptime()
-            call.resolve(result)
-        } catch let error as NativeError {
-            reject(call, error: error)
-        } catch {
-            handleError(call, error)
-        }
+        call.resolve(implementation.getSystemUptime())
     }
 
     // MARK: - App Version
 
     @objc func getAppVersion(_ call: CAPPluginCall) {
-        do {
-            let result = implementation.getAppVersion()
-            call.resolve(result)
-        } catch let error as NativeError {
-            reject(call, error: error)
-        } catch {
-            handleError(call, error)
-        }
+        call.resolve(implementation.getAppVersion())
     }
 
     // MARK: - Storage Info
 
     @objc func getStorageInfo(_ call: CAPPluginCall) {
-        do {
-            let result = implementation.getStorageInfo()
-            call.resolve(result)
-        } catch let error as NativeError {
-            reject(call, error: error)
-        } catch {
-            handleError(call, error)
-        }
+        call.resolve(implementation.getStorageInfo())
     }
 
     // MARK: - Error Mapping
