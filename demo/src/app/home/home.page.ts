@@ -36,7 +36,7 @@ import { PageFooterComponent } from '../components/page-footer.component';
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
   standalone: true,
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     IonTitle,
     IonToolbar,
@@ -55,6 +55,10 @@ import { PageFooterComponent } from '../components/page-footer.component';
 export class HomePage {
   public plugins = computed(() => PLUGINS.filter((p) => p.isVisible).sort((a, b) => a.id - b.id));
   public readonly appVersion = signal<string | undefined>(APP_VERSION);
+
+  public trackByPluginId(_index: number, plugin: { id: number }): number {
+    return plugin.id;
+  }
 
   constructor() {
     addIcons({

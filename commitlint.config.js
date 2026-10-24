@@ -6,11 +6,13 @@ const packages = fs.readdirSync(path.resolve(__dirname, "packages"));
 const apps = fs.existsSync(path.resolve(__dirname, "apps"))
   ? fs.readdirSync(path.resolve(__dirname, "apps"))
   : [];
+const demoDir = fs.existsSync(path.resolve(__dirname, "demo")) ? ["demo"] : [];
 
 // Expanded static scopes for better granularity
 const scopes = [
   ...packages,
   ...apps,
+  ...demoDir,
   "root",
   "deps",
   "release",
@@ -23,7 +25,7 @@ const scopes = [
   "scripts",
   "style",
   "infra",
-];
+].filter((scope) => scope !== ".DS_Store");
 
 module.exports = {
   /*
