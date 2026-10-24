@@ -8,6 +8,8 @@ import {
   IonBreadcrumb,
   IonIcon,
 } from '@ionic/angular';
+import { addIcons } from 'ionicons';
+import { home } from 'ionicons/icons';
 
 @Component({
   selector: 'app-page-header',
@@ -40,4 +42,8 @@ import {
 })
 export class PageHeaderComponent {
   title = input.required<string>();
+
+  constructor() {
+    addIcons({ home });
+  }
 }

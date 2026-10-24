@@ -11,10 +11,10 @@
     </ion-toolbar>
   </ion-header>
   <ion-list-header>
-    <ion-label>Default</ion-label>
+    <ion-label>Plugins</ion-label>
   </ion-list-header>
   <ion-list lines="none">
-    @for (plugin of plugins(); track $index) {
+    @for (plugin of plugins(); track trackByPluginId($index, plugin)) {
       <ion-item
         [button]="plugin.active"
         [routerLink]="plugin.active ? [plugin.pathName] : null"

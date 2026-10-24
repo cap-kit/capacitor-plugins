@@ -43,8 +43,12 @@ import { logoGithub, chevronUpOutline, chevronDownOutline } from 'ionicons/icons
           <ion-col size="auto">
             <ion-icon
               class="toggle-icon"
+              role="button"
+              tabindex="0"
+              aria-label="Toggle card content"
               [name]="expanded() ? 'chevron-up-outline' : 'chevron-down-outline'"
               (click)="toggle()"
+              (keydown)="toggleFromKeyboard($event)"
             />
           </ion-col>
         </ion-row>
@@ -63,7 +67,11 @@ import { logoGithub, chevronUpOutline, chevronDownOutline } from 'ionicons/icons
                 name="logo-github"
                 size="large"
                 class="github-icon"
+                role="button"
+                tabindex="0"
+                aria-label="Open GitHub repository"
                 (click)="openGithub()"
+                (keydown)="openGithubFromKeyboard($event)"
               />
             </ion-row>
           }
@@ -83,6 +91,12 @@ import { logoGithub, chevronUpOutline, chevronDownOutline } from 'ionicons/icons
       }
       .toggle-icon:hover {
         opacity: 1;
+      }
+      .toggle-icon:focus-visible,
+      .github-icon:focus-visible {
+        outline: 2px solid var(--ion-color-primary, #3880ff);
+        outline-offset: 2px;
+        border-radius: 4px;
       }
       .github-icon {
         cursor: pointer;
@@ -113,6 +127,20 @@ export class InfoCardComponent {
     this.expanded.update((v) => !v);
   }
 
+  toggleFromKeyboard(event: KeyboardEvent): void {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.toggle();
+    }
+  }
+
+  openGithubFromKeyboard(event: KeyboardEvent): void {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.openGithub();
+    }
+  }
+
   constructor() {
     addIcons({
       'logo-github': logoGithub,
@@ -129,6 +157,6 @@ export class InfoCardComponent {
     this.githubClick.emit();
 
     // Default behavior: open link
-    window.open(url, '_blank');
+    window.open(url, '_blank', 'noopener,noreferrer');
   }
 }

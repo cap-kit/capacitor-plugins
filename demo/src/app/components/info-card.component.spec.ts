@@ -149,7 +149,11 @@ describe('InfoCardComponent', () => {
 
       component.openGithub();
 
-      expect(windowOpenSpy).toHaveBeenCalledWith('https://github.com/test', '_blank');
+      expect(windowOpenSpy).toHaveBeenCalledWith(
+        'https://github.com/test',
+        '_blank',
+        'noopener,noreferrer',
+      );
     });
   });
 });

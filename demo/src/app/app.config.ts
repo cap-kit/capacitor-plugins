@@ -20,8 +20,9 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes, withPreloading(PreloadAllModules)),
     provideIonicAngular({}),
+    // Preload ToastController to avoid first-use latency
     provideAppInitializer(() => {
-      const toastCtrl = inject(ToastController);
+      inject(ToastController);
     }),
   ],
 };
