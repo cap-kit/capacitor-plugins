@@ -18,8 +18,8 @@ import io.capkit.privacyscreen.logger.PrivacyScreenLogger
  * PluginCall objects.
  *
  * Responsibilities:
- * - Mask snapshots via `FLAG_SECURE` while enabled.
- * - Render a neutral full-screen scrim (dim or opaque) while enabled.
+ * - Mask snapshots via `FLAG_SECURE` while enabled (app switcher, recents,
+ *   screenshots and screen recordings).
  * - Render a temporary scrim when the activity is hidden, honoring the
  *   `privacyModeOnActivityHidden` session option.
  */
@@ -74,10 +74,12 @@ class PrivacyScreenImpl(
   // ---------------------------------------------------------------------------
 
   /**
-   * Enables protection: `FLAG_SECURE` plus a neutral scrim.
+   * Enables protection by applying `FLAG_SECURE`, which blanks the app
+   * snapshot in the app switcher and blocks screenshots and recordings.
+   * No steady scrim is shown while the app is active.
    *
    * @param activity Host activity or null (state is still tracked).
-   * @param dimBackground Session option from `enable({ android })`.
+   * @param dimBackground Unused legacy option (kept for API compatibility).
    * @param hiddenMode Session option `privacyModeOnActivityHidden`.
    */
   fun enable(
@@ -90,7 +92,6 @@ class PrivacyScreenImpl(
       if (hiddenMode == "dim" || hiddenMode == "splash") hiddenMode else "none"
     enabled = true
     setWindowSecure(activity, true)
-    showOverlay(activity, dimBackground)
   }
 
   /** Disables protection: clears `FLAG_SECURE` and removes the scrim. */
@@ -119,12 +120,15 @@ class PrivacyScreenImpl(
     }
   }
 
-  /** Restores the steady-state overlay when the activity is shown again. */
+  /**
+   * Removes the transient hidden-activity scrim when the activity is shown
+   * again. `FLAG_SECURE` keeps protecting the switcher snapshot.
+   */
   fun onActivityShown(activity: android.app.Activity?) {
     if (!enabled) {
       return
     }
-    showOverlay(activity, dimBackground)
+    hideOverlay(activity)
   }
 
   // ---------------------------------------------------------------------------

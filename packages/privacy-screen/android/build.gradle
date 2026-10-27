@@ -1,13 +1,22 @@
 buildscript {
-    ext.kotlin_version = project.hasProperty("kotlin_version") ? project.property("kotlin_version") : '2.4.0'
+    ext.kotlin_version = project.hasProperty("kotlin_version") ? project.property("kotlin_version") : '2.4.20'
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:9.4.1'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.21"
-        classpath "org.jetbrains.kotlin:kotlin-serialization:$kotlin_version"
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.21'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        // kotlinx.serialization COMPILER plugin. The runtime json library alone
+        // is not enough: without this classpath the plugin id is unresolvable at
+        // configure time ("Plugin with id 'org.jetbrains.kotlin.plugin.serialization'
+        // not found"), and even with the id present the @Serializable models would
+        // get no generated serializers and every toJSObject() call would fail at
+        // runtime with "Serializer for class '...' is not found".
+        // Pinned to 2.4.21 to match the effective kotlin-gradle-plugin version
+        // (duplicate classpath entries above resolve to the highest, 2.4.21).
+        classpath 'org.jetbrains.kotlin:kotlin-serialization:2.4.21'
     }
 }
 
@@ -27,10 +36,11 @@ if (project.extensions.findByName('kotlin') == null) {
     apply plugin: 'kotlin-android'
 }
 apply plugin: 'kotlin-parcelize'
+// Generates the kotlinx.serialization serializers for the @Serializable result
+// models. Required for toJSObject() to work at runtime; see the buildscript
+// classpath note above.
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
 apply plugin: 'org.jlleitschuh.gradle.ktlint'
-if (!project.plugins.hasPlugin('kotlinx-serialization')) {
-    apply plugin: 'kotlinx-serialization'
-}
 
 import groovy.json.JsonSlurper
 

@@ -44,7 +44,10 @@ declare module '@capacitor/cli' {
 export interface PrivacyScreenConfig {
   android?: {
     /**
-     * Shows a dim scrim instead of the splash drawable while protected.
+     * Legacy option kept for API compatibility. No steady overlay is shown
+     * while the app is active: switcher protection relies on `FLAG_SECURE`,
+     * and the hidden-activity cover style is selected by
+     * `privacyModeOnActivityHidden`.
      *
      * @default false
      * @since 8.0.0

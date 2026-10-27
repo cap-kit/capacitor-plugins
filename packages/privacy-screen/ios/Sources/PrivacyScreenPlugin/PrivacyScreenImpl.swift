@@ -11,8 +11,9 @@ import UIKit
 
  Behavior (extracted from the Fortress privacy engine, adapted to the
  standalone contract):
- - `enable` renders a full-screen blur overlay on the key window so app
-   content never appears in the app-switcher snapshot.
+ - `enable` arms protection; the blur cover is rendered on the key window on
+   `willResignActive` (before the app-switcher snapshot is captured) and
+   removed when the app returns to the foreground.
  - The blur style follows the `ios.blurEffect` session option
    (`light` / `dark`, defaulting to the system style). A `none` value maps
    to the system style: unlike the official plugin, this standalone does
@@ -55,15 +56,28 @@ final class PrivacyScreenImpl: @unchecked Sendable {
     // MARK: - Protection control
 
     /// Enables protection with the requested blur style.
+    ///
+    /// The cover is not shown while the app is active; it appears on
+    /// willResignActive (app switcher, Control Center, notification shade)
+    /// and is removed when the app comes back.
     func enable(blurEffect: String?) {
         if let blurEffect, ["light", "dark", "none"].contains(blurEffect) {
             self.blurEffect = blurEffect
         }
         enabled = true
-        showOverlay()
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self, self.enabled else { return }
+            // If protection is enabled while the app is not fully active
+            // (backgrounded or inactive, e.g. launched straight into the
+            // switcher), the cover must be visible immediately; otherwise
+            // it waits for the next willResignActive event.
+            if UIApplication.shared.applicationState != .active {
+                self.showOverlay()
+            }
+        }
     }
 
-    /// Disables protection and removes the overlay.
+    /// Disables protection and removes the cover.
     func disable() {
         enabled = false
         hideOverlay()
@@ -72,6 +86,32 @@ final class PrivacyScreenImpl: @unchecked Sendable {
     /// Current protection state.
     func isEnabled() -> Bool {
         return enabled
+    }
+
+    // MARK: - App lifecycle
+
+    /// Shows the app-switcher cover when protection is enabled.
+    ///
+    /// Triggered by willResignActive so the cover is on screen before the
+    /// system captures the app-switcher snapshot.
+    func onAppWillResignActive() {
+        guard enabled else { return }
+        showOverlay()
+    }
+
+    /// Removes the app-switcher cover when the app returns to the foreground.
+    func onAppWillEnterForeground() {
+        guard enabled else { return }
+        hideOverlay()
+    }
+
+    /// Removes the cover when the app becomes active again without having
+    /// gone to the background (Control Center, notification banner, call
+    /// banner). Pairs with willResignActive, which showed it; without this
+    /// observer the cover would stay on screen forever in those cases.
+    func onAppDidBecomeActive() {
+        guard enabled else { return }
+        hideOverlay()
     }
 
     // MARK: - Overlay
@@ -114,9 +154,9 @@ final class PrivacyScreenImpl: @unchecked Sendable {
                 blurView.isUserInteractionEnabled = false
 
                 window.addSubview(blurView)
-                UIView.animate(withDuration: 0.2) {
-                    blurView.alpha = 1.0
-                }
+                // No fade-in: the cover must be fully opaque as soon as it is
+                // added, so the system snapshot never catches a mid-fade frame.
+                blurView.alpha = 1.0
                 self.overlayView = blurView
             }
         }
@@ -130,7 +170,15 @@ final class PrivacyScreenImpl: @unchecked Sendable {
             defer { self.overlayLock.unlock() }
 
             Task { @MainActor in
-                let viewToRemove = self.overlayView ?? self.keyWindow()?.viewWithTag(Self.overlayTag)
+                // Prefer the tracked reference; fall back to a scan across ALL
+                // windows so a transient key-window mismatch during the
+                // foreground transition can never orphan the cover on screen.
+                let viewToRemove = self.overlayView
+                    ?? UIApplication.shared.connectedScenes
+                        .compactMap { $0 as? UIWindowScene }
+                        .flatMap { $0.windows }
+                        .first { $0.viewWithTag(Self.overlayTag) != nil }?
+                        .viewWithTag(Self.overlayTag)
 
                 if let blurView = viewToRemove {
                     UIView.animate(withDuration: 0.2, animations: {

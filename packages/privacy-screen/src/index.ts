@@ -7,7 +7,7 @@
 
 import { registerPlugin } from '@capacitor/core';
 
-import { PrivacyScreenPlugin } from './definitions';
+import { PrivacyScreenPlugin } from './definitions.js';
 
 /**
  * The PrivacyScreen plugin instance.
@@ -15,8 +15,8 @@ import { PrivacyScreenPlugin } from './definitions';
  * Use this instance to protect app content in the app switcher and block screenshots.
  */
 const PrivacyScreen = registerPlugin<PrivacyScreenPlugin>('PrivacyScreen', {
-  web: () => import('./web').then((m) => new m.PrivacyScreenWeb()),
+  web: () => import('./web.js').then((m) => new m.PrivacyScreenWeb()),
 });
 
-export * from './definitions';
+export * from './definitions.js';
 export { PrivacyScreen };
