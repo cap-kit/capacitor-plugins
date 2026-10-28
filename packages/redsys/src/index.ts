@@ -7,7 +7,7 @@
 
 import { registerPlugin } from '@capacitor/core';
 
-import { RedsysPlugin } from './definitions';
+import { RedsysPlugin } from './definitions.js';
 
 /**
  * Main entry point for the Redsys Capacitor plugin.
@@ -19,5 +19,5 @@ const Redsys = registerPlugin<RedsysPlugin>('Redsys', {
   web: () => import('./web').then((m) => new m.RedsysWeb()),
 });
 
-export * from './definitions';
+export * from './definitions.js';
 export { Redsys };

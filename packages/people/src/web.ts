@@ -21,8 +21,8 @@ import {
   DeleteContactOptions,
   MergeContactsOptions,
   MergeContactsResult,
-} from './definitions';
-import { PLUGIN_VERSION } from './version';
+} from './definitions.js';
+import { PLUGIN_VERSION } from './version.js';
 
 type WebContact = {
   name?: string[];

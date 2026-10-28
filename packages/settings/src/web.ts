@@ -1,7 +1,7 @@
 import { WebPlugin } from '@capacitor/core';
 
-import { SettingsPlugin, PluginVersionResult } from './definitions';
-import { PLUGIN_VERSION } from './version';
+import { SettingsPlugin, PluginVersionResult } from './definitions.js';
+import { PLUGIN_VERSION } from './version.js';
 
 /**
  * Web implementation of the Settings plugin.

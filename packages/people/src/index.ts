@@ -7,7 +7,7 @@
 
 import { registerPlugin } from '@capacitor/core';
 
-import { PeoplePlugin } from './definitions';
+import { PeoplePlugin } from './definitions.js';
 
 /**
  * The People plugin instance.
@@ -18,5 +18,5 @@ const People = registerPlugin<PeoplePlugin>('People', {
   web: () => import('./web').then((m) => new m.PeopleWeb()),
 });
 
-export * from './definitions';
+export * from './definitions.js';
 export { People };
