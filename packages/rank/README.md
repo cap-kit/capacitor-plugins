@@ -72,17 +72,17 @@ npx cap sync
 
 <docgen-index>
 
-- [`isAvailable()`](#isavailable)
-- [`checkReviewEnvironment()`](#checkreviewenvironment)
-- [`requestReview(...)`](#requestreview)
-- [`presentProductPage(...)`](#presentproductpage)
-- [`openStore(...)`](#openstore)
-- [`openStoreListing(...)`](#openstorelisting)
-- [`search(...)`](#search)
-- [`openDevPage(...)`](#opendevpage)
-- [`openCollection(...)`](#opencollection)
-- [`getPluginVersion()`](#getpluginversion)
-- [Interfaces](#interfaces)
+* [`isAvailable()`](#isavailable)
+* [`checkReviewEnvironment()`](#checkreviewenvironment)
+* [`requestReview(...)`](#requestreview)
+* [`presentProductPage(...)`](#presentproductpage)
+* [`openStore(...)`](#openstore)
+* [`openStoreListing(...)`](#openstorelisting)
+* [`search(...)`](#search)
+* [`openDevPage(...)`](#opendevpage)
+* [`openCollection(...)`](#opencollection)
+* [`getPluginVersion()`](#getpluginversion)
+* [Interfaces](#interfaces)
 
 </docgen-index>
 
@@ -119,7 +119,8 @@ if (value) {
 }
 ```
 
----
+--------------------
+
 
 ### checkReviewEnvironment()
 
@@ -137,7 +138,8 @@ Android-only. On other platforms, it resolves as unavailable.
 
 **Since:** 8.0.0
 
----
+--------------------
+
 
 ### requestReview(...)
 
@@ -164,7 +166,8 @@ await Rank.requestReview();
 await Rank.requestReview({ fireAndForget: true });
 ```
 
----
+--------------------
+
 
 ### presentProductPage(...)
 
@@ -185,16 +188,17 @@ Opens the App Store product page internally (iOS) or redirects to the Store (And
 ```ts
 // On iOS, this will open an internal App Store overlay.
 await Rank.presentProductPage({
-  appId: '123456789', // iOS App ID for URL generation
+  appId: '123456789' // iOS App ID for URL generation
 });
 
 // On Android, this will redirect to the Play Store.
 await Rank.presentProductPage({
-  packageName: 'com.example.app', // Android Package Name for URL generation
+  packageName: 'com.example.app' // Android Package Name for URL generation
 });
 ```
 
----
+--------------------
+
 
 ### openStore(...)
 
@@ -217,11 +221,12 @@ On Web, it performs a URL redirect if parameters are provided.
 // On Web, this will open the store page in a new tab if identifiers are provided.
 await Rank.openStore({
   appId: '123456789', // iOS App ID for URL generation
-  packageName: 'com.example.app', // Android Package Name for URL generation
+  packageName: 'com.example.app' // Android Package Name for URL generation
 });
 ```
 
----
+--------------------
+
 
 ### openStoreListing(...)
 
@@ -244,11 +249,12 @@ If no appId is provided, it uses the one from the plugin configuration.
 // Opens the store listing page.
 // Uses the provided appId or falls back to the one in capacitor.config.ts
 await Rank.openStoreListing({
-  appId: '123456789',
+  appId: '123456789'
 });
 ```
 
----
+--------------------
+
 
 ### search(...)
 
@@ -270,11 +276,12 @@ Performs a search in the app store for the given terms.
 // Searches the store for specific terms.
 // Android: market://search | iOS: itms-apps search
 await Rank.search({
-  terms: 'Capacitor Plugins',
+  terms: 'Capacitor Plugins'
 });
 ```
 
----
+--------------------
+
 
 ### openDevPage(...)
 
@@ -295,11 +302,12 @@ Opens the developer's page in the app store.
 ```ts
 // Navigates to a developer or brand page.
 await Rank.openDevPage({
-  devId: '543216789',
+  devId: '543216789'
 });
 ```
 
----
+--------------------
+
 
 ### openCollection(...)
 
@@ -320,11 +328,12 @@ Opens a specific app collection (Android Only).
 ```ts
 // Opens a curated collection (Android only).
 await Rank.openCollection({
-  name: 'editors_choice',
+  name: 'editors_choice'
 });
 ```
 
----
+--------------------
+
 
 ### getPluginVersion()
 
@@ -347,9 +356,11 @@ bundled with the application.
 const { version } = await Rank.getPluginVersion();
 ```
 
----
+--------------------
+
 
 ### Interfaces
+
 
 #### AvailabilityResult
 
@@ -358,6 +369,7 @@ Result object returned by the `isAvailable()` method.
 | Prop        | Type                 | Description                                                 |
 | ----------- | -------------------- | ----------------------------------------------------------- |
 | **`value`** | <code>boolean</code> | Indicates whether the native In-App Review UI is available. |
+
 
 #### ReviewEnvironmentResult
 
@@ -371,6 +383,7 @@ flow can actually be displayed in the current environment.
 | **`canRequestReview`** | <code>boolean</code>                                                       | True if the environment supports showing the review dialog.        |
 | **`reason`**           | <code>'PLAY_STORE_NOT_AVAILABLE' \| 'NOT_INSTALLED_FROM_PLAY_STORE'</code> | Optional diagnostic reason when the review dialog cannot be shown. |
 
+
 #### ReviewOptions
 
 Options for the `requestReview` method.
@@ -378,6 +391,7 @@ Options for the `requestReview` method.
 | Prop                | Type                 | Description                                                                                                           |
 | ------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | **`fireAndForget`** | <code>boolean</code> | Override the global configuration to determine if the promise should resolve immediately or wait for the native flow. |
+
 
 #### StoreOptions
 
@@ -387,6 +401,7 @@ Options for the `openStore` method.
 | ----------------- | ------------------- | ---------------------------------------------- |
 | **`appId`**       | <code>string</code> | Runtime override for the Apple App ID on iOS.  |
 | **`packageName`** | <code>string</code> | Runtime override for the Android Package Name. |
+
 
 #### PluginVersionResult
 

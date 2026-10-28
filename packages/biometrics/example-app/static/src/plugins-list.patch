@@ -1,0 +1,21 @@
+--- a/src/app/plugins-list.ts
++++ b/src/app/plugins-list.ts
+@@ -10,4 +10,17 @@
+   isVisible: boolean;
+ }
+ 
+-export const PLUGINS: PluginConfig[] = [];
++export const PLUGINS: PluginConfig[] = [
++  {
++    id: 12,
++    name: 'Biometrics',
++    npmName: '@cap-kit/biometrics',
++    iconName: 'key',
++    githubUrl:
++      'https://github.com/cap-kit/capacitor-plugins/tree/main/packages/biometrics',
++    pathName: '/biometrics',
++    description: 'Biometrics for Capacitor apps',
++    active: true,
++    isVisible: true,
++  }
++];
