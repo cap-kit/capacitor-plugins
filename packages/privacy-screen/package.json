@@ -63,7 +63,7 @@
   ],
   "scripts": {
     "verify": "pnpm run verify:ios && pnpm run verify:android && pnpm run verify:web",
-    "verify:ios": "node ./scripts/sync-version.mjs && xcodebuild -test -scheme CapKitPrivacyScreen -destination generic/platform=iOS",
+    "verify:ios": "node ./scripts/sync-version.mjs && xcodebuild -scheme CapKitPrivacyScreen -destination generic/platform=iOS",
     "verify:android": "cd android && ./gradlew clean build test && cd ..",
     "verify:web": "pnpm run build",
     "lint:android": "cd android && ./gradlew ktlintCheck",

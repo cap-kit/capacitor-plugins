@@ -32,6 +32,12 @@ final class PrivacyScreenImpl: @unchecked Sendable {
     /// Session blur style requested via `enable({ ios: { blurEffect } })`.
     private var blurEffect: String = "system"
 
+    /// Read-only view of the current session blur style.
+    /// Exposed for diagnostics and headless tests; never mutated externally.
+    var activeBlurEffect: String {
+        return blurEffect
+    }
+
     private let overlayLock = NSLock()
     private var overlayView: UIView?
 
@@ -61,8 +67,8 @@ final class PrivacyScreenImpl: @unchecked Sendable {
     /// willResignActive (app switcher, Control Center, notification shade)
     /// and is removed when the app comes back.
     func enable(blurEffect: String?) {
-        if let blurEffect, ["light", "dark", "none"].contains(blurEffect) {
-            self.blurEffect = blurEffect
+        if PrivacyScreenValidators.isValidBlurEffect(blurEffect) {
+            self.blurEffect = blurEffect ?? "system"
         }
         enabled = true
         DispatchQueue.main.async { [weak self] in
@@ -118,14 +124,7 @@ final class PrivacyScreenImpl: @unchecked Sendable {
 
     @MainActor
     private func resolvedBlurStyle() -> UIBlurEffect.Style {
-        switch blurEffect {
-        case "light":
-            return .systemMaterialLight
-        case "dark":
-            return .systemMaterialDark
-        default:
-            return .systemMaterial
-        }
+        return PrivacyScreenUtils.blurStyle(for: blurEffect)
     }
 
     @MainActor

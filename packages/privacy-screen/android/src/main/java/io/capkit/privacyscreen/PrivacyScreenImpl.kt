@@ -9,6 +9,7 @@ import android.view.WindowManager
 import android.widget.FrameLayout
 import io.capkit.privacyscreen.config.PrivacyScreenConfig
 import io.capkit.privacyscreen.logger.PrivacyScreenLogger
+import io.capkit.privacyscreen.utils.PrivacyScreenValidators
 
 /**
  * Platform-specific native implementation for the PrivacyScreen plugin.
@@ -24,7 +25,15 @@ import io.capkit.privacyscreen.logger.PrivacyScreenLogger
  *   `privacyModeOnActivityHidden` session option.
  */
 class PrivacyScreenImpl(
-  private val context: Context,
+  /**
+   * Android application context.
+   *
+   * Nullable so the pure state logic can be exercised headless in JVM unit
+   * tests (no Context exists there). The implementation never reads it
+   * directly: every window/scrim side effect is driven by the activity
+   * parameter passed to each method.
+   */
+  private val context: Context?,
 ) {
   // ---------------------------------------------------------------------------
   // Properties
@@ -88,8 +97,7 @@ class PrivacyScreenImpl(
     hiddenMode: String,
   ) {
     this.dimBackground = dimBackground
-    this.privacyModeOnActivityHidden =
-      if (hiddenMode == "dim" || hiddenMode == "splash") hiddenMode else "none"
+    this.privacyModeOnActivityHidden = PrivacyScreenValidators.normalizeHiddenMode(hiddenMode)
     enabled = true
     setWindowSecure(activity, true)
   }
