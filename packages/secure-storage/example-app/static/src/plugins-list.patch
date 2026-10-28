@@ -1,0 +1,21 @@
+--- a/src/app/plugins-list.ts
++++ b/src/app/plugins-list.ts
+@@ -10,4 +10,17 @@
+   isVisible: boolean;
+ }
+ 
+-export const PLUGINS: PluginConfig[] = [];
++export const PLUGINS: PluginConfig[] = [
++  {
++    id: 13,
++    name: 'SecureStorage',
++    npmName: '@cap-kit/secure-storage',
++    iconName: 'key',
++    githubUrl:
++      'https://github.com/cap-kit/capacitor-plugins/tree/main/packages/secure-storage',
++    pathName: '/secure-storage',
++    description: 'SecureStorage for Capacitor apps',
++    active: true,
++    isVisible: true,
++  }
++];

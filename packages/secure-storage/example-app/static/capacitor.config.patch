@@ -1,0 +1,50 @@
+--- a/capacitor.config.ts
++++ b/capacitor.config.ts
+@@ -1,3 +1,7 @@
++/// <reference types='@cap-kit/secure-storage' />
++
++/// <reference types='@cap-kit/secure-storage' />
++
+ import type { CapacitorConfig } from '@capacitor/cli';
+ 
+ const config: CapacitorConfig = {
+@@ -21,6 +25,39 @@
+       style: 'DEFAULT', // 'DARK' | 'LIGHT' | 'DEFAULT'
+       insetsHandling: 'native', // 'css' | 'native' | 'disable'
+     },
++    SecureStorage: {
++      /**
++       * Enables verbose native logging.
++       * Logs are printed in Logcat (Android) and Xcode console (iOS).
++       * Default: false
++       */
++      verboseLogging: false,
++      /**
++       * Enables iCloud Keychain synchronization for stored entries.
++       * iOS only; ignored on Android and Web.
++       * Default: false
++       */
++      enableICloudKeychainSync: false,
++      /**
++       * Base64-encodes stored key names (both tiers) on top of any prefix.
++       * Obfuscation hides names from casual inspection; it is not encryption.
++       * Default: false
++       */
++      obfuscateKeys: false,
++      /**
++       * Prefix prepended to stored key names before optional encoding.
++       * Default: '' (no namespacing beyond the tier scope)
++       */
++      obfuscationPrefix: '',
++    },
++    SecureStorage: {
++      /**
++       * Enables verbose native logging.
++       * Logs are printed in Logcat (Android) and Xcode console (iOS).
++       * Default: false
++       */
++      verboseLogging: false,
++    },
+   },
+ };
+ 

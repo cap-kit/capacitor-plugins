@@ -148,14 +148,14 @@ export default config;
 
 <docgen-index>
 
-- [`check(...)`](#check)
-- [`presentBlockPage(...)`](#presentblockpage)
-- [`getPluginVersion()`](#getpluginversion)
-- [`addListener('integritySignal', ...)`](#addlistenerintegritysignal-)
-- [`removeAllListeners()`](#removealllisteners)
-- [Interfaces](#interfaces)
-- [Type Aliases](#type-aliases)
-- [Enums](#enums)
+* [`check(...)`](#check)
+* [`presentBlockPage(...)`](#presentblockpage)
+* [`getPluginVersion()`](#getpluginversion)
+* [`addListener('integritySignal', ...)`](#addlistenerintegritysignal-)
+* [`removeAllListeners()`](#removealllisteners)
+* [Interfaces](#interfaces)
+* [Type Aliases](#type-aliases)
+* [Enums](#enums)
 
 </docgen-index>
 
@@ -189,7 +189,8 @@ Executes a runtime integrity check.
 const report = await Integrity.check();
 ```
 
----
+--------------------
+
 
 ### presentBlockPage(...)
 
@@ -199,7 +200,7 @@ presentBlockPage(options?: PresentBlockPageOptions) => Promise<PresentBlockPageR
 
 Presents the configured integrity block page, if enabled.
 
-The plugin never decides _when_ this method should be called.
+The plugin never decides *when* this method should be called.
 Invocation is entirely controlled by the host application.
 
 | Param         | Type                                                                        |
@@ -216,7 +217,8 @@ Invocation is entirely controlled by the host application.
 await Integrity.presentBlockPage({ reason: 'integrity_failed' });
 ```
 
----
+--------------------
+
 
 ### getPluginVersion()
 
@@ -239,7 +241,8 @@ bundled with the application.
 const { version } = await Integrity.getPluginVersion();
 ```
 
----
+--------------------
+
 
 ### addListener('integritySignal', ...)
 
@@ -253,7 +256,6 @@ The provided callback is invoked every time a new integrity
 signal is detected by the native layer.
 
 BEHAVIOR:
-
 - Signals may be emitted at any time after plugin initialization.
 - Signals detected before listener registration MAY be delivered
   immediately after registration.
@@ -261,7 +263,6 @@ BEHAVIOR:
   across platforms.
 
 IMPORTANT:
-
 - This listener is non-blocking.
 - The plugin does NOT enforce any policy based on signals.
 
@@ -274,7 +275,8 @@ IMPORTANT:
 
 **Since:** 8.0.0
 
----
+--------------------
+
 
 ### removeAllListeners()
 
@@ -285,16 +287,17 @@ removeAllListeners() => Promise<void>
 Removes all registered listeners for this plugin.
 
 NOTE:
-
 - Removing listeners does NOT stop signal detection natively.
 - Signals may continue to be detected and buffered
   until a listener is registered again.
 
 **Since:** 8.0.0
 
----
+--------------------
+
 
 ### Interfaces
+
 
 #### IntegrityReport
 
@@ -312,16 +315,16 @@ and provides a provisional integrity score.
 | **`timestamp`**        | <code>number</code>                                                             | Unix timestamp (milliseconds) when the check was performed.                                                                                                                                                       |       |
 | **`scoreExplanation`** | <code><a href="#integrityscoreexplanation">IntegrityScoreExplanation</a></code> | Optional explanation metadata describing how the integrity score was derived from the detected signals. This field is informational only and MUST NOT be treated as a security decision or enforcement mechanism. | 8.0.0 |
 
+
 #### IntegritySignal
 
 A single integrity signal detected on the current device.
 
-Signals represent _observations_, not decisions.
+Signals represent *observations*, not decisions.
 Multiple signals MAY be combined by the host application
 to derive a security policy.
 
 Signals:
-
 - are emitted asynchronously
 - may occur at any time during the app lifecycle
 - may be emitted before or after the first call to `check()`
@@ -334,6 +337,7 @@ Signals:
 | **`description`** | <code>string</code>                                                           | Optional human-readable description. This field: - is intended for diagnostics and debugging only - MAY be omitted or redacted in production builds - MUST NOT be relied upon programmatically                                                                                                                                                                                                                                  |
 | **`metadata`**    | <code>Record&lt;string, string \| number \| boolean&gt;</code>                | Additional diagnostic metadata associated with the signal. Metadata provides granular details about the detection (e.g. matched filesystem paths, runtime artifacts, or environment properties) without altering the stable signal identifier. IMPORTANT: - Metadata is informational only. - Keys and values are NOT guaranteed to be stable. - Applications MUST NOT rely on specific metadata fields for security decisions. |
 
+
 #### IntegrityEnvironment
 
 Summary of the execution environment in which
@@ -344,6 +348,7 @@ the integrity check was performed.
 | **`platform`**     | <code>'ios' \| 'android' \| 'web'</code> | Current platform.                                                             |
 | **`isEmulator`**   | <code>boolean</code>                     | Indicates whether the app is running in an emulator or simulator environment. |
 | **`isDebugBuild`** | <code>boolean</code>                     | Indicates whether the app was built in debug/development mode.                |
+
 
 #### IntegrityScoreExplanation
 
@@ -358,17 +363,19 @@ without exposing internal scoring algorithms.
 | **`byConfidence`** | <code>{ high: number; medium: number; low: number; }</code> | Breakdown of signals by confidence level.                 |
 | **`contributors`** | <code>string[]</code>                                       | List of signal identifiers that contributed to the score. |
 
+
 #### IntegrityCheckOptions
 
 Options controlling the behavior of `Integrity.check()`.
 
-These options influence _how_ checks are performed,
-not _what_ the public API returns.
+These options influence *how* checks are performed,
+not *what* the public API returns.
 
 | Prop                   | Type                                           | Description                                                                                          |
 | ---------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | **`level`**            | <code>'basic' \| 'standard' \| 'strict'</code> | Desired strictness level. Higher levels may enable additional heuristics at the cost of performance. |
 | **`includeDebugInfo`** | <code>boolean</code>                           | Includes additional debug information in the returned signals when enabled.                          |
+
 
 #### PresentBlockPageResult
 
@@ -377,6 +384,7 @@ Result object returned by `presentBlockPage()`.
 | Prop            | Type                 | Description                                              |
 | --------------- | -------------------- | -------------------------------------------------------- |
 | **`presented`** | <code>boolean</code> | Indicates whether the block page was actually presented. |
+
 
 #### PresentBlockPageOptions
 
@@ -389,6 +397,7 @@ Options for presenting the integrity block page.
 | **`customUrl`**   | <code>string</code>                        | Optional override for the block page URL. Takes precedence over the static configuration. Maximum length: 2048 characters.                 |                    | 8.0.5 |
 | **`context`**     | <code>Record&lt;string, unknown&gt;</code> | Optional context data to pass to the block page. This value is encoded as a JSON string and appended to the URL as a query parameter.      |                    | 8.0.5 |
 
+
 #### PluginVersionResult
 
 Result returned by the getPluginVersion method.
@@ -397,13 +406,16 @@ Result returned by the getPluginVersion method.
 | ------------- | ------------------- | ---------------------------------------- |
 | **`version`** | <code>string</code> | The native version string of the plugin. |
 
+
 #### PluginListenerHandle
 
 | Prop         | Type                                      |
 | ------------ | ----------------------------------------- |
 | **`remove`** | <code>() =&gt; Promise&lt;void&gt;</code> |
 
+
 ### Type Aliases
+
 
 #### IntegritySignalCategory
 
@@ -415,30 +427,29 @@ whenever possible to avoid breaking consumers.
 
 <code>'root' | 'jailbreak' | 'emulator' | 'debug' | 'hook' | 'tamper' | 'environment'</code>
 
+
 #### IntegritySignalEvent
 
 Event payload emitted when a new integrity signal is detected.
 
-This event represents a _real-time observation_ of a potential
+This event represents a *real-time observation* of a potential
 integrity-relevant condition on the device.
 
 IMPORTANT:
-
 - Signals are observational only.
 - Emitting a signal does NOT imply that the environment is compromised.
 - No blocking or enforcement is performed by the plugin.
 
 The host application is responsible for:
-
 - interpreting signals
 - correlating multiple signals
 - applying any security or UX policy
 
-<code>
-  <a href="#integritysignal">IntegritySignal</a>
-</code>
+<code><a href="#integritysignal">IntegritySignal</a></code>
+
 
 ### Enums
+
 
 #### IntegrityConfidenceLevel
 
