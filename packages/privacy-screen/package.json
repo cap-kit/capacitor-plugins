@@ -1,6 +1,6 @@
 {
   "name": "@cap-kit/privacy-screen",
-  "version": "8.0.0",
+  "version": "8.1.0",
   "description": "Capacitor v8 plugin for privacy-screen protection: hides app content in the app switcher and blocks screenshots and screen recordings.",
   "type": "module",
   "private": false,
