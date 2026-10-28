@@ -28,7 +28,9 @@ if (project.extensions.findByName('kotlin') == null) {
 }
 apply plugin: 'kotlin-parcelize'
 apply plugin: 'org.jlleitschuh.gradle.ktlint'
-if (!project.plugins.hasPlugin('kotlinx-serialization')) { apply plugin: 'kotlinx-serialization' }
+// Generates the kotlinx.serialization serializers for the @Serializable result
+// models. Required for toJSObject() to work at runtime.
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
 
 import groovy.json.JsonSlurper
 

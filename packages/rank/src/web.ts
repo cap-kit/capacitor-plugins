@@ -1,7 +1,13 @@
 import { WebPlugin } from '@capacitor/core';
 
-import { RankPlugin, PluginVersionResult, StoreOptions, ReviewEnvironmentResult, RankErrorCode } from './definitions';
-import { PLUGIN_VERSION } from './version';
+import {
+  RankPlugin,
+  PluginVersionResult,
+  StoreOptions,
+  ReviewEnvironmentResult,
+  RankErrorCode,
+} from './definitions.js';
+import { PLUGIN_VERSION } from './version.js';
 
 /**
  * Web implementation of the Rank plugin.

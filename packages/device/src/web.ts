@@ -17,8 +17,8 @@ import {
   StorageInfo,
   SystemUptime,
   AppVersion,
-} from './definitions';
-import { PLUGIN_VERSION } from './version';
+} from './definitions.js';
+import { PLUGIN_VERSION } from './version.js';
 
 declare global {
   interface Navigator {

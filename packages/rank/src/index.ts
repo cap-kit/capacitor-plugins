@@ -7,7 +7,7 @@
 
 import { registerPlugin } from '@capacitor/core';
 
-import { RankPlugin } from './definitions';
+import { RankPlugin } from './definitions.js';
 
 /**
  * The Rank plugin instance.
@@ -18,5 +18,5 @@ const Rank = registerPlugin<RankPlugin>('Rank', {
   web: () => import('./web').then((m) => new m.RankWeb()),
 });
 
-export * from './definitions';
+export * from './definitions.js';
 export { Rank };
