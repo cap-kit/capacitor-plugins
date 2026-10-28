@@ -1,5 +1,12 @@
 # @cap-kit/tls-fingerprint
 
+## 8.1.1
+
+### Patch Changes
+
+- 5a926bd: Bump Capacitor Swift PM to 8.6.0
+- df11138: Align Android serialization and ESM imports
+
 ## 8.1.0
 
 ### Minor Changes

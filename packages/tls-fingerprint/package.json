@@ -1,6 +1,6 @@
 {
   "name": "@cap-kit/tls-fingerprint",
-  "version": "8.1.0",
+  "version": "8.1.1",
   "description": "Runtime TLS leaf certificate SHA-256 fingerprint validation plugin for Capacitor (iOS & Android)",
   "type": "module",
   "private": false,
