@@ -1,6 +1,6 @@
 {
   "name": "@cap-kit/secure-storage",
-  "version": "8.0.0",
+  "version": "8.1.0",
   "description": "Capacitor v8 plugin for encrypted key-value storage: hardware-backed secure storage on Android and iOS with iCloud sync and Keychain access levels.",
   "type": "module",
   "private": false,

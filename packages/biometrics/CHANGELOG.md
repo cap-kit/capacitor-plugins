@@ -1,5 +1,11 @@
 # @cap-kit/biometrics
 
+## 8.1.0
+
+### Minor Changes
+
+- b4ef5b0: feat: Initial release
+
 ## Unreleased — 8.0.0
 
 ### Added
