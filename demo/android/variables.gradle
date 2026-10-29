@@ -14,5 +14,5 @@ ext {
     androidxEspressoCoreVersion = '3.7.0'
     cordovaAndroidVersion = '15.0.0'
     androidxCoreKTXVersion = '1.19.1'
-    kotlin_version = '2.2.20'
+    kotlin_version = '2.4.21'
 }

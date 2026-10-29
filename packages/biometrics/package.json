@@ -1,6 +1,6 @@
 {
   "name": "@cap-kit/biometrics",
-  "version": "8.0.0",
+  "version": "8.1.0",
   "description": "Capacitor v8 plugin for biometric authentication: Face ID, Touch ID, fingerprint, face and iris recognition with device-credential fallback.",
   "type": "module",
   "private": false,
