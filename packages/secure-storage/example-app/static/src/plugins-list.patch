@@ -1,9 +1,15 @@
 --- a/src/app/plugins-list.ts
 +++ b/src/app/plugins-list.ts
-@@ -10,4 +10,17 @@
-   isVisible: boolean;
- }
+@@ -1,4 +1,5 @@
+ import { addIcons } from 'ionicons';
++import { key } from 'ionicons/icons';
  
+ export interface PluginConfig {
+   id: number;
+@@ -27,7 +28,21 @@
+  * `pathName` must be absolute, because the router resolves relative commands
+  * against the current activated route.
+  */
 -export const PLUGINS: PluginConfig[] = [];
 +export const PLUGINS: PluginConfig[] = [
 +  {
@@ -11,6 +17,7 @@
 +    name: 'SecureStorage',
 +    npmName: '@cap-kit/secure-storage',
 +    iconName: 'key',
++    icon: key,
 +    githubUrl:
 +      'https://github.com/cap-kit/capacitor-plugins/tree/main/packages/secure-storage',
 +    pathName: '/secure-storage',
@@ -19,3 +26,6 @@
 +    isVisible: true,
 +  }
 +];
+ 
+ /**
+  * Registers every icon declared by `plugins`, keyed by `iconName`.

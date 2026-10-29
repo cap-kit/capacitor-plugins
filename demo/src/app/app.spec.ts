@@ -10,9 +10,11 @@ describe('AppComponent', () => {
     }).compileComponents();
   });
 
-  it('should create the app', () => {
+  it('should create the app', async () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;
+    fixture.detectChanges();
+    await fixture.whenStable();
     expect(app).toBeTruthy();
   });
 });

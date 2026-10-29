@@ -10,6 +10,14 @@
       <ion-title size="large">CapKit Plugins</ion-title>
     </ion-toolbar>
   </ion-header>
+  @if (singlePlugin(); as plugin) {
+    <app-about-card
+      title="About this demo"
+      [subtitle]="plugin.npmName"
+      [content]="plugin.description"
+      [githubUrl]="plugin.githubUrl"
+    />
+  }
   <ion-list-header>
     <ion-label>Plugins</ion-label>
   </ion-list-header>
