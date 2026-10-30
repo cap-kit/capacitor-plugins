@@ -87,13 +87,6 @@ dependencies {
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
 }
 
-configurations.configureEach {
-    resolutionStrategy {
-        // Force specific versions of libraries to avoid conflicts.
-        force("androidx.core:core-ktx:$androidxCoreKTXVersion")
-    }
-}
-
 // Include additional Gradle scripts and plugins.
 apply from: 'capacitor.build.gradle'
 
