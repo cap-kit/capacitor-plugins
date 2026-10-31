@@ -1,0 +1,149 @@
+<app-page-header [title]="'Local Network'" />
+
+<ion-content class="ion-padding">
+  <app-info-card
+    [title]="'Local Network'"
+    [subtitle]="'@cap-kit/local-network'"
+    [content]="
+      'Check and request the local-network permission that gates access to devices on the same Wi-Fi network.'
+    "
+    (githubClick)="openOnGithub()"
+  />
+
+  @if (isSupported()) {
+  <!-- STATUS CARD --------------------------------------------------------- -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="wifi" class="ion-margin-end" />
+        Permission Status
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-item lines="none">
+        <ion-label>
+          <strong>Local Network</strong>
+        </ion-label>
+        @if (permissionState() !== null) {
+        <ion-badge slot="end" [color]="permissionColor(permissionState())">
+          {{ permissionLabel(permissionState()) }}
+        </ion-badge>
+        } @else {
+        <ion-badge slot="end" color="medium">Unknown</ion-badge>
+        }
+      </ion-item>
+      <ion-button expand="block" size="small" (click)="refreshPermission()" [disabled]="inProgress()">
+        <ion-icon name="refresh" slot="start" />
+        Refresh Status
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- REQUEST CARD -------------------------------------------------------- -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="shield-checkmark-outline" class="ion-margin-end" />
+        Request Permission
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-text>
+        <small>
+          On Android 17+ this opens the system prompt when the permission has not been decided yet. A denial is reported
+          as state, never as an error.
+        </small>
+      </ion-text>
+
+      <ion-item lines="none">
+        <ion-label>
+          <strong>Last request</strong>
+        </ion-label>
+        @if (lastRequestResult() !== null) {
+        <ion-badge slot="end" [color]="permissionColor(lastRequestResult())">
+          {{ permissionLabel(lastRequestResult()) }}
+        </ion-badge>
+        } @else {
+        <ion-badge slot="end" color="medium">Not requested</ion-badge>
+        }
+      </ion-item>
+
+      <ion-button
+        expand="block"
+        size="small"
+        class="ion-margin-top"
+        (click)="onRequestPermission()"
+        [disabled]="inProgress()"
+      >
+        <ion-icon name="shield-checkmark-outline" slot="start" />
+        Request Permission
+      </ion-button>
+
+      <ion-button expand="block" size="small" fill="outline" (click)="onGetVersion()" [disabled]="inProgress()">
+        <ion-icon name="settings-outline" slot="start" />
+        Get Plugin Version ({{ displayVersion() }})
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- PLATFORM NOTE ------------------------------------------------------- -->
+  <ion-card>
+    <ion-card-content>
+      <ion-item lines="none">
+        <ion-icon name="information-circle-outline" slot="start" color="medium" />
+        <ion-label class="ion-text-wrap">
+          <ion-note>
+            The local-network permission is only enforced on <strong>Android 17 (API 37) and newer</strong>. On older
+            Android versions, iOS and web it is not enforced and always reports <strong>granted</strong>.
+          </ion-note>
+        </ion-label>
+      </ion-item>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- LOGS CARD ----------------------------------------------------------- -->
+  <ion-card>
+    <ion-card-header>
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <ion-card-title>
+          <ion-icon name="terminal-outline" class="ion-margin-end" />
+          Event Log
+        </ion-card-title>
+        <ion-button size="small" fill="clear" color="medium" (click)="clearLogs()"> Clear </ion-button>
+        <ion-button size="small" fill="clear" color="warning" (click)="onRemoveAllListeners()">
+          <ion-icon name="sync-outline" slot="start" />
+          Reset Listeners
+        </ion-button>
+      </div>
+    </ion-card-header>
+    <ion-card-content>
+      @if (logs().length === 0) {
+      <p class="ion-text-muted">
+        <small>No events logged yet. Actions will appear here.</small>
+      </p>
+      } @else {
+      <div class="log-container">
+        @for (log of logs(); track $index) {
+        <div class="log-entry">
+          <ion-note>{{ log }}</ion-note>
+        </div>
+        }
+      </div>
+      }
+    </ion-card-content>
+  </ion-card>
+
+  @if (inProgress()) {
+  <div class="ion-text-center ion-padding">
+    <ion-spinner />
+  </div>
+  } } @else {
+  <ion-card>
+    <ion-card-content>
+      <p class="ion-text-muted">This plugin is not supported on this platform.</p>
+    </ion-card-content>
+  </ion-card>
+  }
+</ion-content>
+
+<app-page-footer [version]="displayVersion()" [label]="'Plugin Version'" />

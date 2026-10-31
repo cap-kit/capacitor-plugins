@@ -1,0 +1,31 @@
+--- a/src/app/plugins-list.ts
++++ b/src/app/plugins-list.ts
+@@ -1,4 +1,5 @@
+ import { addIcons } from 'ionicons';
++import { wifi } from 'ionicons/icons';
+ 
+ export interface PluginConfig {
+   id: number;
+@@ -27,7 +28,21 @@
+  * `pathName` must be absolute, because the router resolves relative commands
+  * against the current activated route.
+  */
+-export const PLUGINS: PluginConfig[] = [];
++export const PLUGINS: PluginConfig[] = [
++  {
++    id: 15,
++    name: 'Local Network',
++    npmName: '@cap-kit/local-network',
++    iconName: 'wifi',
++    icon: wifi,
++    githubUrl:
++      'https://github.com/cap-kit/capacitor-plugins/tree/main/packages/local-network',
++    pathName: '/local-network',
++    description: 'Check and request the Android 17+ local network access permission.',
++    active: true,
++    isVisible: true,
++  },
++];
+ 
+ /**
+  * Registers every icon declared by `plugins`, keyed by `iconName`.
