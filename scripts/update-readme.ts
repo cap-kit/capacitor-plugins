@@ -64,6 +64,7 @@ function formatPluginName(packageName: string): string {
     payment: "💰",
     biometrics: "🫆",
     "privacy-screen": "🚫",
+    "local-network": "📡",
   };
 
   const emoji = iconMap[cleanName] || "🔌";

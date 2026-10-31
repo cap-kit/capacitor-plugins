@@ -1,0 +1,17 @@
+--- a/package.json
++++ b/package.json
+@@ -1,5 +1,5 @@
+ {
+-  "name": "capkit-plugin-demo",
++  "name": "capkit-plugin-demo-local-network",
+   "version": "1.0.0",
+   "author": "CapKit Team",
+   "homepage": "https://github.com/cap-kit/capacitor-plugins",
+@@ -43,6 +43,7 @@
+     "@angular/forms": "^22.2.4",
+     "@angular/platform-browser": "^22.2.4",
+     "@angular/router": "^22.2.4",
++    "@cap-kit/local-network": "workspace:*",
+     "@capacitor/android": "^8.6.0",
+     "@capacitor/cli": "^8.6.0",
+     "@capacitor/core": "^8.6.0",

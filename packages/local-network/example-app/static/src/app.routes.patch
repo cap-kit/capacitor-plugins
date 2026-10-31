@@ -1,0 +1,13 @@
+--- a/src/app/app.routes.ts
++++ b/src/app/app.routes.ts
+@@ -5,6 +5,10 @@
+     path: 'home',
+     loadComponent: () => import('./home/home.page').then((m) => m.HomePage),
+   },
++  {
++    path: 'local-network',
++    loadComponent: () => import('./local-network/local-network.page').then((m) => m.LocalNetworkPage),
++  },
+   {
+     path: '',
+     redirectTo: 'home',
