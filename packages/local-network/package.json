@@ -1,6 +1,6 @@
 {
   "name": "@cap-kit/local-network",
-  "version": "8.0.0-next.0",
+  "version": "8.0.0",
   "description": "Capacitor v8 plugin for the Android 17+ local network access permission (ACCESS_LOCAL_NETWORK), with a parity contract on iOS and web.",
   "type": "module",
   "private": false,
