@@ -1,6 +1,6 @@
 import { WebPlugin } from '@capacitor/core';
 
-import type {
+import {
   AuthenticateOptions,
   AuthenticationTypeResult,
   BiometricStrengthResult,

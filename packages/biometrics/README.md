@@ -123,24 +123,24 @@ export default config;
 
 <docgen-index>
 
-* [`authenticate(...)`](#authenticate)
-* [`cancelAuthentication()`](#cancelauthentication)
-* [`isAvailable()`](#isavailable)
-* [`isEnrolled()`](#isenrolled)
-* [`getBiometricType()`](#getbiometrictype)
-* [`getBiometricTypes()`](#getbiometrictypes)
-* [`hasDeviceCredential()`](#hasdevicecredential)
-* [`isDeviceSecure()`](#isdevicesecure)
-* [`getBiometricStrengthLevel()`](#getbiometricstrengthlevel)
-* [`getAuthenticationType()`](#getauthenticationtype)
-* [`enroll()`](#enroll)
-* [`setSecureData(...)`](#setsecuredata)
-* [`getSecureData(...)`](#getsecuredata)
-* [`deleteSecureData(...)`](#deletesecuredata)
-* [`isSecureDataSaved(...)`](#issecuredatasaved)
-* [`getPluginVersion()`](#getpluginversion)
-* [Interfaces](#interfaces)
-* [Type Aliases](#type-aliases)
+- [`authenticate(...)`](#authenticate)
+- [`cancelAuthentication()`](#cancelauthentication)
+- [`isAvailable()`](#isavailable)
+- [`isEnrolled()`](#isenrolled)
+- [`getBiometricType()`](#getbiometrictype)
+- [`getBiometricTypes()`](#getbiometrictypes)
+- [`hasDeviceCredential()`](#hasdevicecredential)
+- [`isDeviceSecure()`](#isdevicesecure)
+- [`getBiometricStrengthLevel()`](#getbiometricstrengthlevel)
+- [`getAuthenticationType()`](#getauthenticationtype)
+- [`enroll()`](#enroll)
+- [`setSecureData(...)`](#setsecuredata)
+- [`getSecureData(...)`](#getsecuredata)
+- [`deleteSecureData(...)`](#deletesecuredata)
+- [`isSecureDataSaved(...)`](#issecuredatasaved)
+- [`getPluginVersion()`](#getpluginversion)
+- [Interfaces](#interfaces)
+- [Type Aliases](#type-aliases)
 
 </docgen-index>
 
@@ -183,8 +183,7 @@ await Biometrics.authenticate({
 });
 ```
 
---------------------
-
+---
 
 ### cancelAuthentication()
 
@@ -199,8 +198,7 @@ Resolves immediately when idle. Only available on Android
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### isAvailable()
 
@@ -217,8 +215,7 @@ Only available on Android and iOS.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### isEnrolled()
 
@@ -235,8 +232,7 @@ Check both `isAvailable()` and `isEnrolled()` before
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### getBiometricType()
 
@@ -253,8 +249,7 @@ Only available on Android and iOS.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### getBiometricTypes()
 
@@ -271,8 +266,7 @@ Only available on Android and iOS.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### hasDeviceCredential()
 
@@ -289,8 +283,7 @@ Only available on Android and iOS.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### isDeviceSecure()
 
@@ -308,8 +301,7 @@ Only available on Android and iOS.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### getBiometricStrengthLevel()
 
@@ -325,8 +317,7 @@ when available.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### getAuthenticationType()
 
@@ -341,8 +332,7 @@ in this session.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### enroll()
 
@@ -356,8 +346,7 @@ Android only (API 30+). iOS and Web reject with `UNAVAILABLE`.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### setSecureData(...)
 
@@ -390,8 +379,7 @@ await Biometrics.setSecureData({
 });
 ```
 
---------------------
-
+---
 
 ### getSecureData(...)
 
@@ -427,8 +415,7 @@ const { value } = await Biometrics.getSecureData({
 });
 ```
 
---------------------
-
+---
 
 ### deleteSecureData(...)
 
@@ -446,8 +433,7 @@ Only available on Android and iOS.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### isSecureDataSaved(...)
 
@@ -468,8 +454,7 @@ Only available on Android and iOS.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### getPluginVersion()
 
@@ -483,11 +468,9 @@ Returns the native plugin version.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### Interfaces
-
 
 #### AuthenticateOptions
 
@@ -505,7 +488,6 @@ Field names follow the Capawesome-style contract.
 | **`iosFallbackButtonText`** | <code>string</code>  | iOS only: fallback button title ("Use Passcode"). An empty string hides the fallback button.                                              |                   | 8.0.0 |
 | **`allowDeviceCredential`** | <code>boolean</code> | Allows device credential (PIN/pattern/password/passcode) fallback.                                                                        | <code>true</code> | 8.0.0 |
 
-
 #### IsAvailableResult
 
 Result of `isAvailable()`.
@@ -513,7 +495,6 @@ Result of `isAvailable()`.
 | Prop              | Type                 |
 | ----------------- | -------------------- |
 | **`isAvailable`** | <code>boolean</code> |
-
 
 #### IsEnrolledResult
 
@@ -523,7 +504,6 @@ Result of `isEnrolled()`.
 | ---------------- | -------------------- |
 | **`isEnrolled`** | <code>boolean</code> |
 
-
 #### BiometricTypeResult
 
 Result of `getBiometricType()`.
@@ -531,7 +511,6 @@ Result of `getBiometricType()`.
 | Prop               | Type                                                  |
 | ------------------ | ----------------------------------------------------- |
 | **`biometryType`** | <code><a href="#biometrytype">BiometryType</a></code> |
-
 
 #### BiometricTypesResult
 
@@ -541,7 +520,6 @@ Result of `getBiometricTypes()`.
 | ------------------- | --------------------------- |
 | **`biometryTypes`** | <code>BiometryType[]</code> |
 
-
 #### HasDeviceCredentialResult
 
 Result of `hasDeviceCredential()`.
@@ -549,7 +527,6 @@ Result of `hasDeviceCredential()`.
 | Prop                      | Type                 |
 | ------------------------- | -------------------- |
 | **`hasDeviceCredential`** | <code>boolean</code> |
-
 
 #### IsDeviceSecureResult
 
@@ -559,7 +536,6 @@ Result of `isDeviceSecure()`.
 | -------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
 | **`isDeviceSecure`** | <code>boolean</code> | Whether the device is secured by any lock-screen credential: PIN/pattern/password (Android `KeyguardManager.isDeviceSecure`) or the passcode required by `.deviceOwnerAuthentication` (iOS). Biometrics cannot be enrolled without one, so this doubles as the broad "any secure lock" check. | 8.0.0 |
 
-
 #### BiometricStrengthResult
 
 Result of `getBiometricStrengthLevel()`.
@@ -568,7 +544,6 @@ Result of `getBiometricStrengthLevel()`.
 | ------------------- | --------------------------------------------------------------- |
 | **`strengthLevel`** | <code><a href="#biometricstrength">BiometricStrength</a></code> |
 
-
 #### AuthenticationTypeResult
 
 Result of `getAuthenticationType()`.
@@ -576,7 +551,6 @@ Result of `getAuthenticationType()`.
 | Prop                     | Type                                                              |
 | ------------------------ | ----------------------------------------------------------------- |
 | **`authenticationType`** | <code><a href="#authenticationtype">AuthenticationType</a></code> |
-
 
 #### SetSecureDataOptions
 
@@ -591,7 +565,6 @@ Options for `setSecureData()`.
 | **`negativeButtonText`** | <code>string</code>                                     | Android only: negative/cancel button text for the write-time prompt.                                      | 8.0.0 |
 | **`maxAttempts`**        | <code>number</code>                                     | Android only: maximum prompt attempts (device maximum is 5).                                              | 8.0.0 |
 
-
 #### SecureDataResult
 
 Result of `getSecureData()`.
@@ -599,7 +572,6 @@ Result of `getSecureData()`.
 | Prop        | Type                | Description                 | Since |
 | ----------- | ------------------- | --------------------------- | ----- |
 | **`value`** | <code>string</code> | The decrypted stored value. | 8.0.0 |
-
 
 #### GetSecureDataOptions
 
@@ -616,7 +588,6 @@ Options for `getSecureData()`.
 | **`fallbackTitle`**      | <code>string</code> | iOS only: fallback button title. An empty string hides the fallback button.                 | 8.0.0 |
 | **`maxAttempts`**        | <code>number</code> | Android only: maximum prompt attempts (device maximum is 5).                                | 8.0.0 |
 
-
 #### DeleteSecureDataOptions
 
 Options for `deleteSecureData()`.
@@ -624,7 +595,6 @@ Options for `deleteSecureData()`.
 | Prop      | Type                | Description                 | Since |
 | --------- | ------------------- | --------------------------- | ----- |
 | **`key`** | <code>string</code> | Key of the value to delete. | 8.0.0 |
-
 
 #### IsSecureDataSavedResult
 
@@ -634,7 +604,6 @@ Result of `isSecureDataSaved()`.
 | ------------- | -------------------- | ----------------------------------- | ----- |
 | **`isSaved`** | <code>boolean</code> | Whether a value exists for the key. | 8.0.0 |
 
-
 #### IsSecureDataSavedOptions
 
 Options for `isSecureDataSaved()`.
@@ -642,7 +611,6 @@ Options for `isSecureDataSaved()`.
 | Prop      | Type                | Description   | Since |
 | --------- | ------------------- | ------------- | ----- |
 | **`key`** | <code>string</code> | Key to check. | 8.0.0 |
-
 
 #### PluginVersionResult
 
@@ -652,16 +620,13 @@ Result object returned by the `getPluginVersion()` method.
 | ------------- | ------------------- | --------------------------------- |
 | **`version`** | <code>string</code> | The native plugin version string. |
 
-
 ### Type Aliases
-
 
 #### BiometryType
 
 Biometry modality reported by the device.
 
 <code>'none' | 'touchId' | 'faceId' | 'fingerprint' | 'face' | 'iris'</code>
-
 
 #### BiometricStrength
 
@@ -673,7 +638,6 @@ Strength class of the available biometry.
 
 <code>'strong' | 'weak' | 'none'</code>
 
-
 #### AuthenticationType
 
 Credential class that satisfied an authentication ceremony.
@@ -682,7 +646,6 @@ Credential class that satisfied an authentication ceremony.
 platform does not report it.
 
 <code>'biometric' | 'deviceCredential' | 'unknown'</code>
-
 
 #### AccessControl
 

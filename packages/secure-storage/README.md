@@ -137,26 +137,26 @@ export default config;
 
 <docgen-index>
 
-* [`set(...)`](#set)
-* [`get(...)`](#get)
-* [`remove(...)`](#remove)
-* [`has(...)`](#has)
-* [`keys()`](#keys)
-* [`getMany(...)`](#getmany)
-* [`clear()`](#clear)
-* [`configure(...)`](#configure)
-* [`setInsecure(...)`](#setinsecure)
-* [`getInsecure(...)`](#getinsecure)
-* [`removeInsecure(...)`](#removeinsecure)
-* [`hasInsecure(...)`](#hasinsecure)
-* [`keysInsecure()`](#keysinsecure)
-* [`clearInsecure()`](#clearinsecure)
-* [`setSynchronize(...)`](#setsynchronize)
-* [`getSynchronize()`](#getsynchronize)
-* [`setDefaultKeychainAccess(...)`](#setdefaultkeychainaccess)
-* [`getPluginVersion()`](#getpluginversion)
-* [Interfaces](#interfaces)
-* [Type Aliases](#type-aliases)
+- [`set(...)`](#set)
+- [`get(...)`](#get)
+- [`remove(...)`](#remove)
+- [`has(...)`](#has)
+- [`keys()`](#keys)
+- [`getMany(...)`](#getmany)
+- [`clear()`](#clear)
+- [`configure(...)`](#configure)
+- [`setInsecure(...)`](#setinsecure)
+- [`getInsecure(...)`](#getinsecure)
+- [`removeInsecure(...)`](#removeinsecure)
+- [`hasInsecure(...)`](#hasinsecure)
+- [`keysInsecure()`](#keysinsecure)
+- [`clearInsecure()`](#clearinsecure)
+- [`setSynchronize(...)`](#setsynchronize)
+- [`getSynchronize()`](#getsynchronize)
+- [`setDefaultKeychainAccess(...)`](#setdefaultkeychainaccess)
+- [`getPluginVersion()`](#getpluginversion)
+- [Interfaces](#interfaces)
+- [Type Aliases](#type-aliases)
 
 </docgen-index>
 
@@ -190,8 +190,7 @@ Stores a value under a key, overwriting any previous entry.
 await SecureStorage.set({ key: 'theme', value: 'dark' });
 ```
 
---------------------
-
+---
 
 ### get(...)
 
@@ -209,8 +208,7 @@ Reads the value for a key, or `null` when absent.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### remove(...)
 
@@ -228,8 +226,7 @@ Removes the entry for a key.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### has(...)
 
@@ -247,8 +244,7 @@ Checks whether an entry exists without reading it.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### keys()
 
@@ -262,8 +258,7 @@ Lists every stored key.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### getMany(...)
 
@@ -281,8 +276,7 @@ Reads several keys in one call. Missing keys map to `null`.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### clear()
 
@@ -297,8 +291,7 @@ captured ciphertext can never be decrypted again.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### configure(...)
 
@@ -317,8 +310,7 @@ setting untouched. Mirrors the official Preferences contract.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### setInsecure(...)
 
@@ -338,8 +330,7 @@ secure tier.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### getInsecure(...)
 
@@ -357,8 +348,7 @@ Reads a plaintext value from the insecure tier, or `null` when absent.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### removeInsecure(...)
 
@@ -376,8 +366,7 @@ Removes an insecure entry.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### hasInsecure(...)
 
@@ -395,8 +384,7 @@ Checks insecure existence without reading.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### keysInsecure()
 
@@ -410,8 +398,7 @@ Lists insecure keys of the current group.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### clearInsecure()
 
@@ -423,8 +410,7 @@ Removes every insecure entry of the current group.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### setSynchronize(...)
 
@@ -442,8 +428,7 @@ iOS only; a no-op on Android and Web.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### getSynchronize()
 
@@ -459,8 +444,7 @@ iOS only; always `false` elsewhere.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### setDefaultKeychainAccess(...)
 
@@ -479,8 +463,7 @@ iOS only; a no-op on Android and Web.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### getPluginVersion()
 
@@ -494,11 +477,9 @@ Returns the native plugin version.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### Interfaces
-
 
 #### SetOptions
 
@@ -510,7 +491,6 @@ Key/value payload for writes.
 | **`value`**  | <code>string</code>                                       |                                                                                                                                    |       |
 | **`access`** | <code><a href="#keychainaccess">KeychainAccess</a></code> | iOS Keychain accessibility for this item, overriding the default set via `setDefaultKeychainAccess()`. Ignored on Android and Web. | 8.0.0 |
 
-
 #### GetResult
 
 Read result. `value` is `null` when the key does not exist.
@@ -518,7 +498,6 @@ Read result. `value` is `null` when the key does not exist.
 | Prop        | Type                        |
 | ----------- | --------------------------- |
 | **`value`** | <code>string \| null</code> |
-
 
 #### KeyOptions
 
@@ -528,7 +507,6 @@ Key payload for reads, removals, and existence checks.
 | --------- | ------------------- |
 | **`key`** | <code>string</code> |
 
-
 #### RemoveResult
 
 Removal result. `existed` reports whether an entry was present.
@@ -536,7 +514,6 @@ Removal result. `existed` reports whether an entry was present.
 | Prop          | Type                 |
 | ------------- | -------------------- |
 | **`existed`** | <code>boolean</code> |
-
 
 #### HasResult
 
@@ -546,7 +523,6 @@ Existence-check result.
 | ------------ | -------------------- |
 | **`exists`** | <code>boolean</code> |
 
-
 #### KeysResult
 
 Key-enumeration result.
@@ -554,7 +530,6 @@ Key-enumeration result.
 | Prop       | Type                  |
 | ---------- | --------------------- |
 | **`keys`** | <code>string[]</code> |
-
 
 #### GetManyResult
 
@@ -564,7 +539,6 @@ Batch-read result. Missing keys map to `null`.
 | ------------ | ------------------------------------------------- |
 | **`values`** | <code>Record&lt;string, string \| null&gt;</code> |
 
-
 #### GetManyOptions
 
 Batch-read input.
@@ -572,7 +546,6 @@ Batch-read input.
 | Prop       | Type                  |
 | ---------- | --------------------- |
 | **`keys`** | <code>string[]</code> |
-
 
 #### ConfigureOptions
 
@@ -587,7 +560,6 @@ Preferences plugin. The default group is `CapacitorStorage`.
 | **`obfuscateKeys`**     | <code>boolean</code> | Base64-encodes stored key names (both tiers) at runtime, overriding the static `obfuscateKeys` value for this session. | 8.0.0 |
 | **`obfuscationPrefix`** | <code>string</code>  | Prefix prepended to stored key names at runtime, overriding the static `obfuscationPrefix` value for this session.     | 8.0.0 |
 
-
 #### SynchronizeOptions
 
 Synchronization-toggle input.
@@ -595,7 +567,6 @@ Synchronization-toggle input.
 | Prop              | Type                 |
 | ----------------- | -------------------- |
 | **`synchronize`** | <code>boolean</code> |
-
 
 #### SynchronizeResult
 
@@ -605,7 +576,6 @@ Synchronization-state result.
 | ----------------- | -------------------- |
 | **`synchronize`** | <code>boolean</code> |
 
-
 #### DefaultAccessOptions
 
 Default-accessibility input.
@@ -613,7 +583,6 @@ Default-accessibility input.
 | Prop         | Type                                                      |
 | ------------ | --------------------------------------------------------- |
 | **`access`** | <code><a href="#keychainaccess">KeychainAccess</a></code> |
-
 
 #### PluginVersionResult
 
@@ -623,9 +592,7 @@ Result object returned by the `getPluginVersion()` method.
 | ------------- | ------------------- | --------------------------------- |
 | **`version`** | <code>string</code> | The native plugin version string. |
 
-
 ### Type Aliases
-
 
 #### KeychainAccess
 
@@ -634,7 +601,10 @@ iOS Keychain accessibility level for stored items.
 Mirrors the platform `kSecAttrAccessible` constants. Applies to iOS
 only; ignored on Android and Web.
 
-<code>'whenUnlocked' | 'whenUnlockedThisDeviceOnly' | 'afterFirstUnlock' | 'afterFirstUnlockThisDeviceOnly' | 'whenPasscodeSetThisDeviceOnly'</code>
+<code>
+  'whenUnlocked' | 'whenUnlockedThisDeviceOnly' | 'afterFirstUnlock' | 'afterFirstUnlockThisDeviceOnly' |
+  'whenPasscodeSetThisDeviceOnly'
+</code>
 
 </docgen-api>
 
