@@ -86,10 +86,11 @@ npx cap sync
 
 Configuration options for the PrivacyScreen plugin.
 
-| Prop                 | Type                 | Description                                                                                                           | Default            | Since |
-| -------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------ | ----- |
-| **`verboseLogging`** | <code>boolean</code> | Enables verbose native logging.                                                                                       | <code>false</code> | 8.0.0 |
-| **`enabled`**        | <code>boolean</code> | Enables privacy protection automatically when the native plugin loads, without waiting for the first `enable()` call. | <code>false</code> | 8.0.0 |
+| Prop                 | Type                                                      | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Default                | Since |
+| -------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- | ----- |
+| **`verboseLogging`** | <code>boolean</code>                                      | Enables verbose native logging.                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | <code>false</code>     | 8.0.0 |
+| **`enabled`**        | <code>boolean</code>                                      | Enables privacy protection automatically when the native plugin loads, without waiting for the first `enable()` call.                                                                                                                                                                                                                                                                                                                                                                             | <code>false</code>     | 8.0.0 |
+| **`color`**          | <code>string \| { light?: string; dark?: string; }</code> | Hex color (`#RRGGBB` or `#AARRGGBB`) used for the privacy cover instead of the platform default (blur on iOS, black scrim on Android). Accepts either a single string (applied to both light and dark appearances) or an object with per-appearance variants (`{ light: '#RRGGBB', dark: '#RRGGBB' }`); the variant matching the current appearance wins, and a single variant covers both when only one is set. Invalid values are ignored and the platform default applies for that appearance. | <code>undefined</code> | 8.2.0 |
 
 ### Examples
 
@@ -133,15 +134,15 @@ export default config;
 
 <docgen-index>
 
-* [`enable(...)`](#enable)
-* [`disable()`](#disable)
-* [`isEnabled()`](#isenabled)
-* [`addListener('screenshotTaken', ...)`](#addlistenerscreenshottaken-)
-* [`addListener('screenRecordingStarted', ...)`](#addlistenerscreenrecordingstarted-)
-* [`addListener('screenRecordingStopped', ...)`](#addlistenerscreenrecordingstopped-)
-* [`removeAllListeners()`](#removealllisteners)
-* [`getPluginVersion()`](#getpluginversion)
-* [Interfaces](#interfaces)
+- [`enable(...)`](#enable)
+- [`disable()`](#disable)
+- [`isEnabled()`](#isenabled)
+- [`addListener('screenshotTaken', ...)`](#addlistenerscreenshottaken-)
+- [`addListener('screenRecordingStarted', ...)`](#addlistenerscreenrecordingstarted-)
+- [`addListener('screenRecordingStopped', ...)`](#addlistenerscreenrecordingstopped-)
+- [`removeAllListeners()`](#removealllisteners)
+- [`getPluginVersion()`](#getpluginversion)
+- [Interfaces](#interfaces)
 
 </docgen-index>
 
@@ -184,8 +185,7 @@ Only available on Android and iOS.
 await PrivacyScreen.enable({ ios: { blurEffect: 'dark' } });
 ```
 
---------------------
-
+---
 
 ### disable()
 
@@ -209,8 +209,7 @@ Only available on Android and iOS.
 await PrivacyScreen.disable();
 ```
 
---------------------
-
+---
 
 ### isEnabled()
 
@@ -226,8 +225,7 @@ Only available on Android and iOS.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### addListener('screenshotTaken', ...)
 
@@ -256,8 +254,7 @@ Only available on Android and iOS.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### addListener('screenRecordingStarted', ...)
 
@@ -283,8 +280,7 @@ Only available on iOS.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### addListener('screenRecordingStopped', ...)
 
@@ -309,8 +305,7 @@ Only available on iOS.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### removeAllListeners()
 
@@ -322,8 +317,7 @@ Removes all listeners for this plugin.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### getPluginVersion()
 
@@ -346,11 +340,9 @@ bundled with the application.
 const { version } = await PrivacyScreen.getPluginVersion();
 ```
 
---------------------
-
+---
 
 ### Interfaces
-
 
 #### PrivacyScreenActionResult
 
@@ -361,7 +353,6 @@ Mirrors the official `@capacitor/privacy-screen` API.
 | Prop          | Type                 | Description                             | Since |
 | ------------- | -------------------- | --------------------------------------- | ----- |
 | **`success`** | <code>boolean</code> | Whether the native operation completed. | 8.0.0 |
-
 
 #### PrivacyScreenConfig
 
@@ -375,7 +366,6 @@ so this plugin stays a drop-in replacement.
 | **`android`** | <code>{ dimBackground?: boolean; preventScreenshots?: boolean; privacyModeOnActivityHidden?: 'none' \| 'dim' \| 'splash'; }</code> |
 | **`ios`**     | <code>{ blurEffect?: 'none' \| 'light' \| 'dark'; }</code>                                                                         |
 
-
 #### PrivacyScreenStatus
 
 Current privacy-screen state.
@@ -386,13 +376,11 @@ Mirrors the official `@capacitor/privacy-screen` API.
 | ------------- | -------------------- | ------------------------------------------------ | ----- |
 | **`enabled`** | <code>boolean</code> | Whether privacy protection is currently enabled. | 8.0.0 |
 
-
 #### PluginListenerHandle
 
 | Prop         | Type                                      |
 | ------------ | ----------------------------------------- |
 | **`remove`** | <code>() =&gt; Promise&lt;void&gt;</code> |
-
 
 #### PluginVersionResult
 

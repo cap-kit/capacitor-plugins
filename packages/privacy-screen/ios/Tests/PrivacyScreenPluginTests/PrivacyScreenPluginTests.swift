@@ -21,7 +21,7 @@ final class PrivacyScreenPluginTests: XCTestCase {
     // MARK: - Version
 
     func testPluginVersionMatchesPackageJson() {
-        XCTAssertEqual(PluginVersion.number, "8.0.0")
+        XCTAssertEqual(PluginVersion.number, "8.1.1")
     }
 
     // MARK: - Error codes
@@ -82,6 +82,56 @@ final class PrivacyScreenPluginTests: XCTestCase {
     func testIsValidBlurEffectIsCaseSensitive() {
         XCTAssertFalse(PrivacyScreenValidators.isValidBlurEffect("Light"))
         XCTAssertFalse(PrivacyScreenValidators.isValidBlurEffect("DARK"))
+    }
+
+    // MARK: - Hex color validation
+
+    func testIsValidHexColorAcceptsDocumentedShapes() {
+        XCTAssertTrue(PrivacyScreenValidators.isValidHexColor("#0B2E4F"))
+        XCTAssertTrue(PrivacyScreenValidators.isValidHexColor("#FF0B2E4F"))
+        XCTAssertTrue(PrivacyScreenValidators.isValidHexColor("0B2E4F"))
+        XCTAssertTrue(PrivacyScreenValidators.isValidHexColor("#0b2e4f"))
+    }
+
+    func testIsValidHexColorRejectsNilAndInvalidShapes() {
+        XCTAssertFalse(PrivacyScreenValidators.isValidHexColor(nil))
+        XCTAssertFalse(PrivacyScreenValidators.isValidHexColor("white"))
+        XCTAssertFalse(PrivacyScreenValidators.isValidHexColor("#fff"))
+        XCTAssertFalse(PrivacyScreenValidators.isValidHexColor("#GGGGGG"))
+        XCTAssertFalse(PrivacyScreenValidators.isValidHexColor(""))
+    }
+
+    // MARK: - Hex color mapping
+
+    func testColorFromHexParsesOpaqueSixDigitInput() {
+        let color = PrivacyScreenUtils.color(fromHex: "#FFFFFF")
+        XCTAssertNotNil(color)
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        color!.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        XCTAssertEqual(red, 1.0, accuracy: 0.001)
+        XCTAssertEqual(green, 1.0, accuracy: 0.001)
+        XCTAssertEqual(blue, 1.0, accuracy: 0.001)
+        XCTAssertEqual(alpha, 1.0, accuracy: 0.001)
+    }
+
+    func testColorFromHexKeepsAlphaChannel() {
+        let color = PrivacyScreenUtils.color(fromHex: "#80FF0000")
+        XCTAssertNotNil(color)
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        color!.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        XCTAssertEqual(red, 1.0, accuracy: 0.001)
+        XCTAssertEqual(alpha, 0x80 / 255.0, accuracy: 0.001)
+    }
+
+    func testColorFromHexReturnsNilForInvalidInput() {
+        XCTAssertNil(PrivacyScreenUtils.color(fromHex: "white"))
+        XCTAssertNil(PrivacyScreenUtils.color(fromHex: "#fff"))
     }
 
     // MARK: - Blur-style mapping

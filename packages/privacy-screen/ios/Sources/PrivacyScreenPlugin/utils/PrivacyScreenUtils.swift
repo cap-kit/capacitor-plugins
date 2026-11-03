@@ -35,4 +35,33 @@ struct PrivacyScreenUtils {
             return .systemMaterial
         }
     }
+
+    /**
+     Builds a `UIColor` from a validated hex color string.
+
+     Accepts the same shapes as `PrivacyScreenValidators.isValidHexColor`
+     (`#RRGGBB`, `#AARRGGBB`, with or without `#`); 6-digit input is treated
+     as fully opaque. Returns nil for invalid input so callers can fall back
+     to the default blur cover.
+
+     Pure string parsing with no UIKit side effects.
+     */
+    static func color(fromHex hex: String) -> UIColor? {
+        guard PrivacyScreenValidators.isValidHexColor(hex) else { return nil }
+        var digits = hex
+        if digits.hasPrefix("#") {
+            digits.removeFirst()
+        }
+        if digits.count == 6 {
+            digits = "FF" + digits
+        }
+        var argb: UInt64 = 0
+        Scanner(string: digits).scanHexInt64(&argb)
+        return UIColor(
+            red: CGFloat((argb >> 16) & 0xFF) / 255.0,
+            green: CGFloat((argb >> 8) & 0xFF) / 255.0,
+            blue: CGFloat(argb & 0xFF) / 255.0,
+            alpha: CGFloat((argb >> 24) & 0xFF) / 255.0
+        )
+    }
 }

@@ -32,6 +32,14 @@ final class PrivacyScreenImpl: @unchecked Sendable {
     /// Session blur style requested via `enable({ ios: { blurEffect } })`.
     private var blurEffect: String = "system"
 
+    /// Static cover colors from config (`color`). When a valid color is
+    /// available, the cover is a solid color view instead of the blur; the
+    /// variant matching the current appearance (light/dark) wins, falling
+    /// back to the other variant when only one is set. When neither is
+    /// valid, the blur cover is used.
+    private var coverColorLight: UIColor?
+    private var coverColorDark: UIColor?
+
     /// Read-only view of the current session blur style.
     /// Exposed for diagnostics and headless tests; never mutated externally.
     var activeBlurEffect: String {
@@ -53,10 +61,41 @@ final class PrivacyScreenImpl: @unchecked Sendable {
     func applyConfig(_ config: PrivacyScreenConfig) {
         self.config = config
         PrivacyScreenLogger.verbose = config.verboseLogging
+        coverColorLight = Self.validatedColor(from: config.colorLight)
+        coverColorDark = Self.validatedColor(from: config.colorDark)
+        if coverColorLight != nil || coverColorDark != nil {
+            PrivacyScreenLogger.debug(
+                "Cover colors applied. Light:",
+                config.colorLight ?? "default",
+                "Dark:",
+                config.colorDark ?? "default"
+            )
+        }
         PrivacyScreenLogger.debug(
             "Configuration applied. Verbose logging:",
             config.verboseLogging
         )
+    }
+
+    /// Returns the parsed color for a raw config value, or nil when the
+    /// value is missing or not a valid hex color (default blur applies).
+    private static func validatedColor(from raw: String?) -> UIColor? {
+        guard let raw, PrivacyScreenValidators.isValidHexColor(raw) else { return nil }
+        return PrivacyScreenUtils.color(fromHex: raw)
+    }
+
+    /// Resolves the cover color for the current appearance: the matching
+    /// light/dark variant wins; when only one variant is configured it is
+    /// used for both appearances. Returns nil when no valid color exists
+    /// (default blur cover).
+    private func resolvedCoverColor(for traits: UITraitCollection) -> UIColor? {
+        let light = coverColorLight
+        let dark = coverColorDark
+        let isDark = traits.userInterfaceStyle == .dark
+        if isDark {
+            return dark ?? light
+        }
+        return light ?? dark
     }
 
     // MARK: - Protection control
@@ -146,17 +185,28 @@ final class PrivacyScreenImpl: @unchecked Sendable {
             Task { @MainActor in
                 guard let window = self.keyWindow() else { return }
 
-                let blurView = UIVisualEffectView(effect: UIBlurEffect(style: self.resolvedBlurStyle()))
-                blurView.frame = window.bounds
-                blurView.tag = Self.overlayTag
-                blurView.alpha = 0
-                blurView.isUserInteractionEnabled = false
+                let coverView: UIView
+                if let color = self.resolvedCoverColor(for: window.traitCollection) {
+                    // Static `color` configured: solid color cover instead
+                    // of the blur (explicit user intent wins over the blur
+                    // style). The light/dark variant matching the current
+                    // appearance is used.
+                    let colorView = UIView()
+                    colorView.backgroundColor = color
+                    coverView = colorView
+                } else {
+                    coverView = UIVisualEffectView(effect: UIBlurEffect(style: self.resolvedBlurStyle()))
+                }
+                coverView.frame = window.bounds
+                coverView.tag = Self.overlayTag
+                coverView.alpha = 0
+                coverView.isUserInteractionEnabled = false
 
-                window.addSubview(blurView)
+                window.addSubview(coverView)
                 // No fade-in: the cover must be fully opaque as soon as it is
                 // added, so the system snapshot never catches a mid-fade frame.
-                blurView.alpha = 1.0
-                self.overlayView = blurView
+                coverView.alpha = 1.0
+                self.overlayView = coverView
             }
         }
     }
