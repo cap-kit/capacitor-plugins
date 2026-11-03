@@ -22,6 +22,7 @@ public struct PrivacyScreenConfig {
     private struct Keys {
         static let verboseLogging = "verboseLogging"
         static let enabled = "enabled"
+        static let color = "color"
     }
 
     // MARK: - Public Properties
@@ -41,6 +42,17 @@ public struct PrivacyScreenConfig {
      Default: false
      */
     public let enabled: Bool
+
+    /**
+     Hex cover colors from config (`color`). Accepts a single hex string
+     (`#RRGGBB` / `#AARRGGBB`, applied to both appearances) or an object
+     `{ light: hex, dark: hex }` for per-appearance values. When a valid
+     color is available for the current appearance, the cover is a solid
+     color view instead of the blur; otherwise the blur cover is used.
+     Default: nil (blur cover)
+     */
+    public let colorLight: String?
+    public let colorDark: String?
 
     // MARK: - Private Defaults
 
@@ -66,5 +78,21 @@ public struct PrivacyScreenConfig {
             Keys.enabled,
             Self.defaultEnabled
         )
+        // `color` accepts a hex string or `{ light: hex, dark: hex }`.
+        if let raw = plugin.getConfigValue(Keys.color) {
+            if let hex = raw as? String {
+                self.colorLight = hex
+                self.colorDark = hex
+            } else if let object = raw as? [String: Any] {
+                self.colorLight = object["light"] as? String
+                self.colorDark = object["dark"] as? String
+            } else {
+                self.colorLight = nil
+                self.colorDark = nil
+            }
+        } else {
+            self.colorLight = nil
+            self.colorDark = nil
+        }
     }
 }
