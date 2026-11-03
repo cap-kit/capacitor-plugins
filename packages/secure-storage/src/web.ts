@@ -1,6 +1,6 @@
 import { WebPlugin } from '@capacitor/core';
 
-import type {
+import {
   DefaultAccessOptions,
   GetManyOptions,
   GetManyResult,
@@ -109,9 +109,7 @@ export class SecureStorageWeb extends WebPlugin implements SecureStoragePlugin {
   }
 
   async clear(): Promise<void> {
-    const doomed = (await this.storeKeys()).filter((key) =>
-      key.startsWith(SecureStorageWeb.PREFIX),
-    );
+    const doomed = (await this.storeKeys()).filter((key) => key.startsWith(SecureStorageWeb.PREFIX));
     for (const key of doomed) {
       this.storeRemove(key);
     }
@@ -228,9 +226,7 @@ export class SecureStorageWeb extends WebPlugin implements SecureStoragePlugin {
    * never orphans existing entries.
    */
   private nameCandidates(key: string): string[] {
-    const bodies = this.obfuscateKeys
-      ? [this.encodeB64(key), key]
-      : [key, this.encodeB64(key)];
+    const bodies = this.obfuscateKeys ? [this.encodeB64(key), key] : [key, this.encodeB64(key)];
     const names: string[] = [];
     for (const body of bodies) {
       names.push(`${SecureStorageWeb.PREFIX}${this.obfuscationPrefix}${body}`);
@@ -274,9 +270,7 @@ export class SecureStorageWeb extends WebPlugin implements SecureStoragePlugin {
       }
     }
     const current = this.obfuscationPrefix;
-    return current.length > 0 && stored.startsWith(current)
-      ? stored.slice(current.length)
-      : stored;
+    return current.length > 0 && stored.startsWith(current) ? stored.slice(current.length) : stored;
   }
 
   private encodeB64(value: string): string {
@@ -373,14 +367,14 @@ export class SecureStorageWeb extends WebPlugin implements SecureStoragePlugin {
     } catch {
       return;
     }
-    let legacyKeys: string[] = [];
+    const legacyKeys: string[] = [];
     try {
       if (typeof localStorage === 'undefined') {
         return;
       }
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key !== null && key.startsWith(SecureStorageWeb.PREFIX)) {
+        if (key?.startsWith(SecureStorageWeb.PREFIX)) {
           legacyKeys.push(key);
         }
       }
@@ -391,7 +385,7 @@ export class SecureStorageWeb extends WebPlugin implements SecureStoragePlugin {
       if (existing.has(key)) {
         continue;
       }
-      let legacy: string | null = null;
+      let legacy: string | null;
       try {
         legacy = localStorage.getItem(key);
       } catch {
@@ -430,10 +424,7 @@ export class SecureStorageWeb extends WebPlugin implements SecureStoragePlugin {
         request.onerror = () => reject(request.error ?? new Error('IndexedDB open failed.'));
       });
 
-    const withStore = <T>(
-      mode: IDBTransactionMode,
-      task: (store: IDBObjectStore) => IDBRequest<T>,
-    ): Promise<T> =>
+    const withStore = <T>(mode: IDBTransactionMode, task: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> =>
       openDb().then(
         (db) =>
           new Promise<T>((resolve, reject) => {
@@ -476,12 +467,9 @@ export class SecureStorageWeb extends WebPlugin implements SecureStoragePlugin {
         withStore('readonly', (store) => store.get(key)).then((value) =>
           value === undefined || value === null ? null : String(value),
         ),
-      setItem: (key, value) =>
-        withStore('readwrite', (store) => store.put(value, key)).then(() => undefined),
-      removeItem: (key) =>
-        withStore('readwrite', (store) => store.delete(key)).then(() => undefined),
-      keys: () =>
-        withStore('readonly', (store) => store.getAllKeys()).then((keys) => keys.map(String)),
+      setItem: (key, value) => withStore('readwrite', (store) => store.put(value, key)).then(() => undefined),
+      removeItem: (key) => withStore('readwrite', (store) => store.delete(key)).then(() => undefined),
+      keys: () => withStore('readonly', (store) => store.getAllKeys()).then((keys) => keys.map(String)),
     };
 
     const probeKey = `__probe__${Date.now()}`;
@@ -617,13 +605,9 @@ export class SecureStorageWeb extends WebPlugin implements SecureStoragePlugin {
     const scope = this.webCryptoScope();
     const passphrase = `${scope.origin}|securestorage-web-key`;
     const salt = `${scope.hostname}|securestorage-salt-v1`;
-    const baseKey = await crypto.subtle.importKey(
-      'raw',
-      new TextEncoder().encode(passphrase),
-      'PBKDF2',
-      false,
-      ['deriveKey'],
-    );
+    const baseKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(passphrase), 'PBKDF2', false, [
+      'deriveKey',
+    ]);
     const key = await crypto.subtle.deriveKey(
       { name: 'PBKDF2', salt: new TextEncoder().encode(salt), iterations: 150_000, hash: 'SHA-256' },
       baseKey,
