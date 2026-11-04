@@ -180,7 +180,13 @@ export class SecureStorageWeb extends WebPlugin implements SecureStoragePlugin {
   }
 
   private insecureKey(key: string): string {
-    return `${this.insecurePrefix()}${this.encodeName(key)}`;
+    // Mirrors the Android tier (SecureStorageImpl.insecureKey): the insecure
+    // namespace never carries the secure-tier PREFIX segment. Going through
+    // encodeName() here produced a name the insecure candidate list never
+    // reads (write/read asymmetry), so nothing written through the insecure
+    // tier was ever retrievable on web.
+    const body = this.obfuscateKeys ? this.encodeB64(key) : key;
+    return `${this.insecurePrefix()}${this.obfuscationPrefix}${body}`;
   }
 
   private insecureCandidates(key: string): string[] {
