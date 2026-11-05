@@ -66,7 +66,7 @@
     "verify": "pnpm run verify:ios && pnpm run verify:android && pnpm run verify:web",
     "verify:ios": "node ./scripts/sync-version.mjs && xcodebuild -scheme CapKitSecureStorage -destination generic/platform=iOS",
     "verify:android": "cd android && ./gradlew clean build test && cd ..",
-    "verify:web": "pnpm run build",
+    "verify:web": "pnpm run test:web && pnpm run build",
     "lint:android": "cd android && ./gradlew ktlintCheck",
     "fmt:android": "cd android && ./gradlew ktlintFormat",
     "lint": "pnpm run eslint . && pnpm run swiftlint lint --strict || true && pnpm run lint:android || true",
@@ -79,6 +79,7 @@
     "build": "node ./scripts/sync-version.mjs && pnpm run clean && pnpm run docgen && tsc && rollup -c rollup.config.mjs",
     "clean": "rimraf ./dist",
     "watch": "tsc --watch",
+    "test:web": "vitest run --config vitest.config.ts",
     "test": "pnpm run verify",
     "removePacked": "rimraf -g cap-kit-secure-storage-*.tgz",
     "publish:locally": "pnpm run removePacked && pnpm run build && pnpm pack",
@@ -106,7 +107,8 @@
     "rollup": "^4.65.1",
     "swiftlint": "^2.0.0",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.72.1"
+    "typescript-eslint": "^8.72.1",
+    "vitest": "^5.0.5"
   },
   "peerDependencies": {
     "@capacitor/core": "^8.6.0"

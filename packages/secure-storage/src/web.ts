@@ -259,24 +259,33 @@ export class SecureStorageWeb extends WebPlugin implements SecureStoragePlugin {
   }
 
   /**
-   * Best-effort inverse of the name encoding: strips the prefix, then
-   * base64-decodes only when the value round-trips cleanly.
+   * Best-effort inverse of the name encoding: strips the matching prefix,
+   * then base64-decodes only when the value round-trips cleanly.
+   *
+   * The remainder under the CURRENT prefix is interpreted with the CURRENT
+   * obfuscateKeys flag — that is the only configuration known for certain.
+   * Trying a blind base64 inverse there mislisted raw key names that happen
+   * to be base64 fixed points (e.g. 'YWJj' -> 'abc'). Entries under previous
+   * prefixes keep the round-trip heuristic, which is all that exists for
+   * them. Tradeoff: entries written with obfuscation ON and read with the
+   * flag now OFF list their encoded name; reads and removals are unaffected
+   * because nameCandidates() covers both bodies.
    */
   private decodeName(stored: string): string {
-    const remainders = [stored];
-    for (const prefix of this.prefixVariants()) {
-      if (prefix.length > 0 && stored.startsWith(prefix)) {
-        remainders.push(stored.slice(prefix.length));
-      }
-    }
-    for (const remainder of remainders) {
-      const decoded = this.decodeB64(remainder);
-      if (decoded !== null) {
-        return decoded;
-      }
-    }
     const current = this.obfuscationPrefix;
-    return current.length > 0 && stored.startsWith(current) ? stored.slice(current.length) : stored;
+    if (current.length > 0 && stored.startsWith(current)) {
+      const body = stored.slice(current.length);
+      return this.obfuscateKeys ? (this.decodeB64(body) ?? body) : body;
+    }
+    for (const prefix of this.prefixVariants()) {
+      if (prefix !== current && prefix.length > 0 && stored.startsWith(prefix)) {
+        const legacy = stored.slice(prefix.length);
+        return this.decodeB64(legacy) ?? legacy;
+      }
+    }
+    // No prefix matched: the whole remainder is the body under the current
+    // configuration, so interpret it with the current obfuscateKeys flag.
+    return this.obfuscateKeys ? (this.decodeB64(stored) ?? stored) : stored;
   }
 
   private encodeB64(value: string): string {
