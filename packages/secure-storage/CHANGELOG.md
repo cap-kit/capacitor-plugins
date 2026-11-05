@@ -1,5 +1,11 @@
 # @cap-kit/secure-storage
 
+## 8.1.2
+
+### Patch Changes
+
+- 063a773: - Web `keys()` and `keysInsecure()` now preserve raw key names that happen to be valid Base64 values when key obfuscation is disabled, while retaining fallback decoding for entries written with legacy obfuscation prefixes.
+
 ## 8.1.1
 
 ### Patch Changes
