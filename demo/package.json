@@ -55,8 +55,8 @@
   "devDependencies": {
     "@analogjs/vite-plugin-angular": "2.9.6",
     "@analogjs/vitest-angular": "2.9.6",
-    "@angular/build": "^22.2.5",
-    "@angular/cli": "^22.2.5",
+    "@angular/build": "^22.2.6",
+    "@angular/cli": "^22.2.6",
     "@angular/compiler-cli": "^22.2.4",
     "@angular/language-service": "^22.2.4",
     "@ionic/angular-toolkit": "^13.0.0",
@@ -65,8 +65,8 @@
     "jsdom": "^31.0.0",
     "tsx": "^4.23.15",
     "typescript": "~6.0.3",
-    "vite": "^8.3.5",
+    "vite": "^8.3.6",
     "vite-plugin-static-copy": "^4.1.1",
-    "vitest": "^5.0.5"
+    "vitest": "^5.1.0"
   }
 }
