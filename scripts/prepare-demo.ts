@@ -97,6 +97,7 @@ function applyPatches(staticDir: string, targetDir: string) {
     return;
   }
   let ok = 0;
+  const failed: string[] = [];
   for (const patch of patches) {
     const rel = relative(targetDir, patch);
     try {
@@ -106,8 +107,16 @@ function applyPatches(staticDir: string, targetDir: string) {
       });
       log("✅", `Applied: ${rel}`);
       ok++;
-    } catch {
-      log("⚠️", `Failed: ${rel}`);
+    } catch (error) {
+      const details = error as { stdout?: Buffer; stderr?: Buffer };
+      const output = [
+        details.stdout?.toString().trim(),
+        details.stderr?.toString().trim(),
+      ]
+        .filter(Boolean)
+        .join("\n");
+      log("⚠️", `Failed: ${rel}${output ? `\n${output}` : ""}`);
+      failed.push(rel);
     }
   }
   log("🩹", `Patches: ${ok}/${patches.length}`);
@@ -124,6 +133,14 @@ function applyPatches(staticDir: string, targetDir: string) {
     }
   }
   cleanOrig(targetDir);
+
+  if (failed.length) {
+    die(
+      `Patch context no longer matches demo/ (${failed.length}/${patches.length} failed):\n` +
+        failed.map((rel) => `  - ${rel}`).join("\n") +
+        `\nRegenerate the patches against the current demo/ baseline.`,
+    );
+  }
 }
 
 // --- Resolve plugin ---

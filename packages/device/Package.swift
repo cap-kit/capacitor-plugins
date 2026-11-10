@@ -10,7 +10,7 @@ let package = Package(
             targets: ["DevicePlugin"])
     ],
     dependencies: [
-        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", from: "8.5.3")
+        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", from: "8.6.0")
     ],
     targets: [
         .target(

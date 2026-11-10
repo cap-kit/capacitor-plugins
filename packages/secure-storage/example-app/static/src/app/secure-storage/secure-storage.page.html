@@ -1,0 +1,302 @@
+<app-page-header [title]="'Secure Storage'" />
+
+<ion-content class="ion-padding">
+  <app-info-card
+    [title]="'Secure Storage'"
+    [subtitle]="'@cap-kit/secure-storage'"
+    [content]="'Hardware-backed encrypted key-value storage for Capacitor apps.'"
+    (githubClick)="openOnGithub()"
+  />
+
+  @if (isSupported()) {
+  <!-- STORAGE CARD -------------------------------------------------------- -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="key-outline" class="ion-margin-end" />
+        Key-Value Store
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-item>
+        <ion-label position="stacked">Key</ion-label>
+        <ion-input
+          [value]="storageKey()"
+          (ionChange)="storageKey.set($event.detail.value ?? '')"
+          placeholder="Enter key"
+        />
+      </ion-item>
+      <ion-item>
+        <ion-label position="stacked">Value</ion-label>
+        <ion-input
+          [value]="storageValue()"
+          (ionChange)="storageValue.set($event.detail.value ?? '')"
+          placeholder="Enter value"
+        />
+      </ion-item>
+
+      <div class="ion-margin-top">
+        <ion-button size="small" color="primary" (click)="onSetValue()" [disabled]="inProgress()">
+          <ion-icon name="add-circle" slot="start" />
+          Set
+          <ion-badge [color]="badgeColor(setState())" style="margin-left: 8px">
+            {{ badgeLabel(setState()) }}
+          </ion-badge>
+        </ion-button>
+        <ion-button size="small" color="secondary" (click)="onGetValue()" [disabled]="inProgress()">
+          <ion-icon name="key-outline" slot="start" />
+          Get
+          <ion-badge [color]="badgeColor(getState())" style="margin-left: 8px">
+            {{ badgeLabel(getState()) }}
+          </ion-badge>
+        </ion-button>
+        <ion-button size="small" color="warning" (click)="onRemoveValue()" [disabled]="inProgress()">
+          <ion-icon name="trash" slot="start" />
+          Remove
+          <ion-badge [color]="badgeColor(removeState())" style="margin-left: 8px">
+            {{ badgeLabel(removeState()) }}
+          </ion-badge>
+        </ion-button>
+        <ion-button size="small" color="danger" (click)="onClearAll()" [disabled]="inProgress()">
+          <ion-icon name="trash" slot="start" />
+          Clear All
+        </ion-button>
+        <ion-button size="small" fill="outline" (click)="onHasValue()" [disabled]="inProgress()">
+          <ion-icon name="key-outline" slot="start" />
+          Has?
+        </ion-button>
+      </div>
+
+      <ion-item-divider />
+
+      <ion-text>
+        <strong>Stored Keys</strong><br />
+        <small>Click a key to select it for get/remove operations.</small>
+      </ion-text>
+      <div class="ion-margin-top">
+        @for (key of storedKeys(); track key) {
+        <ion-chip
+          [outline]="storageKey() !== key"
+          [color]="storageKey() === key ? 'primary' : 'medium'"
+          (click)="selectKey(key)"
+        >
+          {{ key }}
+        </ion-chip>
+        }
+        @if (storedKeys().length === 0) {
+        <p class="ion-text-muted">
+          <small>No keys stored yet.</small>
+        </p>
+        }
+        <ion-button size="small" fill="clear" (click)="loadStoredKeys()">
+          <ion-icon name="refresh" slot="start" />
+          Load Keys
+        </ion-button>
+        <ion-button size="small" fill="clear" (click)="onGetMany()" [disabled]="storedKeys().length === 0">
+          <ion-icon name="key-outline" slot="start" />
+          Get Many
+        </ion-button>
+      </div>
+
+      @if (lastRetrievedValue() !== null) {
+      <ion-item-divider />
+      <ion-item lines="none">
+        <ion-label>
+          <strong>Retrieved Value</strong>
+        </ion-label>
+        <ion-note slot="end" class="ion-text-wrap"> {{ lastRetrievedValue() }} </ion-note>
+      </ion-item>
+      }
+    </ion-card-content>
+  </ion-card>
+
+  <!-- IOS OPTIONS CARD ----------------------------------------------------- -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="settings-outline" class="ion-margin-end" />
+        iOS Options
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-text>
+        <small>These controls are iOS-only. They resolve harmlessly on Android and Web.</small>
+      </ion-text>
+
+      <ion-item lines="none">
+        <ion-label>
+          <strong>iCloud Keychain Sync</strong><br />
+          <ion-note>Synchronize entries across devices</ion-note>
+        </ion-label>
+        <ion-toggle
+          slot="end"
+          [checked]="synchronize()"
+          (ionChange)="onSynchronizeChange($event.detail.checked)"
+        />
+      </ion-item>
+
+      <ion-item>
+        <ion-label>Default Keychain Access</ion-label>
+        <ion-select
+          slot="end"
+          interface="popover"
+          [value]="defaultAccess()"
+          (ionChange)="onDefaultAccessChange($event.detail.value)"
+        >
+          <ion-select-option value="whenUnlocked">whenUnlocked</ion-select-option>
+          <ion-select-option value="whenUnlockedThisDeviceOnly">whenUnlockedThisDeviceOnly</ion-select-option>
+          <ion-select-option value="afterFirstUnlock">afterFirstUnlock</ion-select-option>
+          <ion-select-option value="afterFirstUnlockThisDeviceOnly">afterFirstUnlockThisDeviceOnly</ion-select-option>
+          <ion-select-option value="whenPasscodeSetThisDeviceOnly">whenPasscodeSetThisDeviceOnly</ion-select-option>
+        </ion-select>
+      </ion-item>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- INSECURE CARD ------------------------------------------------------- -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="eye-outline" class="ion-margin-end" />
+        Insecure Store (Preferences-style)
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-text>
+        <small>Plaintext values under the current group. For non-sensitive data only.</small>
+      </ion-text>
+
+      <ion-item>
+        <ion-label position="stacked">Group</ion-label>
+        <ion-input
+          [value]="insecureGroup()"
+          (ionInput)="insecureGroup.set($event.detail.value ?? '')"
+          placeholder="CapacitorStorage"
+        />
+      </ion-item>
+      <ion-button size="small" fill="outline" (click)="onApplyGroup()" [disabled]="inProgress()">
+        Apply Group
+      </ion-button>
+
+      <ion-item lines="none">
+        <ion-label>
+          <strong>Obfuscate Key Names</strong><br />
+          <ion-note>Base64 key names on write (both tiers)</ion-note>
+        </ion-label>
+        <ion-toggle
+          slot="end"
+          [checked]="obfuscateKeys()"
+          (ionChange)="onToggleObfuscation($event.detail.checked)"
+        />
+      </ion-item>
+
+      <ion-item-divider />
+
+      <ion-item>
+        <ion-label position="stacked">Key</ion-label>
+        <ion-input
+          [value]="insecureKey()"
+          (ionInput)="insecureKey.set($event.detail.value ?? '')"
+          placeholder="Enter key"
+        />
+      </ion-item>
+      <ion-item>
+        <ion-label position="stacked">Value</ion-label>
+        <ion-input
+          [value]="insecureValue()"
+          (ionInput)="insecureValue.set($event.detail.value ?? '')"
+          placeholder="Enter value"
+        />
+      </ion-item>
+
+      <div class="ion-margin-top">
+        <ion-button size="small" color="primary" (click)="onSetInsecure()" [disabled]="inProgress()">
+          Set
+        </ion-button>
+        <ion-button size="small" color="secondary" (click)="onGetInsecure()" [disabled]="inProgress()">
+          Get
+        </ion-button>
+        <ion-button size="small" color="warning" (click)="onRemoveInsecure()" [disabled]="inProgress()">
+          Remove
+        </ion-button>
+        <ion-button size="small" fill="outline" (click)="onHasInsecure()" [disabled]="inProgress()">
+          Has?
+        </ion-button>
+        <ion-button size="small" fill="outline" color="danger" (click)="onClearInsecure()" [disabled]="inProgress()">
+          Clear Group
+        </ion-button>
+      </div>
+
+      @if (lastInsecureValue() !== null) {
+      <ion-item lines="none">
+        <ion-label>
+          <strong>Retrieved Value</strong>
+        </ion-label>
+        <ion-note slot="end" class="ion-text-wrap"> {{ lastInsecureValue() }} </ion-note>
+      </ion-item>
+      }
+
+      <ion-text>
+        <strong>Group Keys</strong>
+      </ion-text>
+      <div class="ion-margin-top">
+        @for (key of storedInsecureKeys(); track key) {
+        <ion-chip
+          [outline]="insecureKey() !== key"
+          [color]="insecureKey() === key ? 'primary' : 'medium'"
+          (click)="selectInsecureKey(key)"
+        >
+          {{ key }}
+        </ion-chip>
+        }
+        @if (storedInsecureKeys().length === 0) {
+        <p class="ion-text-muted">
+          <small>No insecure keys in this group yet.</small>
+        </p>
+        }
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- LOGS CARD ------------------------------------------------------------ -->
+  <ion-card>
+    <ion-card-header>
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <ion-card-title>
+          <ion-icon name="terminal-outline" class="ion-margin-end" />
+          Event Log
+        </ion-card-title>
+        <ion-button size="small" fill="clear" color="medium" (click)="clearLogs()"> Clear </ion-button>
+      </div>
+    </ion-card-header>
+    <ion-card-content>
+      @if (logs().length === 0) {
+      <p class="ion-text-muted">
+        <small>No events logged yet. Actions will appear here.</small>
+      </p>
+      } @else {
+      <div class="log-container">
+        @for (log of logs(); track $index) {
+        <div class="log-entry">
+          <ion-note>{{ log }}</ion-note>
+        </div>
+        }
+      </div>
+      }
+    </ion-card-content>
+  </ion-card>
+
+  @if (inProgress()) {
+  <div class="ion-text-center ion-padding">
+    <ion-spinner />
+  </div>
+  } } @else {
+  <ion-card>
+    <ion-card-content>
+      <p class="ion-text-muted">This plugin is not supported on this platform.</p>
+    </ion-card-content>
+  </ion-card>
+  }
+</ion-content>
+
+<app-page-footer [version]="displayVersion()" [label]="'Plugin Version'" />

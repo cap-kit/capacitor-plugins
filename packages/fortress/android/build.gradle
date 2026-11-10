@@ -1,13 +1,21 @@
 buildscript {
-    ext.kotlin_version = project.hasProperty("kotlin_version") ? project.property("kotlin_version") : '2.4.20'
+    ext.kotlin_version = project.hasProperty("kotlin_version") ? project.property("kotlin_version") : '2.4.21'
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:9.4.1'
+        classpath 'com.android.tools.build:gradle:9.5.1'
         classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.21'
         classpath "org.jetbrains.kotlin:kotlin-serialization:$kotlin_version"
+        // kotlinx.serialization COMPILER plugin. The runtime json library alone
+        // is not enough: without this classpath the @Serializable models get no
+        // generated serializers and every toJSObject() call fails at runtime
+        // with "Serializer for class '...' is not found" (observed on device
+        // 2026-10-26: every capability getter rejected with INIT_FAILED).
+        // Pinned to 2.4.21 to match the effective kotlin-gradle-plugin version
+        // (duplicate classpath entries above resolve to the highest, 2.4.21).
+        classpath 'org.jetbrains.kotlin:kotlin-serialization:2.4.21'
     }
 }
 
@@ -20,6 +28,7 @@ ext {
     androidxAppCompatVersion = project.hasProperty('androidxAppCompatVersion') ? project.property('androidxAppCompatVersion') : '1.8.0'
     androidxJunitVersion = project.hasProperty('androidxJunitVersion') ? project.property('androidxJunitVersion') : '1.3.0'
     androidxEspressoCoreVersion = project.hasProperty('androidxEspressoCoreVersion') ? project.property('androidxEspressoCoreVersion') : '3.7.0'
+    androidxBiometricVersion = project.hasProperty('androidxBiometricVersion') ? project.property('androidxBiometricVersion') : '1.1.0'
 }
 
 apply plugin: 'com.android.library'
@@ -27,10 +36,11 @@ if (project.extensions.findByName('kotlin') == null) {
     apply plugin: 'kotlin-android'
 }
 apply plugin: 'kotlin-parcelize'
+// Generates the kotlinx.serialization serializers for the @Serializable result
+// models. Required for toJSObject() to work at runtime; see the buildscript
+// classpath note above.
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
 apply plugin: 'org.jlleitschuh.gradle.ktlint'
-if (!project.plugins.hasPlugin('kotlinx-serialization')) {
-    apply plugin: 'kotlinx-serialization'
-}
 
 import groovy.json.JsonSlurper
 
@@ -102,9 +112,8 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
     implementation "androidx.lifecycle:lifecycle-process:2.11.0"
-    implementation "androidx.biometric:biometric:1.1.0"
+    implementation "androidx.biometric:biometric:$androidxBiometricVersion"
     implementation "androidx.security:security-crypto:1.1.0"
-
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.12.0"
 
     testImplementation "junit:junit:$junitVersion"

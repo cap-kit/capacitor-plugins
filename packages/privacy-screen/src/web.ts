@@ -1,4 +1,4 @@
-import { WebPlugin, PluginListenerHandle, ListenerCallback  } from '@capacitor/core';
+import { WebPlugin, PluginListenerHandle, ListenerCallback } from '@capacitor/core';
 
 import {
   PluginVersionResult,
@@ -6,8 +6,8 @@ import {
   PrivacyScreenConfig,
   PrivacyScreenPlugin,
   PrivacyScreenStatus,
-} from './definitions';
-import { PLUGIN_VERSION } from './version';
+} from './definitions.js';
+import { PLUGIN_VERSION } from './version.js';
 
 /**
  * Web implementation of the PrivacyScreen plugin.
@@ -48,10 +48,7 @@ export class PrivacyScreenWeb extends WebPlugin implements PrivacyScreenPlugin {
     return { version: PLUGIN_VERSION };
   }
 
-  async addListener(
-    _eventName: string,
-    _listenerFunc: ListenerCallback,
-  ): Promise<PluginListenerHandle> {
+  async addListener(_eventName: string, _listenerFunc: ListenerCallback): Promise<PluginListenerHandle> {
     throw this.unimplemented('Not implemented on web.');
   }
 

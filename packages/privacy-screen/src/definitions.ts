@@ -29,6 +29,20 @@ declare module '@capacitor/cli' {
        * @since 8.0.0
        */
       enabled?: boolean;
+      /**
+       * Hex color (`#RRGGBB` or `#AARRGGBB`) used for the privacy cover
+       * instead of the platform default (blur on iOS, black scrim on
+       * Android). Accepts either a single string (applied to both light and
+       * dark appearances) or an object with per-appearance variants
+       * (`{ light: '#RRGGBB', dark: '#RRGGBB' }`); the variant matching the
+       * current appearance wins, and a single variant covers both when only
+       * one is set. Invalid values are ignored and the platform default
+       * applies for that appearance.
+       *
+       * @default undefined
+       * @since 8.2.0
+       */
+      color?: string | { light?: string; dark?: string };
     };
   }
 }
@@ -44,7 +58,10 @@ declare module '@capacitor/cli' {
 export interface PrivacyScreenConfig {
   android?: {
     /**
-     * Shows a dim scrim instead of the splash drawable while protected.
+     * Legacy option kept for API compatibility. No steady overlay is shown
+     * while the app is active: switcher protection relies on `FLAG_SECURE`,
+     * and the hidden-activity cover style is selected by
+     * `privacyModeOnActivityHidden`.
      *
      * @default false
      * @since 8.0.0

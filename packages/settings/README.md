@@ -117,12 +117,12 @@ export default config;
 
 <docgen-index>
 
-- [`open(...)`](#open)
-- [`openIOS(...)`](#openios)
-- [`openAndroid(...)`](#openandroid)
-- [`getPluginVersion()`](#getpluginversion)
-- [Interfaces](#interfaces)
-- [Enums](#enums)
+* [`open(...)`](#open)
+* [`openIOS(...)`](#openios)
+* [`openAndroid(...)`](#openandroid)
+* [`getPluginVersion()`](#getpluginversion)
+* [Interfaces](#interfaces)
+* [Enums](#enums)
 
 </docgen-index>
 
@@ -134,7 +134,6 @@ Public JavaScript API for the Settings Capacitor plugin.
 This plugin uses a standard Promise rejection model for errors.
 
 All methods return a Promise that:
-
 - resolves when the operation is successful
 - rejects when the operation fails or is not supported
 
@@ -156,7 +155,8 @@ On Web, this method is not supported and will reject.
 
 **Since:** 8.0.0
 
----
+--------------------
+
 
 ### openIOS(...)
 
@@ -175,7 +175,8 @@ prefer the generic `open()` method with <a href="#platformoptions">`PlatformOpti
 
 **Since:** 8.0.0
 
----
+--------------------
+
 
 ### openAndroid(...)
 
@@ -195,7 +196,8 @@ prefer the generic `open()` method with <a href="#platformoptions">`PlatformOpti
 
 **Since:** 8.0.0
 
----
+--------------------
+
 
 ### getPluginVersion()
 
@@ -218,9 +220,11 @@ bundled with the application.
 const { version } = await Settings.getPluginVersion();
 ```
 
----
+--------------------
+
 
 ### Interfaces
+
 
 #### PlatformOptions
 
@@ -234,6 +238,7 @@ Android and iOS in a single call.
 | **`optionAndroid`** | <code><a href="#androidsettings">AndroidSettings</a></code> | Android settings option to open. Used only when running on Android. Mapped internally to a system Intent. If running on Android and this option is missing or empty, the promise will be rejected with `SettingsErrorCode.INVALID_INPUT`. |
 | **`optionIOS`**     | <code><a href="#iossettings">IOSSettings</a></code>         | iOS settings option to open. Used only when running on iOS. Mapped internally to an iOS settings URL scheme. If running on iOS and this option is missing or empty, the promise will be rejected with `SettingsErrorCode.INVALID_INPUT`.  |
 
+
 #### IOSOptions
 
 iOS-specific options for opening system settings.
@@ -241,6 +246,7 @@ iOS-specific options for opening system settings.
 | Prop         | Type                                                | Description                                                                                                                                             |
 | ------------ | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **`option`** | <code><a href="#iossettings">IOSSettings</a></code> | The iOS settings section to open. Most values correspond to internal iOS URL schemes. Availability depends on the iOS version and system configuration. |
+
 
 #### AndroidOptions
 
@@ -250,6 +256,7 @@ Android-specific options for opening system settings.
 | ------------ | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **`option`** | <code><a href="#androidsettings">AndroidSettings</a></code> | The Android settings section to open. Each value maps to a specific Android system Intent. Support varies depending on the device and OS version. |
 
+
 #### PluginVersionResult
 
 Result object returned by the `getPluginVersion()` method.
@@ -258,7 +265,9 @@ Result object returned by the `getPluginVersion()` method.
 | ------------- | ------------------- | --------------------------------- |
 | **`version`** | <code>string</code> | The native plugin version string. |
 
+
 ### Enums
+
 
 #### AndroidSettings
 
@@ -293,6 +302,7 @@ Result object returned by the `getPluginVersion()` method.
 | **`ZenMode`**               | <code>'zen_mode'</code>                 | Opens Zen Mode (Do Not Disturb) settings. This uses a non-public intent and may not work on all devices. |
 | **`ZenModePriority`**       | <code>'zen_mode_priority'</code>        | Opens Zen Mode Priority settings.                                                                        |
 | **`ZenModeBlockedEffects`** | <code>'zen_mode_blocked_effects'</code> | Opens Zen Mode Blocked Effects settings.                                                                 |
+
 
 #### IOSSettings
 

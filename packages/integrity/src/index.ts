@@ -6,7 +6,7 @@ import { registerPlugin } from '@capacitor/core';
  * Registers the plugin with Capacitor and re-exports public types.
  */
 
-import { IntegrityPlugin } from './definitions';
+import { IntegrityPlugin } from './definitions.js';
 
 /**
  * The Integrity plugin instance.
@@ -16,5 +16,5 @@ const Integrity = registerPlugin<IntegrityPlugin>('Integrity', {
   web: () => import('./web').then((m) => new m.IntegrityWeb()),
 });
 
-export * from './definitions';
+export * from './definitions.js';
 export { Integrity };

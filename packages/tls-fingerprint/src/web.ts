@@ -6,8 +6,8 @@ import {
   TLSFingerprintOptions,
   TLSFingerprintMultiOptions,
   TLSFingerprintResult,
-} from './definitions';
-import { PLUGIN_VERSION } from './version';
+} from './definitions.js';
+import { PLUGIN_VERSION } from './version.js';
 
 /**
  * Web implementation of the TLSFingerprint plugin.

@@ -77,6 +77,34 @@ public final class PrivacyScreenPlugin: CAPPlugin, CAPBridgedPlugin {
             object: nil
         )
 
+        // App-switcher cover lifecycle: show the blur cover on willResignActive
+        // so it is already on screen BEFORE iOS captures the app-switcher
+        // snapshot (didEnterBackground fires after the snapshot, which caused
+        // the content to leak on the first backgrounding). Hide it on BOTH
+        // willEnterForeground (return from background) and didBecomeActive
+        // (Control Center / notification banner / call banner: the app never
+        // left the foreground, so willEnterForeground never fires and the
+        // cover would stay stuck if only that observer removed it).
+        // hideOverlay is idempotent, so the double wiring is harmless.
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleWillResignActive),
+            name: UIApplication.willResignActiveNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleWillEnterForeground),
+            name: UIApplication.willEnterForegroundNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleDidBecomeActive),
+            name: UIApplication.didBecomeActiveNotification,
+            object: nil
+        )
+
         PrivacyScreenLogger.debug("Plugin loaded. Version: ", PluginVersion.number)
     }
 
@@ -96,6 +124,18 @@ public final class PrivacyScreenPlugin: CAPPlugin, CAPBridgedPlugin {
         notifyListeners("screenRecordingStopped", data: nil)
     }
 
+    @objc private func handleWillResignActive() {
+        implementation.onAppWillResignActive()
+    }
+
+    @objc private func handleWillEnterForeground() {
+        implementation.onAppWillEnterForeground()
+    }
+
+    @objc private func handleDidBecomeActive() {
+        implementation.onAppDidBecomeActive()
+    }
+
     // MARK: - Version
 
     @objc func getPluginVersion(_ call: CAPPluginCall) {
@@ -111,8 +151,11 @@ public final class PrivacyScreenPlugin: CAPPlugin, CAPBridgedPlugin {
 
      The JS argument arrives flattened: `{ android, ios }` are top-level keys.
      Only `ios.blurEffect` is honored natively (`light` / `dark` / `none`
-     mapping to the overlay blur style, defaulting to the system style);
+     mapping to the cover blur style, defaulting to the system style);
      unknown values fall back to the system style.
+
+     The cover is shown when the app enters the background (app switcher /
+     recents) and removed when it returns to the foreground.
      */
     @objc func enable(_ call: CAPPluginCall) {
         let blurEffect = call.getObject("ios")?["blurEffect"] as? String

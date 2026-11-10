@@ -6,7 +6,7 @@ import { registerPlugin } from '@capacitor/core';
  * Registers the plugin and re-exports public API types.
  */
 
-import { TLSFingerprintPlugin } from './definitions';
+import { TLSFingerprintPlugin } from './definitions.js';
 
 /**
  * The TLSFingerprint plugin instance.
@@ -16,5 +16,5 @@ const TLSFingerprint = registerPlugin<TLSFingerprintPlugin>('TLSFingerprint', {
   web: () => import('./web').then((m) => new m.TLSFingerprintWeb()),
 });
 
-export * from './definitions';
+export * from './definitions.js';
 export { TLSFingerprint };

@@ -2,9 +2,14 @@ package io.capkit.privacyscreen.config
 
 import android.content.Context
 import com.getcapacitor.Plugin
+import io.capkit.privacyscreen.utils.PrivacyScreenValidators
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * Data Transfer Object (DTO) for parsing capacitor.config.ts configuration.
@@ -15,6 +20,10 @@ private data class PrivacyScreenConfigData(
   val verboseLogging: Boolean = false,
   @SerialName("enabled")
   val enabled: Boolean = false,
+  // `color` accepts a hex string or `{ light: hex, dark: hex }`; parsed
+  // manually below because kotlinx has no union type.
+  @SerialName("color")
+  val color: JsonElement? = null,
 )
 
 /**
@@ -56,6 +65,24 @@ class PrivacyScreenConfig(
    */
   val enabled: Boolean
 
+  /**
+   * Hex color for the light appearance (`color` string or `color.light`),
+   * validated with [PrivacyScreenValidators.isValidHexColor]; null when
+   * absent or invalid. Falls back to [colorDark] usage rules: each variant
+   * is used as-is for its appearance, and a single variant covers both when
+   * only one is set.
+   * Default: null
+   */
+  val colorLight: String?
+
+  /**
+   * Hex color for the dark appearance (`color` string or `color.dark`),
+   * validated with [PrivacyScreenValidators.isValidHexColor]; null when
+   * absent or invalid.
+   * Default: null
+   */
+  val colorDark: String?
+
   // ---------------------------------------------------------------------------
   // Initialization
   // ---------------------------------------------------------------------------
@@ -65,7 +92,34 @@ class PrivacyScreenConfig(
 
     verboseLogging = parsedConfig.verboseLogging
     enabled = parsedConfig.enabled
+    val colors = normalizeColor(parsedConfig.color)
+    colorLight = colors.first
+    colorDark = colors.second
   }
+
+  /**
+   * Normalizes the `color` option into (light, dark) hex pairs:
+   * a string applies to both appearances; an object maps `light`/`dark`.
+   * Invalid hex values are dropped (the platform default applies for that
+   * appearance).
+   */
+  private fun normalizeColor(raw: JsonElement?): Pair<String?, String?> =
+    when {
+      raw == null -> null to null
+      raw is JsonPrimitive -> {
+        val content = raw.jsonPrimitive.content
+        val hex = content.takeIf { PrivacyScreenValidators.isValidHexColor(it) }
+        hex to hex
+      }
+      raw is JsonObject -> {
+        val lightRaw = (raw["light"] as? JsonPrimitive)?.content
+        val darkRaw = (raw["dark"] as? JsonPrimitive)?.content
+        val light = lightRaw?.takeIf { PrivacyScreenValidators.isValidHexColor(it) }
+        val dark = darkRaw?.takeIf { PrivacyScreenValidators.isValidHexColor(it) }
+        light to dark
+      }
+      else -> null to null
+    }
 
   private companion object {
     private val json =

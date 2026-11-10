@@ -1,0 +1,124 @@
+{
+  "name": "@cap-kit/secure-storage",
+  "version": "8.1.2",
+  "description": "Capacitor v8 plugin for encrypted key-value storage: hardware-backed secure storage on Android and iOS with iCloud sync and Keychain access levels.",
+  "type": "module",
+  "private": false,
+  "sideEffects": false,
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=12.0.0"
+  },
+  "main": "dist/plugin.cjs",
+  "module": "dist/esm/index.js",
+  "types": "dist/esm/index.d.ts",
+  "unpkg": "dist/plugin.js",
+  "exports": {
+    ".": {
+      "types": "./dist/esm/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/plugin.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "android/src/main/",
+    "android/build.gradle",
+    "dist/",
+    "ios/Sources",
+    "ios/Tests",
+    "Package.swift",
+    "CapKitSecureStorage.podspec",
+    "LICENSE",
+    "README.md",
+    "docs/"
+  ],
+  "author": "CapKit Team",
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/cap-kit"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cap-kit/capacitor-plugins.git",
+    "directory": "packages/secure-storage"
+  },
+  "bugs": {
+    "url": "https://github.com/cap-kit/capacitor-plugins/issues"
+  },
+  "homepage": "https://github.com/cap-kit/capacitor-plugins/tree/main/packages/secure-storage#readme",
+  "keywords": [
+    "capacitor",
+    "capacitor-plugin",
+    "cap-kit",
+    "secure-storage",
+    "keychain",
+    "keystore",
+    "encrypted-storage",
+    "icloud-sync",
+    "mobile",
+    "native",
+    "ios",
+    "android"
+  ],
+  "scripts": {
+    "verify": "pnpm run verify:ios && pnpm run verify:android && pnpm run verify:web",
+    "verify:ios": "node ./scripts/sync-version.mjs && xcodebuild -scheme CapKitSecureStorage -destination generic/platform=iOS",
+    "verify:android": "cd android && ./gradlew clean build test && cd ..",
+    "verify:web": "pnpm run test:web && pnpm run build",
+    "lint:android": "cd android && ./gradlew ktlintCheck",
+    "fmt:android": "cd android && ./gradlew ktlintFormat",
+    "lint": "pnpm run eslint . && pnpm run swiftlint lint --strict || true && pnpm run lint:android || true",
+    "format:check": "prettier --check \"**/*.{css,html,ts,js,java}\" --plugin=prettier-plugin-java",
+    "format": "eslint --fix . && prettier --write \"**/*.{css,html,ts,js,java}\" --plugin=prettier-plugin-java && pnpm run swiftlint --fix --format && pnpm run fmt:android",
+    "eslint": "eslint",
+    "prettier": "prettier \"**/*.{css,html,ts,js,java}\" --plugin=prettier-plugin-java",
+    "swiftlint": "node-swiftlint lint ios/Sources",
+    "docgen": "docgen --api SecureStoragePlugin --output-readme README.md --output-json dist/docs.json",
+    "build": "node ./scripts/sync-version.mjs && pnpm run clean && pnpm run docgen && tsc && rollup -c rollup.config.mjs",
+    "clean": "rimraf ./dist",
+    "watch": "tsc --watch",
+    "test:web": "vitest run --config vitest.config.ts",
+    "test": "pnpm run verify",
+    "removePacked": "rimraf -g cap-kit-secure-storage-*.tgz",
+    "publish:locally": "pnpm run removePacked && pnpm run build && pnpm pack",
+    "prepublishOnly": "pnpm run build",
+    "app:demo:prepare": "tsx ../../scripts/prepare-demo.ts",
+    "app:demo:cleanup": "tsx ../../scripts/prepare-demo.ts --cleanup"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/cli": "^8.6.0",
+    "@capacitor/core": "^8.6.0",
+    "@capkit/docgen": "file:./../../local_lib/cap-kit-docgen-0.3.1.tgz",
+    "@capacitor/ios": "^8.5.3",
+    "@eslint/eslintrc": "^3.3.7",
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.14.0",
+    "eslint-plugin-import-x": "^4.18.1",
+    "globals": "^17.14.0",
+    "prettier": "^3.9.10",
+    "prettier-plugin-java": "^2.11.0",
+    "rimraf": "^6.1.4",
+    "rollup": "^4.68.2",
+    "swiftlint": "^2.0.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.2",
+    "vitest": "^5.1.0"
+  },
+  "peerDependencies": {
+    "@capacitor/core": "^8.6.0"
+  },
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    },
+    "android": {
+      "src": "android"
+    }
+  }
+}

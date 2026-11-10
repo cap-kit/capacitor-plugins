@@ -7,7 +7,7 @@
 
 import { registerPlugin } from '@capacitor/core';
 
-import { DevicePlugin } from './definitions';
+import { DevicePlugin } from './definitions.js';
 
 /**
  * The Device plugin instance.
@@ -18,5 +18,5 @@ const Device = registerPlugin<DevicePlugin>('Device', {
   web: () => import('./web').then((m) => new m.DeviceWeb()),
 });
 
-export * from './definitions';
+export * from './definitions.js';
 export { Device };

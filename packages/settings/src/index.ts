@@ -7,7 +7,7 @@
 
 import { registerPlugin } from '@capacitor/core';
 
-import { SettingsPlugin } from './definitions';
+import { SettingsPlugin } from './definitions.js';
 
 /**
  * Main entry point for the Settings Capacitor plugin.
@@ -19,5 +19,5 @@ const Settings = registerPlugin<SettingsPlugin>('Settings', {
   web: () => import('./web').then((m) => new m.SettingsWeb()),
 });
 
-export * from './definitions';
+export * from './definitions.js';
 export { Settings };

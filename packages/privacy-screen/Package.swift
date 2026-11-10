@@ -10,7 +10,7 @@ let package = Package(
             targets: ["PrivacyScreenPlugin"])
     ],
     dependencies: [
-        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", from: "8.5.3")
+        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", from: "8.6.0")
     ],
     targets: [
         .target(
@@ -20,6 +20,11 @@ let package = Package(
                 .product(name: "Cordova", package: "capacitor-swift-pm")
             ],
             path: "ios/Sources/PrivacyScreenPlugin"
+        ),
+        .testTarget(
+            name: "PrivacyScreenPluginTests",
+            dependencies: ["PrivacyScreenPlugin"],
+            path: "ios/Tests/PrivacyScreenPluginTests"
         )
     ]
 )

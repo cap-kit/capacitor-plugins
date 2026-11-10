@@ -1,0 +1,13 @@
+--- a/src/app/app.routes.ts
++++ b/src/app/app.routes.ts
+@@ -6,5 +6,10 @@
+       import('./home/home.page').then((m) => m.HomePage),
+   },
++  {
++    path: 'secure-storage',
++    loadComponent: () =>
++      import('./secure-storage/secure-storage.page').then((m) => m.SecureStoragePage),
++  },
+   {
+     path: '',
+     redirectTo: 'home',

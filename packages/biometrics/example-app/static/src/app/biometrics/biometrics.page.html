@@ -1,0 +1,210 @@
+<app-page-header [title]="'Biometrics'" />
+
+<ion-content class="ion-padding">
+  <app-info-card
+    [title]="'Biometrics'"
+    [subtitle]="'@cap-kit/biometrics'"
+    [content]="'Face ID, Touch ID, fingerprint, face and iris authentication with device-credential fallback.'"
+    (githubClick)="openOnGithub()"
+  />
+
+  @if (isSupported()) {
+  <!-- CAPABILITIES CARD --------------------------------------------------- -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="shield-checkmark-outline" class="ion-margin-end" />
+        Capabilities
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-item lines="none">
+        <ion-label>
+          <strong>Available</strong>
+        </ion-label>
+        @if (isAvailable() !== null) {
+        <ion-badge slot="end" [color]="isAvailable()! ? 'success' : 'medium'">
+          {{ isAvailable()! ? 'Yes' : 'No' }}
+        </ion-badge>
+        } @else {
+        <ion-badge slot="end" color="medium">Unknown</ion-badge>
+        }
+      </ion-item>
+      <ion-item lines="none">
+        <ion-label>
+          <strong>Enrolled</strong>
+        </ion-label>
+        @if (isEnrolled() !== null) {
+        <ion-badge slot="end" [color]="isEnrolled()! ? 'success' : 'medium'">
+          {{ isEnrolled()! ? 'Yes' : 'No' }}
+        </ion-badge>
+        } @else {
+        <ion-badge slot="end" color="medium">Unknown</ion-badge>
+        }
+      </ion-item>
+      <ion-item lines="none">
+        <ion-label>
+          <strong>Primary Type</strong>
+        </ion-label>
+        <ion-badge slot="end" color="tertiary">
+          {{ biometryType() ?? 'Unknown' }}
+        </ion-badge>
+      </ion-item>
+      <ion-item lines="none">
+        <ion-label>
+          <strong>All Types</strong>
+        </ion-label>
+        <ion-note slot="end">
+          {{ biometryTypes().length > 0 ? biometryTypes().join(', ') : '—' }}
+        </ion-note>
+      </ion-item>
+      <ion-item lines="none">
+        <ion-label>
+          <strong>Device Credential</strong>
+        </ion-label>
+        @if (hasDeviceCredential() !== null) {
+        <ion-badge slot="end" [color]="hasDeviceCredential()! ? 'success' : 'medium'">
+          {{ hasDeviceCredential()! ? 'Yes' : 'No' }}
+        </ion-badge>
+        } @else {
+        <ion-badge slot="end" color="medium">Unknown</ion-badge>
+        }
+      </ion-item>
+      <ion-item lines="none">
+        <ion-label>
+          <strong>Strength</strong>
+        </ion-label>
+        <ion-badge slot="end" color="tertiary">
+          {{ strengthLevel() ?? 'Unknown' }}
+        </ion-badge>
+      </ion-item>
+      <ion-button expand="block" size="small" (click)="refreshCapabilities()" [disabled]="inProgress()">
+        <ion-icon name="refresh" slot="start" />
+        Refresh Capabilities
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- AUTHENTICATE CARD ---------------------------------------------------- -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="finger-print" class="ion-margin-end" />
+        Authenticate
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-item>
+        <ion-label position="stacked">Title (Android)</ion-label>
+        <ion-input
+          [value]="promptTitle()"
+          (ionInput)="promptTitle.set($event.detail.value ?? '')"
+          placeholder="Authentication Required"
+        />
+      </ion-item>
+      <ion-item>
+        <ion-label position="stacked">Subtitle (Android)</ion-label>
+        <ion-input
+          [value]="promptSubtitle()"
+          (ionInput)="promptSubtitle.set($event.detail.value ?? '')"
+          placeholder="Please authenticate to continue"
+        />
+      </ion-item>
+      <ion-item>
+        <ion-label position="stacked">Reason (optional)</ion-label>
+        <ion-input
+          [value]="promptReason()"
+          (ionInput)="promptReason.set($event.detail.value ?? '')"
+          placeholder="Confirm payment"
+        />
+      </ion-item>
+      <ion-item lines="none">
+        <ion-label>
+          <strong>Allow Device Credential</strong><br />
+          <ion-note>PIN / pattern / password fallback</ion-note>
+        </ion-label>
+        <ion-toggle
+          slot="end"
+          [checked]="allowDeviceCredential()"
+          (ionChange)="allowDeviceCredential.set($event.detail.checked)"
+        />
+      </ion-item>
+
+      <div class="ion-margin-top">
+        <ion-button size="small" color="primary" (click)="onAuthenticate()" [disabled]="inProgress()">
+          <ion-icon name="finger-print" slot="start" />
+          Authenticate
+          <ion-badge [color]="badgeColor(authenticateState())" style="margin-left: 8px">
+            {{ badgeLabel(authenticateState()) }}
+          </ion-badge>
+        </ion-button>
+        <ion-button size="small" fill="outline" (click)="onCancelAuthentication()" [disabled]="inProgress()">
+          Cancel Prompt
+        </ion-button>
+      </div>
+
+      @if (lastAuthenticationType() !== null) {
+      <ion-item lines="none">
+        <ion-label>
+          <strong>Last Authentication Type</strong>
+        </ion-label>
+        <ion-badge slot="end" color="tertiary">
+          {{ lastAuthenticationType() }}
+        </ion-badge>
+      </ion-item>
+      }
+
+      <ion-item-divider />
+
+      <ion-button expand="block" size="small" fill="outline" (click)="onEnroll()" [disabled]="inProgress()">
+        <ion-icon name="key-outline" slot="start" />
+        Open Enrollment (Android)
+      </ion-button>
+      <ion-note class="ion-margin-top ion-padding-start ion-display-block">
+        iOS and Web have no enrollment screen: the call rejects with UNAVAILABLE there.
+      </ion-note>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- LOGS CARD ------------------------------------------------------------ -->
+  <ion-card>
+    <ion-card-header>
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <ion-card-title>
+          <ion-icon name="terminal-outline" class="ion-margin-end" />
+          Event Log
+        </ion-card-title>
+        <ion-button size="small" fill="clear" color="medium" (click)="clearLogs()"> Clear </ion-button>
+      </div>
+    </ion-card-header>
+    <ion-card-content>
+      @if (logs().length === 0) {
+      <p class="ion-text-muted">
+        <small>No events logged yet. Actions will appear here.</small>
+      </p>
+      } @else {
+      <div class="log-container">
+        @for (log of logs(); track $index) {
+        <div class="log-entry">
+          <ion-note>{{ log }}</ion-note>
+        </div>
+        }
+      </div>
+      }
+    </ion-card-content>
+  </ion-card>
+
+  @if (inProgress()) {
+  <div class="ion-text-center ion-padding">
+    <ion-spinner />
+  </div>
+  } } @else {
+  <ion-card>
+    <ion-card-content>
+      <p class="ion-text-muted">This plugin is not supported on this platform.</p>
+    </ion-card-content>
+  </ion-card>
+  }
+</ion-content>
+
+<app-page-footer [version]="displayVersion()" [label]="'Plugin Version'" />
