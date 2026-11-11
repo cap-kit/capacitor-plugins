@@ -53,8 +53,8 @@
     "tslib": "^2.9.1"
   },
   "devDependencies": {
-    "@analogjs/vite-plugin-angular": "2.9.6",
-    "@analogjs/vitest-angular": "2.9.6",
+    "@analogjs/vite-plugin-angular": "2.9.7",
+    "@analogjs/vitest-angular": "2.9.7",
     "@angular/build": "^22.2.6",
     "@angular/cli": "^22.2.6",
     "@angular/compiler-cli": "^22.2.5",
@@ -65,7 +65,7 @@
     "jsdom": "^31.0.0",
     "tsx": "^4.23.15",
     "typescript": "~6.0.3",
-    "vite": "^8.3.7",
+    "vite": "^8.3.8",
     "vite-plugin-static-copy": "^4.1.1",
     "vitest": "^5.1.0"
   }
