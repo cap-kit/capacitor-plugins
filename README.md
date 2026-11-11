@@ -84,7 +84,7 @@ pnpm run build:android  # build web + cap sync android + open Android Studio
 > **Information:** All plugins are optimized for **Capacitor v8+** and tested for native parity.
 
 <p align="center">
-  📦 <strong>Total Plugins:</strong> 11 &nbsp;&bull;&nbsp; ⚡ <strong>Core:</strong> <img src="https://img.shields.io/badge/Capacitor-v8+-05f.svg?style=flat-square&logo=capacitor&logoColor=white" alt="Capacitor v8+" valign="middle" />
+  📦 <strong>Total Plugins:</strong> 12 &nbsp;&bull;&nbsp; ⚡ <strong>Core:</strong> <img src="https://img.shields.io/badge/Capacitor-v8+-05f.svg?style=flat-square&logo=capacitor&logoColor=white" alt="Capacitor v8+" valign="middle" />
 </p>
 
 <table width="100%">
@@ -258,6 +258,22 @@ Capacitor plugin to open app and system settings on iOS and Android.
 
 <td align="center" width="33%" valign="top">
 
+### <a href="./packages/splash-motion">🎬 Splash Motion</a>
+
+<a href="https://www.npmjs.com/package/@cap-kit/splash-motion"><code>@cap-kit/splash-motion</code></a>
+
+<a href="https://www.npmjs.com/package/@cap-kit/splash-motion"><img src="https://img.shields.io/npm/v/@cap-kit/splash-motion?style=flat-square&label=npm&logo=npm" alt="npm version" /></a>
+<a href="https://www.npmjs.com/package/@cap-kit/splash-motion"><img src="https://img.shields.io/npm/dm/@cap-kit/splash-motion?style=flat-square&label=downloads&logo=npm&color=orange" alt="downloads" /></a>
+
+Capacitor v8 splash screen plugin for iOS and Android: Lottie animations, layered images, entrance animation and haptic feedback.
+
+<a href="./packages/splash-motion"><strong>Docs</strong></a> • 
+<a href="https://www.npmjs.com/package/@cap-kit/splash-motion"><strong>NPM</strong></a>
+
+</td>
+
+<td align="center" width="33%" valign="top">
+
 ### <a href="./packages/tls-fingerprint">🔒 Tls Fingerprint</a>
 
 <a href="https://www.npmjs.com/package/@cap-kit/tls-fingerprint"><code>@cap-kit/tls-fingerprint</code></a>
@@ -271,7 +287,6 @@ Runtime TLS leaf certificate SHA-256 fingerprint validation plugin for Capacitor
 <a href="https://www.npmjs.com/package/@cap-kit/tls-fingerprint"><strong>NPM</strong></a>
 
 </td>
-<td width="33%"></td>
 </tr>
 </table>
 
@@ -396,6 +411,18 @@ Capacitor v8 plugin for encrypted key-value storage: hardware-backed secure stor
 Capacitor plugin to open app and system settings on iOS and Android.
 
 [Docs](./packages/settings) • [NPM](https://www.npmjs.com/package/@cap-kit/settings)
+
+---
+
+### 🎬 Splash Motion
+
+`@cap-kit/splash-motion`
+
+![npm](https://img.shields.io/npm/v/@cap-kit/splash-motion?style=flat-square&label=npm&logo=npm) ![downloads](https://img.shields.io/npm/dm/@cap-kit/splash-motion?style=flat-square&label=downloads&logo=npm&color=orange)
+
+Capacitor v8 splash screen plugin for iOS and Android: Lottie animations, layered images, entrance animation and haptic feedback.
+
+[Docs](./packages/splash-motion) • [NPM](https://www.npmjs.com/package/@cap-kit/splash-motion)
 
 ---
 
