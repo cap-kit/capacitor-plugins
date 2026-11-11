@@ -1,0 +1,133 @@
+<app-page-header title="Splash Motion" />
+
+<ion-content class="ion-padding">
+  <app-info-card
+    title="Splash Motion"
+    subtitle="@cap-kit/splash-motion"
+    content="Splash screen with Lottie animations, static image layers, entrance animations and haptic feedback."
+  />
+
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Version</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-item lines="none">
+        <ion-icon name="terminal-outline" slot="start" />
+        <ion-label>getPluginVersion()</ion-label>
+        <ion-note slot="end">{{ version() }}</ion-note>
+      </ion-item>
+    </ion-card-content>
+  </ion-card>
+
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Options</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-item>
+        <ion-toggle [(ngModel)]="autoHide" labelPlacement="start">Auto hide</ion-toggle>
+      </ion-item>
+      <ion-item>
+        <ion-input
+          label="Show duration (ms)"
+          labelPlacement="start"
+          type="number"
+          [(ngModel)]="showDuration"
+        ></ion-input>
+      </ion-item>
+      <ion-item>
+        <ion-input label="Fade in (ms)" labelPlacement="start" type="number" [(ngModel)]="fadeInDuration"></ion-input>
+      </ion-item>
+      <ion-item>
+        <ion-input label="Fade out (ms)" labelPlacement="start" type="number" [(ngModel)]="fadeOutDuration"></ion-input>
+      </ion-item>
+      <ion-item>
+        <ion-toggle [(ngModel)]="useLottie" labelPlacement="start">Use Lottie</ion-toggle>
+      </ion-item>
+      @if (useLottie) {
+      <ion-item>
+        <ion-input label="Lottie source" labelPlacement="start" type="text" [(ngModel)]="lottieSource"></ion-input>
+      </ion-item>
+      <ion-item>
+        <ion-input
+          label="Lottie dark source"
+          labelPlacement="start"
+          type="text"
+          [(ngModel)]="lottieDarkSource"
+        ></ion-input>
+      </ion-item>
+      <ion-item>
+        <ion-toggle [(ngModel)]="lottieLoop" labelPlacement="start">Loop</ion-toggle>
+      </ion-item>
+      <ion-item>
+        <ion-input label="Lottie speed" labelPlacement="start" type="number" [(ngModel)]="lottieSpeed"></ion-input>
+      </ion-item>
+      }
+      <ion-item>
+        <ion-select label="Haptic style" labelPlacement="start" interface="popover" [(ngModel)]="hapticStyle">
+          <ion-select-option value="light">light</ion-select-option>
+          <ion-select-option value="medium">medium</ion-select-option>
+          <ion-select-option value="heavy">heavy</ion-select-option>
+        </ion-select>
+      </ion-item>
+      <ion-item>
+        <ion-select label="Entrance" labelPlacement="start" interface="popover" [(ngModel)]="entranceType">
+          <ion-select-option value="none">none</ion-select-option>
+          <ion-select-option value="fade">fade</ion-select-option>
+          <ion-select-option value="scale">scale</ion-select-option>
+        </ion-select>
+      </ion-item>
+      <ion-item>
+        <ion-toggle [(ngModel)]="useGradient" labelPlacement="start">Gradient background</ion-toggle>
+      </ion-item>
+      <ion-item>
+        <ion-toggle [(ngModel)]="useBranding" labelPlacement="start">Branding image</ion-toggle>
+      </ion-item>
+      <ion-item>
+        <ion-toggle [(ngModel)]="useSpinner" labelPlacement="start">Loading spinner</ion-toggle>
+      </ion-item>
+      @if (useSpinner) {
+      <ion-item>
+        <ion-select label="Spinner style" interface="popover" [(ngModel)]="spinnerStyle">
+          <ion-select-option value="small">small</ion-select-option>
+          <ion-select-option value="large">large</ion-select-option>
+          <ion-select-option value="horizontal">horizontal</ion-select-option>
+          <ion-select-option value="inverse">inverse</ion-select-option>
+          <ion-select-option value="smallInverse">smallInverse</ion-select-option>
+          <ion-select-option value="largeInverse">largeInverse</ion-select-option>
+        </ion-select>
+      </ion-item>
+      <ion-item>
+        <ion-input
+          label="Spinner color"
+          labelPlacement="stacked"
+          placeholder="#999999"
+          [(ngModel)]="spinnerColor"
+        ></ion-input>
+      </ion-item>
+      }
+    </ion-card-content>
+  </ion-card>
+
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Actions</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-button expand="block" (click)="onShow()">
+        <ion-icon name="play-outline" slot="start" />
+        Show
+      </ion-button>
+      <ion-button expand="block" fill="outline" (click)="onHide()">
+        <ion-icon name="pause-outline" slot="start" />
+        Hide
+      </ion-button>
+      @if (lastAction()) {
+      <app-info-card title="Last action" [subtitle]="lastResult()" [content]="lastAction()" />
+      }
+    </ion-card-content>
+  </ion-card>
+</ion-content>
+
+<app-page-footer />

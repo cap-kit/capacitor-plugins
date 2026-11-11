@@ -65,6 +65,7 @@ function formatPluginName(packageName: string): string {
     biometrics: "🫆",
     "privacy-screen": "🚫",
     "local-network": "📡",
+    "splash-motion": "🎬",
   };
 
   const emoji = iconMap[cleanName] || "🔌";
