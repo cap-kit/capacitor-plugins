@@ -109,7 +109,7 @@ dependencies {
 
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.12.0"
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.13.0"
 
     // SDK mandatory dependencies
     implementation "androidx.webkit:webkit:1.18.0"
