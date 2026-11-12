@@ -90,7 +90,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@lottiefiles/dotlottie-web": "^0.82.1"
+    "@lottiefiles/dotlottie-web": "^0.83.0"
   },
   "devDependencies": {
     "@capacitor/android": "^8.6.0",

@@ -843,8 +843,8 @@ importers:
   packages/splash-motion:
     dependencies:
       '@lottiefiles/dotlottie-web':
-        specifier: ^0.82.1
-        version: 0.82.1
+        specifier: ^0.83.0
+        version: 0.83.0
     devDependencies:
       '@capacitor/android':
         specifier: ^8.6.0
@@ -1950,8 +1950,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@lottiefiles/dotlottie-web@0.82.1':
-    resolution: {integrity: sha512-hLPdAL0dUeHKvQvXqw1p3FtvzZUHRtBsTMt3FLLgphFThsUPNUj2+U+GyttJ5H5qSt5JreLzoaD+IaKO8H/VnA==}
+  '@lottiefiles/dotlottie-web@0.83.0':
+    resolution: {integrity: sha512-z4CVlyv0L/ROcG0N3z1ZPLt4x2sbgCJPimmNMCZ98cKQBiMeJj1p3njCK1VtpzNKc3h6BV0xIj7BZtWCjHkOkg==}
     engines: {node: '>=18.17.0', npm: '>=9.5.0'}
 
   '@manypkg/find-root@3.1.0':
@@ -6619,7 +6619,7 @@ snapshots:
   '@lmdb/lmdb-win32-x64@3.5.6':
     optional: true
 
-  '@lottiefiles/dotlottie-web@0.82.1': {}
+  '@lottiefiles/dotlottie-web@0.83.0': {}
 
   '@manypkg/find-root@3.1.0':
     dependencies:
