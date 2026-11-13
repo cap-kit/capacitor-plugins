@@ -10,7 +10,7 @@ let package = Package(
             targets: ["SecureStoragePlugin"])
     ],
     dependencies: [
-        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", from: "8.6.0")
+        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", from: "8.6.2")
     ],
     targets: [
         .target(

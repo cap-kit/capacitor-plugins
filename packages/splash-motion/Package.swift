@@ -10,7 +10,7 @@ let package = Package(
             targets: ["SplashMotionPlugin"])
     ],
     dependencies: [
-        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", from: "8.6.0"),
+        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", from: "8.6.2"),
         .package(url: "https://github.com/airbnb/lottie-ios.git", from: "4.5.1")
     ],
     targets: [
