@@ -1,0 +1,959 @@
+package io.capkit.fortress
+
+import android.content.Context
+import android.util.Base64
+import androidx.fragment.app.FragmentActivity
+import com.getcapacitor.JSObject
+import io.capkit.fortress.config.Config
+import io.capkit.fortress.error.ErrorMessages
+import io.capkit.fortress.error.NativeError
+import io.capkit.fortress.impl.BiometricAuth
+import io.capkit.fortress.impl.PrivacyScreen
+import io.capkit.fortress.impl.SecureStorage
+import io.capkit.fortress.impl.SessionManager
+import io.capkit.fortress.impl.SessionState
+import io.capkit.fortress.impl.StandardStorage
+import io.capkit.fortress.logger.Logger
+import io.capkit.fortress.utils.KeyUtils
+import io.capkit.fortress.utils.KeystoreHelper
+import io.capkit.fortress.utils.Utils
+
+/**
+ * Platform-specific native implementation for the Fortress plugin.
+ *
+ * This class contains pure Android logic and MUST NOT depend
+ * directly on Capacitor bridge APIs.
+ *
+ * The Capacitor plugin class is responsible for:
+ * - reading configuration
+ * - handling PluginCall objects
+ * - delegating logic to this implementation
+ */
+class Fortress(
+  private val context: Context,
+) {
+  private companion object {
+    const val DEFAULT_BIOMETRIC_KEY_ALIAS = "biometric_keypair"
+  }
+  // -----------------------------------------------------------------------------
+  // Properties
+  // -----------------------------------------------------------------------------
+
+  // ---------------------------------------------------------------------------
+  // Configuration
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Cached immutable plugin configuration.
+   */
+  private lateinit var config: Config
+  private val secureStorage = SecureStorage(context)
+  private val standardStorage = StandardStorage(context)
+  private val biometricAuth = BiometricAuth(context)
+  private val sessionManager = SessionManager()
+  private val privacyScreen = PrivacyScreen()
+
+  /**
+   * Manual runtime override from `enable()` / `disable()`.
+   *
+   * Non-null detaches privacy from the follow-lock policy until cleared
+   * by configure/reset.
+   */
+  private var privacyScreenManualOverride: Boolean? = null
+  private var lastSuccessfulAuthAtMs: Long = 0
+  private var failedBiometricAttempts: Int = 0
+  private var lockoutUntilMs: Long = 0
+  private var overrideBiometryType: String? = null
+  private var overrideIsBiometricsAvailable: Boolean? = null
+  private var overrideIsBiometricsEnabled: Boolean? = null
+  private var overrideIsDeviceSecure: Boolean? = null
+
+  /**
+   * Applies static plugin configuration.
+   */
+  fun updateConfig(newConfig: Config) {
+    this.config = newConfig
+    Logger.verbose = newConfig.verboseLogging
+    Logger.setLevel(newConfig.logLevel)
+    Logger.debug(
+      "Configuration applied. Log level:",
+      newConfig.logLevel,
+    )
+
+    // Configure privacy screen overlay
+    privacyScreen.updateOverlayConfig(
+      text = newConfig.privacyOverlayText,
+      showText = newConfig.privacyOverlayShowText,
+      textColor = newConfig.privacyOverlayTextColor,
+      backgroundOpacity = newConfig.privacyOverlayBackgroundOpacity,
+      theme = newConfig.privacyOverlayTheme,
+      imageName = newConfig.privacyOverlayImageName,
+      showImage = newConfig.privacyOverlayShowImage,
+    )
+  }
+
+  fun configure(config: Config) {
+    updateConfig(config)
+
+    if (config.encryptionAlgorithm != "AES-GCM") {
+      throw NativeError.Unavailable(ErrorMessages.UNAVAILABLE)
+    }
+
+    if (config.cryptoStrategy != "auto" && config.cryptoStrategy != "ecc" && config.cryptoStrategy != "rsa") {
+      throw NativeError.InvalidInput(ErrorMessages.INVALID_INPUT)
+    }
+
+    if (config.keySize != 2048 && config.keySize != 4096) {
+      throw NativeError.InvalidInput(ErrorMessages.INVALID_INPUT)
+    }
+
+    if (
+      config.fallbackStrategy != "deviceCredential" &&
+      config.fallbackStrategy != "none" &&
+      config.fallbackStrategy != "systemDefault"
+    ) {
+      throw NativeError.InvalidInput(ErrorMessages.INVALID_INPUT)
+    }
+  }
+
+  private fun shouldUseCachedAuthentication(): Boolean {
+    if (!config.allowCachedAuthentication) {
+      return false
+    }
+
+    val timeoutMs = config.cachedAuthenticationTimeoutMs.toLong()
+    if (timeoutMs <= 0 || lastSuccessfulAuthAtMs <= 0) {
+      return false
+    }
+
+    val freshnessTimeout = config.requireFreshAuthenticationMs.toLong()
+    if (freshnessTimeout > 0 && System.currentTimeMillis() - lastSuccessfulAuthAtMs > freshnessTimeout) {
+      return false
+    }
+
+    return System.currentTimeMillis() - lastSuccessfulAuthAtMs <= timeoutMs
+  }
+
+  private fun markAuthenticationSuccess() {
+    lastSuccessfulAuthAtMs = System.currentTimeMillis()
+    failedBiometricAttempts = 0
+    lockoutUntilMs = 0
+  }
+
+  private fun clearAuthenticationCache() {
+    lastSuccessfulAuthAtMs = 0
+    failedBiometricAttempts = 0
+    lockoutUntilMs = 0
+  }
+
+  /**
+   * Clears failure counters without touching session timestamps.
+   *
+   * Used by side-effect-free ceremonies ([authenticateIdentity]) so a
+   * successful identity proof resets lockout pressure without unlocking
+   * anything.
+   */
+  private fun clearBiometricFailureState() {
+    failedBiometricAttempts = 0
+    lockoutUntilMs = 0
+  }
+
+  private fun assertNotLockedOut() {
+    if (System.currentTimeMillis() < lockoutUntilMs) {
+      throw NativeError.SecurityViolation(ErrorMessages.SECURITY_VIOLATION)
+    }
+  }
+
+  private fun recordBiometricFailure(error: Throwable) {
+    val maxAttempts = config.maxBiometricAttempts
+    val lockoutDuration = config.lockoutDurationMs
+    if (maxAttempts <= 0 || lockoutDuration <= 0) {
+      return
+    }
+
+    if (error is NativeError.Cancelled) {
+      return
+    }
+
+    failedBiometricAttempts += 1
+    if (failedBiometricAttempts >= maxAttempts) {
+      lockoutUntilMs = System.currentTimeMillis() + lockoutDuration.toLong()
+      failedBiometricAttempts = 0
+    }
+  }
+
+  fun setValue(
+    key: String,
+    value: String,
+  ) {
+    ensureSecureVaultAccessible()
+    // Correctly passing the hardware-backed security requirement from config
+    secureStorage.set(secureName(key), value, requireStrongBox = config.requireStrongBox)
+  }
+
+  fun setMany(values: List<JSObject>) {
+    val operations =
+      values.map { item ->
+        val key = item.getString("key") ?: throw NativeError.InvalidInput(ErrorMessages.INVALID_INPUT)
+        val value = item.getString("value") ?: throw NativeError.InvalidInput(ErrorMessages.INVALID_INPUT)
+        val secure = if (item.has("secure")) item.getBoolean("secure") else true
+        SetManyOperation(key = key, value = value, secure = secure)
+      }
+
+    if (operations.any { it.secure }) {
+      ensureSecureVaultAccessible()
+    }
+
+    val snapshot = HashMap<String, String?>()
+    operations.forEach { operation ->
+      val marker = operationMarker(operation)
+      if (!snapshot.containsKey(marker)) {
+        snapshot[marker] = readOperationValue(operation)
+      }
+    }
+
+    try {
+      operations.forEach { operation ->
+        if (operation.secure) {
+          secureStorage.set(secureName(operation.key), operation.value, requireStrongBox = config.requireStrongBox)
+        } else {
+          setInsecureValue(operation.key, operation.value)
+        }
+      }
+    } catch (error: Throwable) {
+      rollbackSetMany(snapshot)
+      throw error
+    }
+  }
+
+  fun getValue(key: String): String? {
+    ensureSecureVaultAccessible()
+    for (name in secureNameCandidates(key)) {
+      secureStorage.get(name)?.let { return it }
+    }
+    return null
+  }
+
+  fun removeValue(key: String) {
+    for (name in secureNameCandidates(key)) {
+      secureStorage.remove(name)
+    }
+  }
+
+  fun clearAll() {
+    secureStorage.clearAll()
+  }
+
+  fun unlock(
+    activity: FragmentActivity,
+    promptOptions: BiometricAuth.PromptOptions?,
+    completion: (Result<Unit>) -> Unit,
+  ) {
+    try {
+      assertNotLockedOut()
+    } catch (error: Throwable) {
+      completion(Result.failure(error))
+      return
+    }
+
+    if (shouldUseCachedAuthentication()) {
+      if (isPrivacyScreenEnabled()) {
+        privacyScreen.hideOverlay(activity)
+      }
+      sessionManager.unlock()
+      completion(Result.success(Unit))
+      return
+    }
+
+    biometricAuth.unlock(
+      activity = activity,
+      allowPasscode = resolveAllowPasscode(),
+      promptText = config.biometricPromptText,
+      promptOptions = promptOptions,
+    ) { result ->
+      result
+        .onSuccess {
+          markAuthenticationSuccess()
+          if (isPrivacyScreenEnabled()) {
+            privacyScreen.hideOverlay(activity)
+          }
+          sessionManager.unlock()
+          completion(Result.success(Unit))
+        }.onFailure { error ->
+          recordBiometricFailure(error)
+          completion(Result.failure(error))
+        }
+    }
+  }
+
+  /**
+   * Verifies identity without touching vault or session state.
+   *
+   * Runs the biometric ceremony only: no session transition, no privacy
+   * overlay change, no activity timestamp. Failure counters still apply
+   * (brute-force protection); a success clears them without unlocking
+   * anything.
+   */
+  fun authenticateIdentity(
+    activity: FragmentActivity,
+    promptOptions: BiometricAuth.PromptOptions?,
+    allowPasscode: Boolean,
+    completion: (Result<Unit>) -> Unit,
+  ) {
+    try {
+      assertNotLockedOut()
+    } catch (error: Throwable) {
+      completion(Result.failure(error))
+      return
+    }
+
+    biometricAuth.unlock(
+      activity = activity,
+      allowPasscode = allowPasscode,
+      promptText = config.biometricPromptText,
+      promptOptions = promptOptions,
+    ) { result ->
+      result
+        .onSuccess {
+          clearBiometricFailureState()
+          completion(Result.success(Unit))
+        }.onFailure { error ->
+          recordBiometricFailure(error)
+          completion(Result.failure(error))
+        }
+    }
+  }
+
+  /** Dismisses an ongoing authentication prompt, if any. */
+  fun cancelActiveAuthentication() {
+    biometricAuth.cancelActiveAuthentication()
+  }
+
+  /** Credential class of the last successful native ceremony in this session. */
+  fun getAuthenticationType(): String = biometricAuth.lastAuthenticationType
+
+  fun lock(activity: android.app.Activity?) {
+    if (isPrivacyScreenEnabled()) {
+      privacyScreen.lock(activity)
+    }
+    sessionManager.lock() // Ensure sessionManager is updated to LOCKED
+    clearAuthenticationCache()
+  }
+
+  fun isLocked(activity: android.app.Activity?): Boolean {
+    val locked = sessionManager.evaluateLockState(config.lockAfterMs.toLong())
+    if (locked && isPrivacyScreenEnabled()) {
+      privacyScreen.lock(activity)
+    }
+    return locked
+  }
+
+  fun getSession(): SessionState = sessionManager.getSession()
+
+  fun resetSession(activity: android.app.Activity?) {
+    // Reset session state and force vault lock with activity reference
+    sessionManager.reset()
+    if (isPrivacyScreenEnabled()) {
+      privacyScreen.lock(activity)
+    }
+    clearAuthenticationCache()
+  }
+
+  /**
+   * Updates the activity timestamp and checks if the session has expired.
+   */
+  fun touchSession(activity: android.app.Activity?) {
+    val locked = sessionManager.evaluateLockState(config.lockAfterMs.toLong())
+    if (locked) {
+      if (isPrivacyScreenEnabled()) {
+        privacyScreen.lock(activity)
+      }
+      return
+    }
+
+    sessionManager.touch()
+  }
+
+  fun createSignature(
+    activity: FragmentActivity,
+    payload: String,
+    keyAlias: String?,
+    promptMessage: String?,
+    promptOptions: BiometricAuth.PromptOptions?,
+    completion: (Result<String>) -> Unit,
+  ) {
+    try {
+      assertNotLockedOut()
+    } catch (error: Throwable) {
+      completion(Result.failure(error))
+      return
+    }
+
+    if (payload.isEmpty()) {
+      completion(Result.failure(NativeError.InvalidInput(ErrorMessages.INVALID_INPUT)))
+      return
+    }
+
+    try {
+      ensureSecureVaultAccessible()
+    } catch (error: Throwable) {
+      completion(Result.failure(error))
+      return
+    }
+
+    val resolvedAlias = keyAlias ?: DEFAULT_BIOMETRIC_KEY_ALIAS
+    // Explicit registration state check
+    val isRegistered = KeystoreHelper.hasKeyPair(resolvedAlias)
+    if (!isRegistered) {
+      completion(Result.failure(NativeError.NotFound(ErrorMessages.NOT_FOUND)))
+      return
+    }
+
+    biometricAuth.unlock(
+      activity = activity,
+      allowPasscode = resolveAllowPasscode(),
+      promptText = promptMessage ?: config.biometricPromptText,
+      promptOptions = promptOptions,
+    ) { result ->
+      result
+        .onSuccess {
+          markAuthenticationSuccess()
+          try {
+            val rawPayload = payload.toByteArray(Charsets.UTF_8)
+            val signatureBytes = KeystoreHelper.sign(resolvedAlias, rawPayload)
+            val signature = Base64.encodeToString(signatureBytes, Base64.NO_WRAP)
+            completion(Result.success(signature))
+          } catch (error: KeystoreHelper.KeystoreError) {
+            val mapped =
+              when (error) {
+                is KeystoreHelper.KeystoreError.KeyNotFound -> NativeError.NotFound(ErrorMessages.NOT_FOUND)
+                else -> NativeError.SecurityViolation(ErrorMessages.SECURITY_VIOLATION)
+              }
+            completion(Result.failure(mapped))
+          } catch (_: Throwable) {
+            completion(Result.failure(NativeError.InitFailed(ErrorMessages.INIT_FAILED)))
+          }
+        }.onFailure { error ->
+          recordBiometricFailure(error)
+          completion(Result.failure(error))
+        }
+    }
+  }
+
+  fun biometricKeysExist(keyAlias: String?): Boolean {
+    val resolvedAlias = keyAlias ?: DEFAULT_BIOMETRIC_KEY_ALIAS
+    return KeystoreHelper.hasKeyPair(resolvedAlias)
+  }
+
+  fun createKeys(keyAlias: String?): String {
+    val resolvedAlias = keyAlias ?: DEFAULT_BIOMETRIC_KEY_ALIAS
+
+    try {
+      KeystoreHelper.deleteKeyPair(resolvedAlias)
+    } catch (_: Throwable) {
+    }
+
+    return try {
+      KeystoreHelper.getOrCreateKeyPair(
+        alias = resolvedAlias,
+        requireStrongBox = config.requireStrongBox,
+        cryptoStrategy = config.cryptoStrategy,
+        keySize = config.keySize,
+      )
+    } catch (_: KeystoreHelper.KeystoreError) {
+      throw NativeError.InitFailed(ErrorMessages.INIT_FAILED)
+    }
+  }
+
+  fun deleteKeys(keyAlias: String?) {
+    val resolvedAlias = keyAlias ?: DEFAULT_BIOMETRIC_KEY_ALIAS
+    try {
+      KeystoreHelper.deleteKeyPair(resolvedAlias)
+    } catch (_: Throwable) {
+    }
+  }
+
+  fun registerWithChallenge(
+    activity: FragmentActivity,
+    challenge: String,
+    keyAlias: String?,
+    promptMessage: String?,
+    promptOptions: BiometricAuth.PromptOptions?,
+    completion: (Result<Pair<String, String>>) -> Unit,
+  ) {
+    try {
+      assertNotLockedOut()
+    } catch (error: Throwable) {
+      completion(Result.failure(error))
+      return
+    }
+
+    if (challenge.isEmpty()) {
+      completion(Result.failure(NativeError.InvalidInput(ErrorMessages.INVALID_INPUT)))
+      return
+    }
+
+    val resolvedAlias = keyAlias ?: DEFAULT_BIOMETRIC_KEY_ALIAS
+    val publicKey =
+      try {
+        createKeys(resolvedAlias)
+      } catch (error: Throwable) {
+        completion(Result.failure(error))
+        return
+      }
+
+    biometricAuth.unlock(
+      activity = activity,
+      allowPasscode = resolveAllowPasscode(),
+      promptText = promptMessage ?: config.biometricPromptText,
+      promptOptions = promptOptions,
+    ) { result ->
+      result
+        .onSuccess {
+          markAuthenticationSuccess()
+          try {
+            val signatureBytes = KeystoreHelper.sign(resolvedAlias, challenge.toByteArray(Charsets.UTF_8))
+            val signature = Base64.encodeToString(signatureBytes, Base64.NO_WRAP)
+            completion(Result.success(Pair(publicKey, signature)))
+          } catch (error: KeystoreHelper.KeystoreError) {
+            val mapped =
+              when (error) {
+                is KeystoreHelper.KeystoreError.KeyNotFound -> NativeError.NotFound(ErrorMessages.NOT_FOUND)
+                else -> NativeError.SecurityViolation(ErrorMessages.SECURITY_VIOLATION)
+              }
+            completion(Result.failure(mapped))
+          } catch (_: Throwable) {
+            completion(Result.failure(NativeError.InitFailed(ErrorMessages.INIT_FAILED)))
+          }
+        }.onFailure { error ->
+          recordBiometricFailure(error)
+          completion(Result.failure(error))
+        }
+    }
+  }
+
+  fun authenticateWithChallenge(
+    activity: FragmentActivity,
+    challenge: String,
+    keyAlias: String?,
+    promptMessage: String?,
+    promptOptions: BiometricAuth.PromptOptions?,
+    completion: (Result<String>) -> Unit,
+  ) {
+    try {
+      assertNotLockedOut()
+    } catch (error: Throwable) {
+      completion(Result.failure(error))
+      return
+    }
+
+    if (challenge.isEmpty()) {
+      completion(Result.failure(NativeError.InvalidInput(ErrorMessages.INVALID_INPUT)))
+      return
+    }
+
+    val resolvedAlias = keyAlias ?: DEFAULT_BIOMETRIC_KEY_ALIAS
+    if (!KeystoreHelper.hasKeyPair(resolvedAlias)) {
+      completion(Result.failure(NativeError.NotFound(ErrorMessages.NOT_FOUND)))
+      return
+    }
+
+    biometricAuth.unlock(
+      activity = activity,
+      allowPasscode = resolveAllowPasscode(),
+      promptText = promptMessage ?: config.biometricPromptText,
+      promptOptions = promptOptions,
+    ) { result ->
+      result
+        .onSuccess {
+          markAuthenticationSuccess()
+          try {
+            val signatureBytes = KeystoreHelper.sign(resolvedAlias, challenge.toByteArray(Charsets.UTF_8))
+            val signature = Base64.encodeToString(signatureBytes, Base64.NO_WRAP)
+            completion(Result.success(signature))
+          } catch (error: KeystoreHelper.KeystoreError) {
+            val mapped =
+              when (error) {
+                is KeystoreHelper.KeystoreError.KeyNotFound -> NativeError.NotFound(ErrorMessages.NOT_FOUND)
+                else -> NativeError.SecurityViolation(ErrorMessages.SECURITY_VIOLATION)
+              }
+            completion(Result.failure(mapped))
+          } catch (_: Throwable) {
+            completion(Result.failure(NativeError.InitFailed(ErrorMessages.INIT_FAILED)))
+          }
+        }.onFailure { error ->
+          recordBiometricFailure(error)
+          completion(Result.failure(error))
+        }
+    }
+  }
+
+  fun generateChallengePayload(nonce: String): String {
+    if (nonce.isEmpty()) {
+      throw NativeError.InvalidInput(ErrorMessages.INVALID_INPUT)
+    }
+
+    val timestamp = System.currentTimeMillis()
+    val deviceIdentifierHash = Utils.deviceIdentifierHash(context)
+
+    // Optimization: Ensure strictly ordered keys and atomic string building
+    // to prevent any mismatch with backend re-serialization.
+    val payload =
+      buildString {
+        append("{")
+        append("\"deviceIdentifierHash\":").append(Utils.jsonString(deviceIdentifierHash)).append(",")
+        append("\"nonce\":").append(Utils.jsonString(nonce)).append(",")
+        append("\"timestamp\":").append(timestamp)
+        append("}")
+      }
+
+    return payload
+  }
+
+  fun setInsecureValue(
+    key: String,
+    value: String,
+  ) {
+    standardStorage.set(key = insecureName(key), value = value)
+  }
+
+  fun getInsecureValue(key: String): String? {
+    for (name in insecureNameCandidates(key)) {
+      standardStorage.get(name)?.let { return it }
+    }
+    return null
+  }
+
+  /**
+   * Lists keys in secure or insecure storage, returned in original
+   * (de-obfuscated) form.
+   */
+  fun keys(secure: Boolean): List<String> {
+    if (secure) {
+      // Mirror getValue gating: enumeration requires an unlocked vault.
+      ensureSecureVaultAccessible()
+      return secureStorage.listKeys().mapNotNull { KeyUtils.decodeB64(it) ?: it }.distinct()
+    }
+    val prefixes = insecurePrefixes()
+    return standardStorage.listKeys(prefixes).map { deobfuscatedKey(it, prefixes) }.distinct()
+  }
+
+  /**
+   * Reads several keys in one call. Missing keys map to null; a locked
+   * vault rejects the whole secure call instead of partial data.
+   */
+  fun getMany(
+    keys: List<String>,
+    secure: Boolean,
+  ): Map<String, String?> {
+    if (secure) {
+      ensureSecureVaultAccessible()
+      return keys.associateWith { secureStorage.get(it) }
+    }
+    return keys.associateWith { getInsecureValue(it) }
+  }
+
+  /** iCloud Keychain does not exist on Android; no-op for API parity. */
+  fun setSynchronize(enabled: Boolean) {
+  }
+
+  /** Always false on Android; iCloud Keychain does not exist here. */
+  fun isSynchronized(): Boolean = false
+
+  /** iOS Keychain accessibility has no Android equivalent; no-op. */
+  fun setDefaultKeychainAccess(access: String) {
+  }
+
+  private fun insecurePrefixes(): List<String> {
+    val configured = config.obfuscationPrefix.takeIf { it.isNotEmpty() } ?: "ftrss_"
+    noteObfuscationPrefix(configured)
+    return (
+      listOf(configured) +
+        seenObfuscationPrefixes.filter { it != configured } +
+        listOf("ftrss_", "fortress_")
+    ).distinct()
+  }
+
+  private val seenObfuscationPrefixes = mutableSetOf<String>()
+
+  private fun noteObfuscationPrefix(prefix: String) {
+    if (prefix.isNotEmpty()) {
+      seenObfuscationPrefixes.add(prefix)
+    }
+  }
+
+  private fun encodeNameBody(key: String): String = if (config.obfuscateKeys) KeyUtils.encodeB64(key) else key
+
+  private fun secureName(key: String): String = encodeNameBody(key)
+
+  private fun secureNameCandidates(key: String): List<String> {
+    val plain = key
+    val encoded = KeyUtils.encodeB64(key)
+    return if (config.obfuscateKeys) listOf(encoded, plain) else listOf(plain, encoded)
+  }
+
+  private fun insecureName(key: String): String = KeyUtils.obfuscate(encodeNameBody(key), config.obfuscationPrefix)
+
+  private fun insecureNameCandidates(key: String): List<String> {
+    val prefix = config.obfuscationPrefix
+    noteObfuscationPrefix(prefix)
+    val prefixes = listOf(prefix) + seenObfuscationPrefixes.filter { it != prefix }
+    val names = mutableListOf<String>()
+    for (candidate in prefixes) {
+      val plain = KeyUtils.obfuscate(key, candidate)
+      val encoded = KeyUtils.obfuscate(KeyUtils.encodeB64(key), candidate)
+      if (config.obfuscateKeys) {
+        names.add(encoded)
+        names.add(plain)
+      } else {
+        names.add(plain)
+        names.add(encoded)
+      }
+    }
+    return names
+  }
+
+  private fun deobfuscatedKey(
+    stored: String,
+    prefixes: List<String>,
+  ): String {
+    val prefix = prefixes.firstOrNull { stored.startsWith(it) }
+    val remainder = if (prefix != null) stored.removePrefix(prefix) else stored
+    return KeyUtils.decodeB64(remainder) ?: remainder
+  }
+
+  fun removeInsecureValue(key: String) {
+    for (name in insecureNameCandidates(key)) {
+      standardStorage.remove(name)
+    }
+  }
+
+  fun getObfuscatedKey(key: String): String = insecureName(key)
+
+  fun hasKey(
+    key: String,
+    secure: Boolean,
+  ): Boolean =
+    if (secure) {
+      secureNameCandidates(key).any { secureStorage.hasKey(it) }
+    } else {
+      insecureNameCandidates(key).any { standardStorage.hasKey(it) }
+    }
+
+  fun setSessionLockCallback(callback: (Boolean) -> Unit) {
+    sessionManager.onLockStatusChanged = callback
+  }
+
+  fun setPrivacyScreenTapCallback(callback: () -> Unit) {
+    privacyScreen.setOnTapUnlock(callback)
+  }
+
+  fun setSessionBackgroundTimestamp() {
+    sessionManager.setBackgroundTimestamp()
+  }
+
+  fun evaluateSessionBackgroundGracePeriod(lockAfterMs: Long) {
+    sessionManager.evaluateBackgroundGracePeriod(lockAfterMs)
+  }
+
+  fun setContentVisibility(
+    activity: android.app.Activity?,
+    visible: Boolean,
+  ) {
+    if (!isPrivacyScreenEnabled()) {
+      return
+    }
+    privacyScreen.setContentVisibility(activity, visible)
+  }
+
+  fun setPrivacyProtection(
+    activity: android.app.Activity?,
+    enabled: Boolean,
+  ) {
+    if (!isPrivacyScreenEnabled()) {
+      privacyScreen.unlock(activity)
+      privacyScreen.setWindowSecure(activity, false)
+      return
+    }
+
+    // Keep snapshot protection always active while privacy screen is enabled.
+    privacyScreen.setWindowSecure(activity, true)
+
+    if (enabled) {
+      privacyScreen.lock(activity)
+    } else {
+      privacyScreen.hideOverlay(activity)
+    }
+  }
+
+  fun setWindowSecure(
+    activity: android.app.Activity?,
+    enabled: Boolean,
+  ) {
+    privacyScreen.setWindowSecure(activity, enabled)
+  }
+
+  fun checkBiometricStatus(context: Context): JSObject = applySecurityOverrides(biometricAuth.checkStatus(context))
+
+  /**
+   * Overrides the detected biometry type for development/testing flows.
+   */
+  fun setBiometryType(biometryType: String) {
+    overrideBiometryType = biometryType
+
+    if (biometryType == "none") {
+      overrideIsBiometricsAvailable = false
+      overrideIsBiometricsEnabled = false
+    } else {
+      overrideIsBiometricsAvailable = true
+    }
+  }
+
+  /**
+   * Overrides biometric enrollment state for development/testing flows.
+   */
+  fun setBiometryIsEnrolled(isBiometricsEnabled: Boolean) {
+    overrideIsBiometricsEnabled = isBiometricsEnabled
+
+    if (isBiometricsEnabled) {
+      overrideIsBiometricsAvailable = true
+      if (overrideBiometryType == "none") {
+        overrideBiometryType = "fingerprint"
+      }
+    }
+  }
+
+  /**
+   * Overrides device secure-state for development/testing flows.
+   */
+  fun setDeviceIsSecure(isDeviceSecure: Boolean) {
+    overrideIsDeviceSecure = isDeviceSecure
+  }
+
+  private data class SetManyOperation(
+    val key: String,
+    val value: String,
+    val secure: Boolean,
+  )
+
+  private fun ensureSecureVaultAccessible() {
+    val freshnessTimeout = config.requireFreshAuthenticationMs.toLong()
+    if (freshnessTimeout > 0) {
+      val now = System.currentTimeMillis()
+      val stale = lastSuccessfulAuthAtMs <= 0 || now - lastSuccessfulAuthAtMs > freshnessTimeout
+      if (stale) {
+        sessionManager.lock()
+        throw NativeError.VaultLocked(ErrorMessages.VAULT_LOCKED)
+      }
+    }
+
+    val locked = sessionManager.evaluateLockState(config.lockAfterMs.toLong())
+    if (locked) {
+      throw NativeError.VaultLocked(ErrorMessages.VAULT_LOCKED)
+    }
+  }
+
+  /**
+   * Manual privacy override from `enable()` / `disable()`.
+   *
+   * A non-null value detaches privacy from the follow-lock policy:
+   * explicit manual control wins until cleared (configure/reset pass null).
+   */
+  fun setPrivacyScreenManualOverride(enabled: Boolean?) {
+    privacyScreenManualOverride = enabled
+  }
+
+  fun isPrivacyScreenActive(): Boolean = isPrivacyScreenEnabled()
+
+  private fun isPrivacyScreenEnabled(): Boolean = privacyScreenManualOverride ?: config.enablePrivacyScreen
+
+  /**
+   * Resolves whether passcode/device credential fallback is allowed
+   * according to fallback strategy semantics.
+   */
+  fun resolveAllowPasscode(): Boolean =
+    when (config.fallbackStrategy) {
+      "deviceCredential" -> true
+      "none" -> false
+      else -> config.allowDevicePasscode
+    }
+
+  private fun applySecurityOverrides(status: JSObject): JSObject {
+    val merged = JSObject()
+    merged.put(
+      "isBiometricsAvailable",
+      overrideIsBiometricsAvailable ?: (status.getBool("isBiometricsAvailable") ?: false),
+    )
+    merged.put(
+      "isBiometricsEnabled",
+      overrideIsBiometricsEnabled ?: (status.getBool("isBiometricsEnabled") ?: false),
+    )
+    merged.put(
+      "isDeviceSecure",
+      overrideIsDeviceSecure ?: (status.getBool("isDeviceSecure") ?: false),
+    )
+    merged.put(
+      "biometryType",
+      overrideBiometryType ?: status.getString("biometryType") ?: "none",
+    )
+    val typeOverride = overrideBiometryType
+    if (typeOverride != null) {
+      merged.put(
+        "biometryTypes",
+        if (typeOverride == "none") emptyList<String>() else listOf(typeOverride),
+      )
+      merged.put("strongBiometryIsAvailable", typeOverride != "none")
+    } else {
+      val types = status.optJSONArray("biometryTypes")
+      if (types != null) {
+        merged.put("biometryTypes", types)
+      } else {
+        merged.put("biometryTypes", emptyList<String>())
+      }
+      merged.put(
+        "strongBiometryIsAvailable",
+        status.getBool("strongBiometryIsAvailable") ?: false,
+      )
+    }
+    return merged
+  }
+
+  private fun operationMarker(operation: SetManyOperation): String =
+    if (operation.secure) {
+      "secure:${operation.key}"
+    } else {
+      "insecure:${operation.key}"
+    }
+
+  private fun readOperationValue(operation: SetManyOperation): String? =
+    if (operation.secure) {
+      secureStorage.get(operation.key)
+    } else {
+      standardStorage.get(KeyUtils.obfuscate(operation.key, config.obfuscationPrefix))
+    }
+
+  private fun rollbackSetMany(snapshot: Map<String, String?>) {
+    snapshot.forEach { (marker, previousValue) ->
+      val secure = marker.startsWith("secure:")
+      val key = marker.substringAfter(':')
+
+      try {
+        if (secure) {
+          if (previousValue == null) {
+            secureStorage.remove(key)
+          } else {
+            secureStorage.set(secureName(key), previousValue, requireStrongBox = config.requireStrongBox)
+          }
+        } else {
+          val storageKey = insecureName(key)
+          if (previousValue == null) {
+            standardStorage.remove(storageKey)
+          } else {
+            standardStorage.set(storageKey, previousValue)
+          }
+        }
+      } catch (_: Throwable) {
+      }
+    }
+  }
+}
