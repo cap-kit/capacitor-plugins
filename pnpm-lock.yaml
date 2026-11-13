@@ -1225,7 +1225,7 @@ packages:
     resolution: {integrity: sha512-buipgOVDkkPXNR5+xBpDw7Zk2n1EvU7qBJCNUcL7rhQ//kfpOXPAvQ511Os0vpLYJ1pZnvudNytkQt2hst3wqA==}
 
   '@cap-kit/docgen@file:local_lib/cap-kit-docgen-0.3.1.tgz':
-    resolution: {integrity: sha512-qHIdHGpFu55ANzXZvRLDBobb5ePsj40+SjdZASCdYVYtGzFjXt4H9xfG4lJYFh+8LjsC0F/1vpNVBZyEoROdtA==, tarball: file:local_lib/cap-kit-docgen-0.3.1.tgz}
+    resolution: {integrity: sha512-lwphyrqCmLAEnDiuY5vREzO5pet9GgOQLDF/au8sG0pQjfVmH9Lofhqu6LeCBhO+l/lxFuTKvDNNpzj0gT3d7w==, tarball: file:local_lib/cap-kit-docgen-0.3.1.tgz}
     version: 0.3.1
     engines: {node: '>=24.0.0', pnpm: '>=11.0.0'}
     hasBin: true
@@ -5194,11 +5194,6 @@ packages:
       eslint: ^8.57.0 || ^9.0.0 || ^10.0.0
       typescript: '>=4.8.4 <6.1.0'
 
-  typescript@5.9.3:
-    resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
-    engines: {node: '>=14.17'}
-    hasBin: true
-
   typescript@6.0.3:
     resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
     engines: {node: '>=14.17'}
@@ -5823,7 +5818,7 @@ snapshots:
       colorette: 2.0.20
       github-slugger: 2.0.0
       minimist: 1.2.8
-      typescript: 5.9.3
+      typescript: 6.0.3
 
   '@capacitor/android@8.6.2(@capacitor/core@8.6.2)':
     dependencies:
@@ -9529,8 +9524,6 @@ snapshots:
       typescript: 6.0.3
     transitivePeerDependencies:
       - supports-color
-
-  typescript@5.9.3: {}
 
   typescript@6.0.3: {}
 

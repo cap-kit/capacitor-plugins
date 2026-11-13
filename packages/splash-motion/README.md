@@ -193,19 +193,23 @@ const config: CapacitorConfig = {
       imageGravity: 'bottom',
       backgroundImage: {
         alpha: 1,
-        margin: 16,
+        margin: 16
       },
-      brandingImage: {},
+      brandingImage: {
+
+      },
       entrance: {
-        durationMs: 300,
+        durationMs: 300
       },
-      backgroundGradient: {},
+      backgroundGradient: {
+
+      },
       launchLottie: {
         loop: true,
-        speed: 1,
+        speed: 1
       },
       launchHaptic: {
-        style: 'medium',
+        style: 'medium'
       },
     },
   },
@@ -376,7 +380,6 @@ Lottie and haptic feedback controls, keeping full API compatibility.
 Options for the Lottie animation rendered by the splash screen.
 
 The `source` (and `darkSource`) accept:
-
 - a path relative to the web asset root (e.g. `'public/lottie/splash.json'`)
   for `.json` Lottie files or `.lottie` dotLottie archives
 - a full remote HTTPS URL (e.g. `'https://example.com/splash.lottie'`)

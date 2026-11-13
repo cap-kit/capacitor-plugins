@@ -137,11 +137,11 @@ export default config;
 
 <docgen-index>
 
-* [`checkCertificate(...)`](#checkcertificate)
-* [`checkCertificates(...)`](#checkcertificates)
-* [`getPluginVersion()`](#getpluginversion)
-* [Interfaces](#interfaces)
-* [Enums](#enums)
+- [`checkCertificate(...)`](#checkcertificate)
+- [`checkCertificates(...)`](#checkcertificates)
+- [`getPluginVersion()`](#getpluginversion)
+- [Interfaces](#interfaces)
+- [Enums](#enums)
 
 </docgen-index>
 
@@ -166,8 +166,7 @@ Checks the SSL certificate of a server using a single fingerprint.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### checkCertificates(...)
 
@@ -185,8 +184,7 @@ Checks the SSL certificate of a server using multiple allowed fingerprints.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### getPluginVersion()
 
@@ -209,11 +207,9 @@ bundled with the application.
 const { version } = await TLSFingerprint.getPluginVersion();
 ```
 
---------------------
-
+---
 
 ### Interfaces
-
 
 #### TLSFingerprintResult
 
@@ -236,7 +232,6 @@ timeout, internal errors) reject the Promise.
 | **`error`**              | <code>string</code>                                                         | Human-readable error message when pinning fails. Present when `fingerprintMatched: false`.               |
 | **`errorCode`**          | <code><a href="#tlsfingerprinterrorcode">TLSFingerprintErrorCode</a></code> | Standardized error code aligned with <a href="#tlsfingerprinterrorcode">TLSFingerprintErrorCode</a>.     |
 
-
 #### TLSFingerprintOptions
 
 Options for checking a single SSL certificate.
@@ -245,7 +240,6 @@ Options for checking a single SSL certificate.
 | ----------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **`url`**         | <code>string</code> | HTTPS URL of the server whose SSL certificate must be checked. This value is REQUIRED and cannot be provided via configuration.                                                                                                                    |
 | **`fingerprint`** | <code>string</code> | Expected SHA-256 fingerprint of the certificate. Resolution order: 1. `options.fingerprint` (runtime) 2. `plugins.TLSFingerprint.fingerprint` (config) If neither is provided, the Promise is rejected with `TLSFingerprintErrorCode.UNAVAILABLE`. |
-
 
 #### TLSFingerprintMultiOptions
 
@@ -256,7 +250,6 @@ Options for checking an SSL certificate using multiple allowed fingerprints.
 | **`url`**          | <code>string</code>   | HTTPS URL of the server whose SSL certificate must be checked. This value is REQUIRED and cannot be provided via configuration.                                                                                                                       |
 | **`fingerprints`** | <code>string[]</code> | Expected SHA-256 fingerprints of the certificate. Resolution order: 1. `options.fingerprints` (runtime) 2. `plugins.TLSFingerprint.fingerprints` (config) If neither is provided, the Promise is rejected with `TLSFingerprintErrorCode.UNAVAILABLE`. |
 
-
 #### PluginVersionResult
 
 Result returned by the getPluginVersion method.
@@ -265,9 +258,7 @@ Result returned by the getPluginVersion method.
 | ------------- | ------------------- | ---------------------------------------- |
 | **`version`** | <code>string</code> | The native version string of the plugin. |
 
-
 ### Enums
-
 
 #### TLSFingerprintErrorCode
 
