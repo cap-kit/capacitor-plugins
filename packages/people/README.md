@@ -130,28 +130,28 @@ export default config;
 
 <docgen-index>
 
-* [`createContact(...)`](#createcontact)
-* [`updateContact(...)`](#updatecontact)
-* [`deleteContact(...)`](#deletecontact)
-* [`mergeContacts(...)`](#mergecontacts)
-* [`listGroups()`](#listgroups)
-* [`createGroup(...)`](#creategroup)
-* [`deleteGroup(...)`](#deletegroup)
-* [`addPeopleToGroup(...)`](#addpeopletogroup)
-* [`removePeopleFromGroup(...)`](#removepeoplefromgroup)
-* [`checkPermissions()`](#checkpermissions)
-* [`requestPermissions(...)`](#requestpermissions)
-* [`pickContact(...)`](#pickcontact)
-* [`getContacts(...)`](#getcontacts)
-* [`getContact(...)`](#getcontact)
-* [`getCapabilities()`](#getcapabilities)
-* [`getPluginVersion()`](#getpluginversion)
-* [`searchPeople(...)`](#searchpeople)
-* [`addListener('peopleChange', ...)`](#addlistenerpeoplechange-)
-* [`addListener(string, ...)`](#addlistenerstring-)
-* [`removeAllListeners()`](#removealllisteners)
-* [Interfaces](#interfaces)
-* [Type Aliases](#type-aliases)
+- [`createContact(...)`](#createcontact)
+- [`updateContact(...)`](#updatecontact)
+- [`deleteContact(...)`](#deletecontact)
+- [`mergeContacts(...)`](#mergecontacts)
+- [`listGroups()`](#listgroups)
+- [`createGroup(...)`](#creategroup)
+- [`deleteGroup(...)`](#deletegroup)
+- [`addPeopleToGroup(...)`](#addpeopletogroup)
+- [`removePeopleFromGroup(...)`](#removepeoplefromgroup)
+- [`checkPermissions()`](#checkpermissions)
+- [`requestPermissions(...)`](#requestpermissions)
+- [`pickContact(...)`](#pickcontact)
+- [`getContacts(...)`](#getcontacts)
+- [`getContact(...)`](#getcontact)
+- [`getCapabilities()`](#getcapabilities)
+- [`getPluginVersion()`](#getpluginversion)
+- [`searchPeople(...)`](#searchpeople)
+- [`addListener('peopleChange', ...)`](#addlistenerpeoplechange-)
+- [`addListener(string, ...)`](#addlistenerstring-)
+- [`removeAllListeners()`](#removealllisteners)
+- [Interfaces](#interfaces)
+- [Type Aliases](#type-aliases)
 
 </docgen-index>
 
@@ -198,8 +198,7 @@ console.error('Failed to create contact:', error.code);
 }
 ```
 
---------------------
-
+---
 
 ### updateContact(...)
 
@@ -237,8 +236,7 @@ console.error('Update failed:', error.message);
 }
 ```
 
---------------------
-
+---
 
 ### deleteContact(...)
 
@@ -265,8 +263,7 @@ import { People } from '@cap-kit/people';
 await People.deleteContact({ contactId: 'contact-id-to-delete' });
 ```
 
---------------------
-
+---
 
 ### mergeContacts(...)
 
@@ -299,8 +296,7 @@ destinationContactId: 'main-contact-id',
 console.log('Final contact state:', contact);
 ```
 
---------------------
-
+---
 
 ### listGroups()
 
@@ -321,8 +317,7 @@ Lists all available contact groups.
 const { groups } = await People.listGroups();
 ```
 
---------------------
-
+---
 
 ### createGroup(...)
 
@@ -348,8 +343,7 @@ Creates a new contact group.
 const { group } = await People.createGroup({ name: 'Family' });
 ```
 
---------------------
-
+---
 
 ### deleteGroup(...)
 
@@ -374,8 +368,7 @@ import { People } from '@cap-kit/people';
 await People.deleteGroup({ groupId: 'group-id-to-delete' });
 ```
 
---------------------
-
+---
 
 ### addPeopleToGroup(...)
 
@@ -403,8 +396,7 @@ await People.addPeopleToGroup({
 });
 ```
 
---------------------
-
+---
 
 ### removePeopleFromGroup(...)
 
@@ -432,8 +424,7 @@ await People.removePeopleFromGroup({
 });
 ```
 
---------------------
-
+---
 
 ### checkPermissions()
 
@@ -455,8 +446,7 @@ const permissions = await People.checkPermissions();
 console.log(permissions.contacts); // Output: 'granted' | 'denied' | 'prompt'
 ```
 
---------------------
-
+---
 
 ### requestPermissions(...)
 
@@ -484,8 +474,7 @@ const permissions = await People.requestPermissions();
 console.log(permissions.contacts); // Output: 'granted' | 'denied'
 ```
 
---------------------
-
+---
 
 ### pickContact(...)
 
@@ -521,8 +510,7 @@ console.log('User cancelled the picker.');
 }
 ```
 
---------------------
-
+---
 
 ### getContacts(...)
 
@@ -553,8 +541,7 @@ offset: 0
 });
 ```
 
---------------------
-
+---
 
 ### getContact(...)
 
@@ -582,8 +569,7 @@ const { contact } = await People.getContact({ id: 'contact-id', projection: ['na
 console.log('Contact details:', contact);
 ```
 
---------------------
-
+---
 
 ### getCapabilities()
 
@@ -608,8 +594,7 @@ console.log('Can Read Contacts:', capabilities.canRead);
 console.log('Can Write Contacts:', capabilities.canWrite);
 ```
 
---------------------
-
+---
 
 ### getPluginVersion()
 
@@ -632,8 +617,7 @@ bundled with the application.
 const { version } = await People.getPluginVersion();
 ```
 
---------------------
-
+---
 
 ### searchPeople(...)
 
@@ -662,8 +646,7 @@ const result = await People.searchPeople({ query: 'John', projection: ['name', '
 console.log('Fetched contacts:', result.contacts);
 ```
 
---------------------
-
+---
 
 ### addListener('peopleChange', ...)
 
@@ -697,8 +680,7 @@ console.log('People change detected:', event.type);
 // await handle.remove();
 ```
 
---------------------
-
+---
 
 ### addListener(string, ...)
 
@@ -719,8 +701,7 @@ Prefer the typed `peopleChange` overload for full payload type safety.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### removeAllListeners()
 
@@ -740,11 +721,9 @@ import { People } from '@cap-kit/people';
 await People.removeAllListeners();
 ```
 
---------------------
-
+---
 
 ### Interfaces
-
 
 #### CreateContactResult
 
@@ -753,7 +732,6 @@ Result returned by `createContact`.
 | Prop          | Type                                                      | Description                                                           |
 | ------------- | --------------------------------------------------------- | --------------------------------------------------------------------- |
 | **`contact`** | <code><a href="#unifiedcontact">UnifiedContact</a></code> | The full contact object as it was saved, including its new unique ID. |
-
 
 #### UnifiedContact
 
@@ -773,7 +751,6 @@ Maps to CNContact (iOS) and Aggregated Contact (Android).
 | **`note`**         | <code>string</code>                                                                                                   |                                                        |
 | **`image`**        | <code>string</code>                                                                                                   | Base64 thumbnail string (iOS only, only if projected). |
 
-
 #### PhoneNumber
 
 Phone number representation.
@@ -784,7 +761,6 @@ Phone number representation.
 | **`number`**     | <code>string</code> | The raw input string                              |
 | **`normalized`** | <code>string</code> | E.164 formatted number (if parsing succeeded)     |
 
-
 #### EmailAddress
 
 Email address representation.
@@ -793,7 +769,6 @@ Email address representation.
 | ------------- | ------------------- |
 | **`label`**   | <code>string</code> |
 | **`address`** | <code>string</code> |
-
 
 #### PostalAddress
 
@@ -809,7 +784,6 @@ Postal address representation.
 | **`postcode`**  | <code>string</code> |
 | **`country`**   | <code>string</code> |
 
-
 #### CreateContactOptions
 
 Options for creating a new contact.
@@ -819,7 +793,6 @@ The contact data is provided as a partial <a href="#unifiedcontact">UnifiedConta
 | ------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
 | **`contact`** | <code>Partial&lt;Omit&lt;<a href="#unifiedcontact">UnifiedContact</a>, 'id'&gt;&gt;</code> | The contact data to be saved. At least one writable field (e.g., name, email) must be provided. |
 
-
 #### UpdateContactResult
 
 Result returned by `updateContact`.
@@ -827,7 +800,6 @@ Result returned by `updateContact`.
 | Prop          | Type                                                      | Description                                                |
 | ------------- | --------------------------------------------------------- | ---------------------------------------------------------- |
 | **`contact`** | <code><a href="#unifiedcontact">UnifiedContact</a></code> | The full contact object after the update has been applied. |
-
 
 #### UpdateContactOptions
 
@@ -839,7 +811,6 @@ This operation performs a patch, not a full replacement.
 | **`contactId`** | <code>string</code>                                                                        | The unique identifier of the contact to update.                                           |
 | **`contact`**   | <code>Partial&lt;Omit&lt;<a href="#unifiedcontact">UnifiedContact</a>, 'id'&gt;&gt;</code> | An object containing the fields to be updated. Only the provided fields will be modified. |
 
-
 #### DeleteContactOptions
 
 Options for deleting a contact.
@@ -848,7 +819,6 @@ Options for deleting a contact.
 | --------------- | ------------------- | ----------------------------------------------- |
 | **`contactId`** | <code>string</code> | The unique identifier of the contact to delete. |
 
-
 #### MergeContactsResult
 
 Result returned by `mergeContacts`.
@@ -856,7 +826,6 @@ Result returned by `mergeContacts`.
 | Prop          | Type                                                      | Description                                           |
 | ------------- | --------------------------------------------------------- | ----------------------------------------------------- |
 | **`contact`** | <code><a href="#unifiedcontact">UnifiedContact</a></code> | The state of the destination contact after the merge. |
-
 
 #### MergeContactsOptions
 
@@ -867,7 +836,6 @@ Options for merging two contacts.
 | **`sourceContactId`**      | <code>string</code> | The identifier of the contact that will be subsumed and deleted. |
 | **`destinationContactId`** | <code>string</code> | The identifier of the contact that will be kept and updated.     |
 
-
 #### ListGroupsResult
 
 Result returned by `listGroups`.
@@ -875,7 +843,6 @@ Result returned by `listGroups`.
 | Prop         | Type                 | Description                                   |
 | ------------ | -------------------- | --------------------------------------------- |
 | **`groups`** | <code>Group[]</code> | An array of groups found in the address book. |
-
 
 #### Group
 
@@ -889,7 +856,6 @@ A group can be system-generated (e.g., "All Contacts") or user-created.
 | **`source`**   | <code>string</code>  | The source or account where the group originates. On iOS, this could be "iCloud" or "Local". On Android, this corresponds to the account name (e.g., "user@gmail.com"). For logical groups, this will be 'local'. |
 | **`readOnly`** | <code>boolean</code> | Indicates if the group is read-only. System groups are typically read-only and cannot be deleted or renamed.                                                                                                      |
 
-
 #### CreateGroupResult
 
 Result returned by `createGroup`.
@@ -897,7 +863,6 @@ Result returned by `createGroup`.
 | Prop        | Type                                    | Description              |
 | ----------- | --------------------------------------- | ------------------------ |
 | **`group`** | <code><a href="#group">Group</a></code> | The newly created group. |
-
 
 #### CreateGroupOptions
 
@@ -907,7 +872,6 @@ Options for creating a new group.
 | ---------- | ------------------- | --------------------------- |
 | **`name`** | <code>string</code> | The name for the new group. |
 
-
 #### DeleteGroupOptions
 
 Options for deleting a group.
@@ -915,7 +879,6 @@ Options for deleting a group.
 | Prop          | Type                | Description                                   |
 | ------------- | ------------------- | --------------------------------------------- |
 | **`groupId`** | <code>string</code> | The unique identifier of the group to delete. |
-
 
 #### AddPeopleToGroupOptions
 
@@ -926,7 +889,6 @@ Options for adding people to a group.
 | **`groupId`**    | <code>string</code>   | The unique identifier of the group.                  |
 | **`contactIds`** | <code>string[]</code> | An array of contact identifiers to add to the group. |
 
-
 #### RemovePeopleFromGroupOptions
 
 Options for removing people from a group.
@@ -936,7 +898,6 @@ Options for removing people from a group.
 | **`groupId`**    | <code>string</code>   | The unique identifier of the group.                       |
 | **`contactIds`** | <code>string[]</code> | An array of contact identifiers to remove from the group. |
 
-
 #### PeoplePluginPermissions
 
 Permissions status interface.
@@ -944,7 +905,6 @@ Permissions status interface.
 | Prop           | Type                                                        |
 | -------------- | ----------------------------------------------------------- |
 | **`contacts`** | <code><a href="#permissionstate">PermissionState</a></code> |
-
 
 #### PickContactResult
 
@@ -955,7 +915,6 @@ Now strictly returns the contact object on success.
 | ------------- | --------------------------------------------------------- |
 | **`contact`** | <code><a href="#unifiedcontact">UnifiedContact</a></code> |
 
-
 #### GetContactsResult
 
 Result returned by getContacts().
@@ -964,7 +923,6 @@ Result returned by getContacts().
 | ---------------- | ----------------------------- | ---------------------------------------------- |
 | **`contacts`**   | <code>UnifiedContact[]</code> |                                                |
 | **`totalCount`** | <code>number</code>           | Total count in the DB (permissions permitting) |
-
 
 #### GetContactsOptions
 
@@ -976,7 +934,6 @@ Options for querying contacts.
 | **`limit`**        | <code>number</code>             | Max number of records to return                                                                                                                              |                       |
 | **`offset`**       | <code>number</code>             | Skip count (implement pagination via cursor usually better, but offset for now)                                                                              |                       |
 | **`includeTotal`** | <code>boolean</code>            | Whether to compute totalCount across the full contacts set. This may require scanning/counting the full address book and can be expensive on large datasets. | <code>false</code>    |
-
 
 #### PeopleCapabilities
 
@@ -990,7 +947,6 @@ Capabilities of the People plugin on this device/implementation.
 | **`canManageGroups`** | <code>boolean</code> |
 | **`canPickContact`**  | <code>boolean</code> |
 
-
 #### PluginVersionResult
 
 Result object returned by the `getPluginVersion()` method.
@@ -999,13 +955,11 @@ Result object returned by the `getPluginVersion()` method.
 | ------------- | ------------------- | --------------------------------- |
 | **`version`** | <code>string</code> | The native plugin version string. |
 
-
 #### PluginListenerHandle
 
 | Prop         | Type                                      |
 | ------------ | ----------------------------------------- |
 | **`remove`** | <code>() =&gt; Promise&lt;void&gt;</code> |
-
 
 #### PeopleChangeEvent
 
@@ -1016,14 +970,11 @@ Event emitted when changes are detected in the device's address book.
 | **`ids`**  | <code>string[]</code>                                         | Array of affected contact IDs (always present, may be empty) |
 | **`type`** | <code><a href="#peoplechangetype">PeopleChangeType</a></code> | The type of change detected                                  |
 
-
 ### Type Aliases
-
 
 #### PermissionState
 
 <code>'prompt' | 'prompt-with-rationale' | 'granted' | 'denied'</code>
-
 
 #### PeopleProjection
 
@@ -1032,7 +983,6 @@ Requesting only what you need reduces memory usage by O(N).
 `image` projection support is iOS-only. On Android and Web, requesting `image` is rejected with `UNKNOWN_TYPE` and message `Unsupported projection field: image`.
 
 <code>'name' | 'organization' | 'birthday' | 'phones' | 'emails' | 'addresses' | 'urls' | 'image' | 'note'</code>
-
 
 #### PeopleChangeType
 

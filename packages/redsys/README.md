@@ -170,13 +170,13 @@ export default config;
 
 <docgen-index>
 
-* [`doDirectPayment(...)`](#dodirectpayment)
-* [`initializeWebPayment(...)`](#initializewebpayment)
-* [`processWebPayment(...)`](#processwebpayment)
-* [`computeHash(...)`](#computehash)
-* [`getPluginVersion()`](#getpluginversion)
-* [Interfaces](#interfaces)
-* [Enums](#enums)
+- [`doDirectPayment(...)`](#dodirectpayment)
+- [`initializeWebPayment(...)`](#initializewebpayment)
+- [`processWebPayment(...)`](#processwebpayment)
+- [`computeHash(...)`](#computehash)
+- [`getPluginVersion()`](#getpluginversion)
+- [Interfaces](#interfaces)
+- [Enums](#enums)
 
 </docgen-index>
 
@@ -218,8 +218,7 @@ const result = await Redsys.doDirectPayment({
 });
 ```
 
---------------------
-
+---
 
 ### initializeWebPayment(...)
 
@@ -251,8 +250,7 @@ const initResult = await Redsys.initializeWebPayment({
 });
 ```
 
---------------------
-
+---
 
 ### processWebPayment(...)
 
@@ -278,8 +276,7 @@ const result = await Redsys.processWebPayment({
 });
 ```
 
---------------------
-
+---
 
 ### computeHash(...)
 
@@ -301,8 +298,7 @@ computeHash(options: HashOptions) => Promise<HashResult>
 
 ```
 
---------------------
-
+---
 
 ### getPluginVersion()
 
@@ -325,11 +321,9 @@ bundled with the application.
 const { version } = await Redsys.getPluginVersion();
 ```
 
---------------------
-
+---
 
 ### Interfaces
-
 
 #### RedsysPaymentResponseOK
 
@@ -362,7 +356,6 @@ This interface merges data from Android's ResultResponse and iOS's WebViewPaymen
 | **`merchantData`**       | <code>string</code>                       | Merchant-specific data               |
 | **`extraParams`**        | <code>Record&lt;string, string&gt;</code> | Extra parameters returned by backend |
 
-
 #### RedsysPaymentRequest
 
 | Prop                  | Type                                                                    | Description                                                                                    |
@@ -374,7 +367,6 @@ This interface merges data from Android's ResultResponse and iOS's WebViewPaymen
 | **`identifier`**      | <code>string</code>                                                     | Token handling: undefined (normal), 'REQUEST_REFERENCE' (new token), or existing token string. |
 | **`extraParams`**     | <code>Record&lt;string, string&gt;</code>                               | Optional additional parameters to be sent to the backend and returned in the response.         |
 | **`uiOptions`**       | <code><a href="#redsysuioptions">RedsysUIOptions</a></code>             | Runtime UI overrides for this specific transaction.                                            |
-
 
 #### RedsysUIOptions
 
@@ -407,14 +399,12 @@ Some properties may only be supported on specific platforms due to SDK limitatio
 | **`androidResultAlertButtonTextOk`** | <code>string</code> | Custom text for the success alert button. (Supported: Android Only)                         |
 | **`androidResultAlertButtonTextKo`** | <code>string</code> | Custom text for the error alert button. (Supported: Android Only)                           |
 
-
 #### RedsysWebPaymentInitResult
 
 | Prop             | Type                | Description                                                     |
 | ---------------- | ------------------- | --------------------------------------------------------------- |
 | **`base64Data`** | <code>string</code> | Base64 data from native SDK that must be signed by the backend. |
 | **`signature`**  | <code>string</code> | The signature if pre-calculated or available from config.       |
-
 
 #### RedsysWebPaymentOptions
 
@@ -423,13 +413,11 @@ Some properties may only be supported on specific platforms due to SDK limitatio
 | **`signature`**        | <code>string</code>                               | Server-generated signature. If omitted, the plugin will attempt to use the 'signature' defined in RedsysConfig. |
 | **`signatureVersion`** | <code>'HMAC_SHA256_V1' \| 'HMAC_SHA512_V1'</code> | Defaults to HMAC_SHA256_V1 if omitted.                                                                          |
 
-
 #### HashResult
 
 | Prop            | Type                | Description              |
 | --------------- | ------------------- | ------------------------ |
 | **`signature`** | <code>string</code> | Firma generata in Base64 |
-
 
 #### HashOptions
 
@@ -439,7 +427,6 @@ Some properties may only be supported on specific platforms due to SDK limitatio
 | **`keyBase64`** | <code>string</code>                               | Chiave segreta in formato Base64                                                 |
 | **`algorithm`** | <code>'HMAC_SHA256_V1' \| 'HMAC_SHA512_V1'</code> | Algorithm: 'HMAC_SHA256_V1' \| 'HMAC_SHA512_V1'                                  |
 
-
 #### PluginVersionResult
 
 Result object returned by the `getPluginVersion()` method.
@@ -448,9 +435,7 @@ Result object returned by the `getPluginVersion()` method.
 | ------------- | ------------------- | --------------------------------- |
 | **`version`** | <code>string</code> | The native plugin version string. |
 
-
 ### Enums
-
 
 #### RedsysTransactionType
 

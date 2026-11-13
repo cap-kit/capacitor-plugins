@@ -148,14 +148,14 @@ export default config;
 
 <docgen-index>
 
-* [`check(...)`](#check)
-* [`presentBlockPage(...)`](#presentblockpage)
-* [`getPluginVersion()`](#getpluginversion)
-* [`addListener('integritySignal', ...)`](#addlistenerintegritysignal-)
-* [`removeAllListeners()`](#removealllisteners)
-* [Interfaces](#interfaces)
-* [Type Aliases](#type-aliases)
-* [Enums](#enums)
+- [`check(...)`](#check)
+- [`presentBlockPage(...)`](#presentblockpage)
+- [`getPluginVersion()`](#getpluginversion)
+- [`addListener('integritySignal', ...)`](#addlistenerintegritysignal-)
+- [`removeAllListeners()`](#removealllisteners)
+- [Interfaces](#interfaces)
+- [Type Aliases](#type-aliases)
+- [Enums](#enums)
 
 </docgen-index>
 
@@ -189,8 +189,7 @@ Executes a runtime integrity check.
 const report = await Integrity.check();
 ```
 
---------------------
-
+---
 
 ### presentBlockPage(...)
 
@@ -217,8 +216,7 @@ Invocation is entirely controlled by the host application.
 await Integrity.presentBlockPage({ reason: 'integrity_failed' });
 ```
 
---------------------
-
+---
 
 ### getPluginVersion()
 
@@ -241,8 +239,7 @@ bundled with the application.
 const { version } = await Integrity.getPluginVersion();
 ```
 
---------------------
-
+---
 
 ### addListener('integritySignal', ...)
 
@@ -275,8 +272,7 @@ IMPORTANT:
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### removeAllListeners()
 
@@ -293,11 +289,9 @@ NOTE:
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### Interfaces
-
 
 #### IntegrityReport
 
@@ -314,7 +308,6 @@ and provides a provisional integrity score.
 | **`environment`**      | <code><a href="#integrityenvironment">IntegrityEnvironment</a></code>           | Execution environment summary.                                                                                                                                                                                    |       |
 | **`timestamp`**        | <code>number</code>                                                             | Unix timestamp (milliseconds) when the check was performed.                                                                                                                                                       |       |
 | **`scoreExplanation`** | <code><a href="#integrityscoreexplanation">IntegrityScoreExplanation</a></code> | Optional explanation metadata describing how the integrity score was derived from the detected signals. This field is informational only and MUST NOT be treated as a security decision or enforcement mechanism. | 8.0.0 |
-
 
 #### IntegritySignal
 
@@ -337,7 +330,6 @@ Signals:
 | **`description`** | <code>string</code>                                                           | Optional human-readable description. This field: - is intended for diagnostics and debugging only - MAY be omitted or redacted in production builds - MUST NOT be relied upon programmatically                                                                                                                                                                                                                                  |
 | **`metadata`**    | <code>Record&lt;string, string \| number \| boolean&gt;</code>                | Additional diagnostic metadata associated with the signal. Metadata provides granular details about the detection (e.g. matched filesystem paths, runtime artifacts, or environment properties) without altering the stable signal identifier. IMPORTANT: - Metadata is informational only. - Keys and values are NOT guaranteed to be stable. - Applications MUST NOT rely on specific metadata fields for security decisions. |
 
-
 #### IntegrityEnvironment
 
 Summary of the execution environment in which
@@ -348,7 +340,6 @@ the integrity check was performed.
 | **`platform`**     | <code>'ios' \| 'android' \| 'web'</code> | Current platform.                                                             |
 | **`isEmulator`**   | <code>boolean</code>                     | Indicates whether the app is running in an emulator or simulator environment. |
 | **`isDebugBuild`** | <code>boolean</code>                     | Indicates whether the app was built in debug/development mode.                |
-
 
 #### IntegrityScoreExplanation
 
@@ -363,7 +354,6 @@ without exposing internal scoring algorithms.
 | **`byConfidence`** | <code>{ high: number; medium: number; low: number; }</code> | Breakdown of signals by confidence level.                 |
 | **`contributors`** | <code>string[]</code>                                       | List of signal identifiers that contributed to the score. |
 
-
 #### IntegrityCheckOptions
 
 Options controlling the behavior of `Integrity.check()`.
@@ -376,7 +366,6 @@ not *what* the public API returns.
 | **`level`**            | <code>'basic' \| 'standard' \| 'strict'</code> | Desired strictness level. Higher levels may enable additional heuristics at the cost of performance. |
 | **`includeDebugInfo`** | <code>boolean</code>                           | Includes additional debug information in the returned signals when enabled.                          |
 
-
 #### PresentBlockPageResult
 
 Result object returned by `presentBlockPage()`.
@@ -384,7 +373,6 @@ Result object returned by `presentBlockPage()`.
 | Prop            | Type                 | Description                                              |
 | --------------- | -------------------- | -------------------------------------------------------- |
 | **`presented`** | <code>boolean</code> | Indicates whether the block page was actually presented. |
-
 
 #### PresentBlockPageOptions
 
@@ -397,7 +385,6 @@ Options for presenting the integrity block page.
 | **`customUrl`**   | <code>string</code>                        | Optional override for the block page URL. Takes precedence over the static configuration. Maximum length: 2048 characters.                 |                    | 8.0.5 |
 | **`context`**     | <code>Record&lt;string, unknown&gt;</code> | Optional context data to pass to the block page. This value is encoded as a JSON string and appended to the URL as a query parameter.      |                    | 8.0.5 |
 
-
 #### PluginVersionResult
 
 Result returned by the getPluginVersion method.
@@ -406,16 +393,13 @@ Result returned by the getPluginVersion method.
 | ------------- | ------------------- | ---------------------------------------- |
 | **`version`** | <code>string</code> | The native version string of the plugin. |
 
-
 #### PluginListenerHandle
 
 | Prop         | Type                                      |
 | ------------ | ----------------------------------------- |
 | **`remove`** | <code>() =&gt; Promise&lt;void&gt;</code> |
 
-
 ### Type Aliases
-
 
 #### IntegritySignalCategory
 
@@ -426,7 +410,6 @@ New detection techniques MUST reuse existing categories
 whenever possible to avoid breaking consumers.
 
 <code>'root' | 'jailbreak' | 'emulator' | 'debug' | 'hook' | 'tamper' | 'environment'</code>
-
 
 #### IntegritySignalEvent
 
@@ -449,7 +432,6 @@ The host application is responsible for:
 
 
 ### Enums
-
 
 #### IntegrityConfidenceLevel
 

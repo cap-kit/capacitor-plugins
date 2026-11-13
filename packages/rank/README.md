@@ -72,17 +72,17 @@ npx cap sync
 
 <docgen-index>
 
-* [`isAvailable()`](#isavailable)
-* [`checkReviewEnvironment()`](#checkreviewenvironment)
-* [`requestReview(...)`](#requestreview)
-* [`presentProductPage(...)`](#presentproductpage)
-* [`openStore(...)`](#openstore)
-* [`openStoreListing(...)`](#openstorelisting)
-* [`search(...)`](#search)
-* [`openDevPage(...)`](#opendevpage)
-* [`openCollection(...)`](#opencollection)
-* [`getPluginVersion()`](#getpluginversion)
-* [Interfaces](#interfaces)
+- [`isAvailable()`](#isavailable)
+- [`checkReviewEnvironment()`](#checkreviewenvironment)
+- [`requestReview(...)`](#requestreview)
+- [`presentProductPage(...)`](#presentproductpage)
+- [`openStore(...)`](#openstore)
+- [`openStoreListing(...)`](#openstorelisting)
+- [`search(...)`](#search)
+- [`openDevPage(...)`](#opendevpage)
+- [`openCollection(...)`](#opencollection)
+- [`getPluginVersion()`](#getpluginversion)
+- [Interfaces](#interfaces)
 
 </docgen-index>
 
@@ -119,8 +119,7 @@ if (value) {
 }
 ```
 
---------------------
-
+---
 
 ### checkReviewEnvironment()
 
@@ -138,8 +137,7 @@ Android-only. On other platforms, it resolves as unavailable.
 
 **Since:** 8.0.0
 
---------------------
-
+---
 
 ### requestReview(...)
 
@@ -166,8 +164,7 @@ await Rank.requestReview();
 await Rank.requestReview({ fireAndForget: true });
 ```
 
---------------------
-
+---
 
 ### presentProductPage(...)
 
@@ -197,8 +194,7 @@ await Rank.presentProductPage({
 });
 ```
 
---------------------
-
+---
 
 ### openStore(...)
 
@@ -225,8 +221,7 @@ await Rank.openStore({
 });
 ```
 
---------------------
-
+---
 
 ### openStoreListing(...)
 
@@ -253,8 +248,7 @@ await Rank.openStoreListing({
 });
 ```
 
---------------------
-
+---
 
 ### search(...)
 
@@ -280,8 +274,7 @@ await Rank.search({
 });
 ```
 
---------------------
-
+---
 
 ### openDevPage(...)
 
@@ -306,8 +299,7 @@ await Rank.openDevPage({
 });
 ```
 
---------------------
-
+---
 
 ### openCollection(...)
 
@@ -332,8 +324,7 @@ await Rank.openCollection({
 });
 ```
 
---------------------
-
+---
 
 ### getPluginVersion()
 
@@ -356,11 +347,9 @@ bundled with the application.
 const { version } = await Rank.getPluginVersion();
 ```
 
---------------------
-
+---
 
 ### Interfaces
-
 
 #### AvailabilityResult
 
@@ -369,7 +358,6 @@ Result object returned by the `isAvailable()` method.
 | Prop        | Type                 | Description                                                 |
 | ----------- | -------------------- | ----------------------------------------------------------- |
 | **`value`** | <code>boolean</code> | Indicates whether the native In-App Review UI is available. |
-
 
 #### ReviewEnvironmentResult
 
@@ -383,7 +371,6 @@ flow can actually be displayed in the current environment.
 | **`canRequestReview`** | <code>boolean</code>                                                       | True if the environment supports showing the review dialog.        |
 | **`reason`**           | <code>'PLAY_STORE_NOT_AVAILABLE' \| 'NOT_INSTALLED_FROM_PLAY_STORE'</code> | Optional diagnostic reason when the review dialog cannot be shown. |
 
-
 #### ReviewOptions
 
 Options for the `requestReview` method.
@@ -391,7 +378,6 @@ Options for the `requestReview` method.
 | Prop                | Type                 | Description                                                                                                           |
 | ------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | **`fireAndForget`** | <code>boolean</code> | Override the global configuration to determine if the promise should resolve immediately or wait for the native flow. |
-
 
 #### StoreOptions
 
@@ -401,7 +387,6 @@ Options for the `openStore` method.
 | ----------------- | ------------------- | ---------------------------------------------- |
 | **`appId`**       | <code>string</code> | Runtime override for the Apple App ID on iOS.  |
 | **`packageName`** | <code>string</code> | Runtime override for the Android Package Name. |
-
 
 #### PluginVersionResult
 

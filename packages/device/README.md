@@ -125,24 +125,24 @@ export default config;
 
 <docgen-index>
 
-* [`getId()`](#getid)
-* [`getInfo()`](#getinfo)
-* [`getBatteryInfo()`](#getbatteryinfo)
-* [`getLanguageCode()`](#getlanguagecode)
-* [`getLanguageTag()`](#getlanguagetag)
-* [`getBatteryExtras()`](#getbatteryextras)
-* [`getDisplayInfo()`](#getdisplayinfo)
-* [`getConfiguration()`](#getconfiguration)
-* [`getPowerState()`](#getpowerstate)
-* [`getMemoryInfo()`](#getmemoryinfo)
-* [`getStorageInfo()`](#getstorageinfo)
-* [`getSystemUptime()`](#getsystemuptime)
-* [`getAppVersion()`](#getappversion)
-* [`addListener('batteryChargingStateChange', ...)`](#addlistenerbatterychargingstatechange-)
-* [`removeAllListeners()`](#removealllisteners)
-* [`getPluginVersion()`](#getpluginversion)
-* [Interfaces](#interfaces)
-* [Type Aliases](#type-aliases)
+- [`getId()`](#getid)
+- [`getInfo()`](#getinfo)
+- [`getBatteryInfo()`](#getbatteryinfo)
+- [`getLanguageCode()`](#getlanguagecode)
+- [`getLanguageTag()`](#getlanguagetag)
+- [`getBatteryExtras()`](#getbatteryextras)
+- [`getDisplayInfo()`](#getdisplayinfo)
+- [`getConfiguration()`](#getconfiguration)
+- [`getPowerState()`](#getpowerstate)
+- [`getMemoryInfo()`](#getmemoryinfo)
+- [`getStorageInfo()`](#getstorageinfo)
+- [`getSystemUptime()`](#getsystemuptime)
+- [`getAppVersion()`](#getappversion)
+- [`addListener('batteryChargingStateChange', ...)`](#addlistenerbatterychargingstatechange-)
+- [`removeAllListeners()`](#removealllisteners)
+- [`getPluginVersion()`](#getpluginversion)
+- [Interfaces](#interfaces)
+- [Type Aliases](#type-aliases)
 
 </docgen-index>
 
@@ -173,8 +173,7 @@ const { identifier } = await Device.getId();
 console.log('Device ID:', identifier);
 ```
 
---------------------
-
+---
 
 ### getInfo()
 
@@ -197,8 +196,7 @@ console.log(`${info.operatingSystem} ${info.osVersion}`);
 console.log(`Virtual: ${info.isVirtual}`);
 ```
 
---------------------
-
+---
 
 ### getBatteryInfo()
 
@@ -220,8 +218,7 @@ const percent = Math.round((battery.batteryLevel ?? 0) * 100);
 console.log(`Battery: ${percent}% — ${battery.isCharging ? 'charging' : 'on battery'}`);
 ```
 
---------------------
-
+---
 
 ### getLanguageCode()
 
@@ -242,8 +239,7 @@ const { value } = await Device.getLanguageCode();
 console.log('Language:', value); // "en", "es", "it"
 ```
 
---------------------
-
+---
 
 ### getLanguageTag()
 
@@ -264,8 +260,7 @@ const { value } = await Device.getLanguageTag();
 console.log('Language tag:', value); // "en-US", "es-ES", "it-IT"
 ```
 
---------------------
-
+---
 
 ### getBatteryExtras()
 
@@ -298,8 +293,7 @@ if (extras.temperature) {
 }
 ```
 
---------------------
-
+---
 
 ### getDisplayInfo()
 
@@ -325,8 +319,7 @@ console.log(`Density: ${display.densityDpi} DPI (${display.scale}x)`);
 console.log(`Refresh rate: ${display.refreshRateHz} Hz`);
 ```
 
---------------------
-
+---
 
 ### getConfiguration()
 
@@ -354,8 +347,7 @@ console.log(`Device type: ${config.idiom}`);       // "phone", "tablet", "deskto
 console.log(`Screen size: ${config.screenSize}`);  // "small", "normal", "large", "xlarge"
 ```
 
---------------------
-
+---
 
 ### getPowerState()
 
@@ -388,8 +380,7 @@ if (power.thermalState === 'serious' || power.thermalState === 'critical') {
 }
 ```
 
---------------------
-
+---
 
 ### getMemoryInfo()
 
@@ -436,8 +427,7 @@ if (memory.memoryPressure === 'critical') {
 }
 ```
 
---------------------
-
+---
 
 ### getStorageInfo()
 
@@ -466,8 +456,7 @@ if (storage.usedPercent > 90) {
 }
 ```
 
---------------------
-
+---
 
 ### getSystemUptime()
 
@@ -499,8 +488,7 @@ if (uptimeSeconds > 7 * 86400) {
 }
 ```
 
---------------------
-
+---
 
 ### getAppVersion()
 
@@ -524,8 +512,7 @@ console.log(`App version: ${app.version} (build ${app.buildNumber})`);
 analytics.setAppVersion(app.version);
 ```
 
---------------------
-
+---
 
 ### addListener('batteryChargingStateChange', ...)
 
@@ -557,8 +544,7 @@ const handle = await Device.addListener('batteryChargingStateChange', (info) => 
 await handle.remove();
 ```
 
---------------------
-
+---
 
 ### removeAllListeners()
 
@@ -576,8 +562,7 @@ Remove all listeners for this plugin.
 await Device.removeAllListeners();
 ```
 
---------------------
-
+---
 
 ### getPluginVersion()
 
@@ -601,18 +586,15 @@ const { version } = await Device.getPluginVersion();
 console.log('Plugin version:', version);
 ```
 
---------------------
-
+---
 
 ### Interfaces
-
 
 #### DeviceId
 
 | Prop             | Type                | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Since |
 | ---------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
 | **`identifier`** | <code>string</code> | The identifier of the device as available to the app. This identifier may change on modern mobile platforms that only allow per-app install ids. On iOS, the identifier is a UUID that uniquely identifies a device to the app's vendor ([read more](https://developer.apple.com/documentation/uikit/uidevice/1620059-identifierforvendor)). On Android 8+, __the identifier is a 64-bit number (expressed as a hexadecimal string)__, unique to each combination of app-signing key, user, and device ([read more](https://developer.android.com/reference/android/provider/Settings.Secure#ANDROID_ID)). On web, a random identifier is generated and stored on localStorage for subsequent calls. If localStorage is not available a new random identifier will be generated on every call. | 8.0.0 |
-
 
 #### DeviceInfo
 
@@ -634,7 +616,6 @@ console.log('Plugin version:', version);
 | **`realDiskTotal`**     | <code>number</code>                                         | The total size of the normal data storage path, in bytes.                                                                                                                                                                                                                                                                                        | 8.0.0 |
 | **`webViewVersion`**    | <code>string</code>                                         | The web view browser version                                                                                                                                                                                                                                                                                                                     | 8.0.0 |
 
-
 #### BatteryInfo
 
 | Prop               | Type                 | Description                                                       | Since |
@@ -642,20 +623,17 @@ console.log('Plugin version:', version);
 | **`batteryLevel`** | <code>number</code>  | A percentage (0 to 1) indicating how much the battery is charged. | 8.0.0 |
 | **`isCharging`**   | <code>boolean</code> | Whether the device is charging.                                   | 8.0.0 |
 
-
 #### GetLanguageCodeResult
 
 | Prop        | Type                | Description                  | Since |
 | ----------- | ------------------- | ---------------------------- | ----- |
 | **`value`** | <code>string</code> | Two character language code. | 8.0.0 |
 
-
 #### LanguageTag
 
 | Prop        | Type                | Description                                     | Since |
 | ----------- | ------------------- | ----------------------------------------------- | ----- |
 | **`value`** | <code>string</code> | Returns a well-formed IETF BCP 47 language tag. | 8.0.0 |
-
 
 #### BatteryExtras
 
@@ -667,7 +645,6 @@ Extended battery information including charge source and detailed state.
 | **`detailedState`** | <code>'unknown' \| 'unplugged' \| 'charging' \| 'full' \| 'not-charging'</code>     | The detailed battery state. - `"unknown"` — Battery state is unknown - `"unplugged"` — Not connected to a power source - `"charging"` — Connected and charging - `"full"` — Connected and fully charged - `"not-charging"` — Connected but not charging (e.g. battery temperature limit)     | 8.0.0 |
 | **`health`**        | <code>'unknown' \| 'good' \| 'overheat' \| 'dead' \| 'cold' \| 'unspecified'</code> | Battery health status. Only available on Android. - `"good"` — Battery is in good condition - `"overheat"` — Battery is overheating - `"dead"` — Battery is dead - `"unknown"` — Health status not available - `"cold"` — Battery is too cold - `"unspecified"` — Health status not reported | 8.0.0 |
 | **`temperature`**   | <code>number</code>                                                                 | Battery temperature in degrees Celsius. Only available on Android. iOS does not expose battery temperature through public APIs.                                                                                                                                                              | 8.0.0 |
-
 
 #### DisplayInfo
 
@@ -681,7 +658,6 @@ Display characteristics of the device screen.
 | **`scale`**         | <code>number</code> | Display scale factor. On iOS this corresponds to `UIScreen.main.scale` (e.g. 2.0, 3.0). On Android this is `DisplayMetrics.density` (e.g. 1.0, 1.5, 2.0, 3.0).    | 8.0.0 |
 | **`refreshRateHz`** | <code>number</code> | Maximum display refresh rate in Hz. On iOS this corresponds to `UIScreen.main.maximumFramesPerWindow`. On Android this corresponds to `Display.getRefreshRate()`. | 8.0.0 |
 
-
 #### DeviceConfiguration
 
 Device configuration and user preferences.
@@ -694,7 +670,6 @@ Device configuration and user preferences.
 | **`idiom`**       | <code>'desktop' \| 'unknown' \| 'phone' \| 'tablet'</code>           | Device form factor / idiom. - `"phone"` — iPhone or small Android phone - `"tablet"` — iPad or Android tablet - `"desktop"` — Mac Catalyst or desktop mode - `"unknown"` — Cannot determine form factor                                                                                                   | 8.0.0 |
 | **`screenSize`**  | <code>'unknown' \| 'small' \| 'normal' \| 'large' \| 'xlarge'</code> | Screen size category relative to standard phone dimensions. - `"small"` — Smaller than normal phone - `"normal"` — Standard phone - `"large"` — Large phone / small tablet - `"xlarge"` — Tablet or larger - `"unknown"` — Cannot determine                                                               | 8.0.0 |
 
-
 #### PowerState
 
 Device power and thermal state.
@@ -703,7 +678,6 @@ Device power and thermal state.
 | -------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----- |
 | **`isLowPowerMode`** | <code>boolean</code>                                        | Whether the device is in low power / battery saver mode. On iOS this corresponds to `ProcessInfo.isLowPowerModeEnabled`. On Android this corresponds to `PowerManager.isPowerSaveMode()`.                                                                                                                                                                                                              | 8.0.0 |
 | **`thermalState`**   | <code>'nominal' \| 'fair' \| 'serious' \| 'critical'</code> | Current thermal state of the device. - `"nominal"` — No thermal issues - `"fair"` — Thermal level is elevated but manageable - `"serious"` — Device is actively throttling performance - `"critical"` — Device is severely throttling; reduce workload immediately On iOS this corresponds to `ProcessInfo.thermalState`. On Android this is derived from battery temperature and system thermal APIs. | 8.0.0 |
-
 
 #### MemoryInfo
 
@@ -719,7 +693,6 @@ Device memory information beyond the basic `memUsed` field.
 | **`cpuUsagePercent`** | <code>number \| null</code>                                   | Current CPU usage as a percentage (0–100), measured as a delta between two samples. The first call always returns `null`. Subsequent calls return the average CPU usage across all cores since the previous call. On iOS this uses `host_statistics(HOST_CPU_LOAD_INFO)` Mach API. On Android this uses `/proc/stat` delta parsing. On web this is always `null`.                                                                                                                                                                                          | 8.0.0 |
 | **`memoryPressure`**  | <code>'unknown' \| 'normal' \| 'critical' \| 'warning'</code> | System memory pressure level, derived from available memory and OS signals. - `"normal"` — Sufficient free memory - `"warning"` — Available memory is below a safe threshold - `"critical"` — Device is under severe memory pressure; reduce allocation immediately - `"unknown"` — Pressure level cannot be determined On iOS this maps from `ProcessInfo.physicalMemory` vs. free memory ratio. On Android this maps from `ActivityManager.<a href="#memoryinfo">MemoryInfo</a>.lowMemory` and `availMem` thresholds. On web this is always `"unknown"`. | 8.0.0 |
 
-
 #### StorageInfo
 
 Disk storage information for the primary data volume.
@@ -732,7 +705,6 @@ Disk storage information for the primary data volume.
 | **`usedBytes`**   | <code>number</code>  | Used storage on the volume, in bytes (`totalBytes - freeBytes`).                                                                                                                               | 8.0.0 |
 | **`usedPercent`** | <code>number</code>  | Percentage of storage used (0–100).                                                                                                                                                            | 8.0.0 |
 
-
 #### SystemUptime
 
 System uptime information.
@@ -740,7 +712,6 @@ System uptime information.
 | Prop                | Type                | Description                                                                                                                                                              | Since |
 | ------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----- |
 | **`uptimeSeconds`** | <code>number</code> | Time in seconds since the device was last booted. On iOS this corresponds to `ProcessInfo.systemUptime`. On Android this corresponds to `SystemClock.elapsedRealtime()`. | 8.0.0 |
-
 
 #### AppVersion
 
@@ -751,13 +722,11 @@ Application version information.
 | **`version`**     | <code>string</code> | Human-readable version string (e.g. "1.2.3"). On iOS this corresponds to `CFBundleShortVersionString`. On Android this corresponds to `PackageInfo.versionName`. | 8.0.0 |
 | **`buildNumber`** | <code>number</code> | Numeric build number used for update detection. On iOS this corresponds to `CFBundleVersion`. On Android this corresponds to `PackageInfo.versionCode`.          | 8.0.0 |
 
-
 #### PluginListenerHandle
 
 | Prop         | Type                                      |
 | ------------ | ----------------------------------------- |
 | **`remove`** | <code>() =&gt; Promise&lt;void&gt;</code> |
-
 
 #### PluginVersionResult
 
@@ -767,14 +736,11 @@ Result object returned by the `getPluginVersion()` method.
 | ------------- | ------------------- | --------------------------------- |
 | **`version`** | <code>string</code> | The native plugin version string. |
 
-
 ### Type Aliases
-
 
 #### OperatingSystem
 
 <code>'ios' | 'android' | 'windows' | 'mac' | 'unknown'</code>
-
 
 #### BatteryChargingStateChangeListener
 

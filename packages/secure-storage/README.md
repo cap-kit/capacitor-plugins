@@ -601,10 +601,7 @@ iOS Keychain accessibility level for stored items.
 Mirrors the platform `kSecAttrAccessible` constants. Applies to iOS
 only; ignored on Android and Web.
 
-<code>
-  'whenUnlocked' | 'whenUnlockedThisDeviceOnly' | 'afterFirstUnlock' | 'afterFirstUnlockThisDeviceOnly' |
-  'whenPasscodeSetThisDeviceOnly'
-</code>
+<code>'whenUnlocked' | 'whenUnlockedThisDeviceOnly' | 'afterFirstUnlock' | 'afterFirstUnlockThisDeviceOnly' | 'whenPasscodeSetThisDeviceOnly'</code>
 
 </docgen-api>
 
