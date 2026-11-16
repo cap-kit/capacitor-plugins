@@ -334,7 +334,7 @@ importers:
         version: 3.10.1
       prettier-plugin-java:
         specifier: ^2.11.0
-        version: 2.11.0(prettier@3.10.1)
+        version: 2.12.0(prettier@3.10.1)
       rimraf:
         specifier: ^6.1.4
         version: 6.1.4
@@ -388,7 +388,7 @@ importers:
         version: 3.10.1
       prettier-plugin-java:
         specifier: ^2.11.0
-        version: 2.11.0(prettier@3.10.1)
+        version: 2.12.0(prettier@3.10.1)
       rimraf:
         specifier: ^6.1.4
         version: 6.1.4
@@ -442,7 +442,7 @@ importers:
         version: 3.10.1
       prettier-plugin-java:
         specifier: ^2.11.0
-        version: 2.11.0(prettier@3.10.1)
+        version: 2.12.0(prettier@3.10.1)
       rimraf:
         specifier: ^6.1.4
         version: 6.1.4
@@ -496,7 +496,7 @@ importers:
         version: 3.10.1
       prettier-plugin-java:
         specifier: ^2.11.0
-        version: 2.11.0(prettier@3.10.1)
+        version: 2.12.0(prettier@3.10.1)
       rimraf:
         specifier: ^6.1.4
         version: 6.1.4
@@ -550,7 +550,7 @@ importers:
         version: 3.10.1
       prettier-plugin-java:
         specifier: ^2.11.0
-        version: 2.11.0(prettier@3.10.1)
+        version: 2.12.0(prettier@3.10.1)
       rimraf:
         specifier: ^6.1.4
         version: 6.1.4
@@ -604,7 +604,7 @@ importers:
         version: 3.10.1
       prettier-plugin-java:
         specifier: ^2.11.0
-        version: 2.11.0(prettier@3.10.1)
+        version: 2.12.0(prettier@3.10.1)
       rimraf:
         specifier: ^6.1.4
         version: 6.1.4
@@ -658,7 +658,7 @@ importers:
         version: 3.10.1
       prettier-plugin-java:
         specifier: ^2.11.0
-        version: 2.11.0(prettier@3.10.1)
+        version: 2.12.0(prettier@3.10.1)
       rimraf:
         specifier: ^6.1.4
         version: 6.1.4
@@ -712,7 +712,7 @@ importers:
         version: 3.10.1
       prettier-plugin-java:
         specifier: ^2.11.0
-        version: 2.11.0(prettier@3.10.1)
+        version: 2.12.0(prettier@3.10.1)
       rimraf:
         specifier: ^6.1.4
         version: 6.1.4
@@ -766,7 +766,7 @@ importers:
         version: 3.10.1
       prettier-plugin-java:
         specifier: ^2.11.0
-        version: 2.11.0(prettier@3.10.1)
+        version: 2.12.0(prettier@3.10.1)
       rimraf:
         specifier: ^6.1.4
         version: 6.1.4
@@ -823,7 +823,7 @@ importers:
         version: 3.10.1
       prettier-plugin-java:
         specifier: ^2.11.0
-        version: 2.11.0(prettier@3.10.1)
+        version: 2.12.0(prettier@3.10.1)
       rimraf:
         specifier: ^6.1.4
         version: 6.1.4
@@ -887,7 +887,7 @@ importers:
         version: 3.10.1
       prettier-plugin-java:
         specifier: ^2.11.0
-        version: 2.11.0(prettier@3.10.1)
+        version: 2.12.0(prettier@3.10.1)
       rimraf:
         specifier: ^6.1.4
         version: 6.1.4
@@ -954,7 +954,7 @@ importers:
         version: 3.10.1
       prettier-plugin-java:
         specifier: ^2.11.0
-        version: 2.11.0(prettier@3.10.1)
+        version: 2.12.0(prettier@3.10.1)
       rimraf:
         specifier: ^6.1.4
         version: 6.1.4
@@ -4636,8 +4636,8 @@ packages:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
     engines: {node: '>= 0.8.0'}
 
-  prettier-plugin-java@2.11.0:
-    resolution: {integrity: sha512-pLwm2wHvVvW5eVVLf1cq2orY2ATaIj5ngN8hJ5ZdXYzUHzxrfaZkk2xmu8Mz/duBXAc2xT/cUH5+dK414HQSTw==}
+  prettier-plugin-java@2.12.0:
+    resolution: {integrity: sha512-0uWedEdr2ZUZHyPPCA/L9/cYzuP5X0P8D7Wtfl71Rm6TDvpOxrbk0Htel49/CEAyk/40/XJpb8bUXcvivoRD/A==}
     peerDependencies:
       prettier: ^3.0.0
 
@@ -5379,8 +5379,8 @@ packages:
   weak-lru-cache@1.2.3:
     resolution: {integrity: sha512-pF0uTATIDYJFeEX4GDD5zjOe2jU9EJbBRcpcGPonUcao7eSp2hl6VA0b2Ims9jisMX33x6zgnozvaBCEsXNGPw==}
 
-  web-tree-sitter@0.27.0:
-    resolution: {integrity: sha512-XK08gj6RwTMQatAG7uVRP8MunqotL/XC19vHgkSPKmELgbGPBj4ECvB8haHOUnyj6ls2B8t42UTro14zxGgAHg==}
+  web-tree-sitter@0.27.2:
+    resolution: {integrity: sha512-ZRo86GKI4aOSBAqOrPmCtriExI3xIzu1sNw/V6v3b4QGxrEmO19FGwbMNdyhw3MJLAZIw0xAV0oSpqX361eAyQ==}
 
   webidl-conversions@8.0.1:
     resolution: {integrity: sha512-BMhLD/Sw+GbJC21C/UgyaZX41nPt8bUTg+jWyDeg7e7YN4xOM05YPSIXceACnXVtqyEw/LMClUQMtMZ+PGGpqQ==}
@@ -8927,10 +8927,10 @@ snapshots:
 
   prelude-ls@1.2.1: {}
 
-  prettier-plugin-java@2.11.0(prettier@3.10.1):
+  prettier-plugin-java@2.12.0(prettier@3.10.1):
     dependencies:
       prettier: 3.10.1
-      web-tree-sitter: 0.27.0
+      web-tree-sitter: 0.27.2
 
   prettier@3.10.1: {}
 
@@ -9643,7 +9643,7 @@ snapshots:
   weak-lru-cache@1.2.3:
     optional: true
 
-  web-tree-sitter@0.27.0: {}
+  web-tree-sitter@0.27.2: {}
 
   webidl-conversions@8.0.1: {}
 
